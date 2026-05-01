@@ -1164,23 +1164,27 @@ table.occ-matrix td.cell-occ:hover{background:#fee2e2;filter:brightness(.97);}
           <input class="fi" id="subj-search" placeholder="ابحث عن مقياس..." oninput="renderSubjGrid()">
         </div>
         <div class="fg">
-          <label class="fl">السداسي</label>
-          <select class="fs" id="subj-f-sem" onchange="renderSubjGrid()">
-            <option value="">كل السداسيات</option>
-            <option value="1">السداسي الأول</option>
-            <option value="2">السداسي الثاني</option>
-          </select>
-        </div>
-        <div class="fg">
-          <label class="fl">السنة الدراسية</label>
-          <select class="fs" id="subj-f-level" onchange="renderSubjGrid()">
+          <label class="fl">المستوى</label>
+          <select class="fs" id="subj-f-level" onchange="onSubjFLvChange()">
             <option value="">كل المستويات</option>
           </select>
         </div>
         <div class="fg">
           <label class="fl">القسم</label>
-          <select class="fs" id="subj-f-dept" onchange="renderSubjGrid()">
+          <select class="fs" id="subj-f-dept" onchange="onSubjFDpChange()">
             <option value="">كل الأقسام</option>
+          </select>
+        </div>
+        <div class="fg">
+          <label class="fl">التخصص</label>
+          <select class="fs" id="subj-f-spec" onchange="renderSubjGrid()">
+            <option value="">كل التخصصات</option>
+          </select>
+        </div>
+        <div class="fg">
+          <label class="fl">السداسي</label>
+          <select class="fs" id="subj-f-sem" onchange="renderSubjGrid()">
+            <option value="">كل السداسيات</option>
           </select>
         </div>
         <button class="btn" style="background:var(--gray-light);color:var(--text-mid);align-self:flex-end;"
@@ -2174,38 +2178,85 @@ function setSubjSemTab(n,btn){
   btn.classList.add('active');renderSubjGrid();
 }
 function clearSubjFilters(){
-  ['subj-search','subj-f-sem','subj-f-level','subj-f-dept'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  ['subj-search','subj-f-sem','subj-f-level','subj-f-dept','subj-f-spec'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
   subjSemTab=0;document.querySelectorAll('.sem-tab').forEach((b,i)=>b.classList.toggle('active',i===0));
   renderSubjGrid();
 }
 function renderSubjGrid(){
   syncSubjSelects();
-  const q=(document.getElementById('subj-search')?.value||'').trim().toLowerCase();
-  const fSem=document.getElementById('subj-f-sem')?.value||'';
+
   const fLv=document.getElementById('subj-f-level')?.value||'';
   const fDp=document.getElementById('subj-f-dept')?.value||'';
+  const fSp=document.getElementById('subj-f-spec')?.value||'';
+  const fSem=document.getElementById('subj-f-sem')?.value||'';
+  const q=(document.getElementById('subj-search')?.value||'').trim().toLowerCase();
+
+  // Cascade: تحديث قائمة الأقسام بناءً على المستوى
+  const dpEl=document.getElementById('subj-f-dept');
+  if(dpEl){
+    const dpOpts=S.depts.filter(d=>!fLv||S.subjects.some(s=>s.level===fLv&&s.dept===d));
+    const cur=dpEl.value;
+    dpEl.innerHTML='<option value="">كل الأقسام</option>'
+      +dpOpts.map(d=>`<option value="${d}"${d===cur?' selected':''}>${d}</option>`).join('');
+  }
+
+  // Cascade: تحديث قائمة التخصصات بناءً على المستوى والقسم
+  const spEl=document.getElementById('subj-f-spec');
+  if(spEl){
+    const spOpts=[...new Set(
+      S.subjects.filter(s=>
+        (!fLv||s.level===fLv)&&(!fDp||s.dept===fDp)&&s.spec
+      ).map(s=>s.spec)
+    )];
+    const cur=spEl.value;
+    spEl.innerHTML='<option value="">كل التخصصات</option>'
+      +spOpts.map(sp=>`<option value="${sp}"${sp===cur?' selected':''}>${sp}</option>`).join('');
+  }
+
+  // Cascade: تحديث السداسيات المتاحة
+  const semEl=document.getElementById('subj-f-sem');
+  if(semEl){
+    const cur=semEl.value;
+    const usedSems=[...new Set(
+      S.subjects.filter(s=>
+        (!fLv||s.level===fLv)&&(!fDp||s.dept===fDp)&&(!fSp||s.spec===fSp)
+      ).map(s=>s.sem)
+    )].sort();
+    semEl.innerHTML='<option value="">كل السداسيات</option>'
+      +usedSems.map(n=>{
+        const label=S.periods[n-1]||('السداسي '+n);
+        return `<option value="${n}"${String(n)===cur?' selected':''}>${label}</option>`;
+      }).join('');
+  }
+
+  // تطبيق الفلاتر
   let list=S.subjects;
   if(subjSemTab)list=list.filter(s=>s.sem==subjSemTab);
   if(q)list=list.filter(s=>s.name.toLowerCase().includes(q));
-  if(fSem)list=list.filter(s=>s.sem==fSem);
   if(fLv)list=list.filter(s=>s.level===fLv);
   if(fDp)list=list.filter(s=>s.dept===fDp);
+  if(fSp)list=list.filter(s=>s.spec===fSp);
+  if(fSem)list=list.filter(s=>s.sem==fSem);
+
   const lbl=document.getElementById('subj-count-lbl');
   if(lbl)lbl.textContent=`عرض ${list.length} من ${S.subjects.length} مقياس`;
   const cnt=document.getElementById('snb-count-subjects');if(cnt)cnt.textContent=S.subjects.length;
   const grid=document.getElementById('subjGrid');if(!grid)return;
+
   grid.innerHTML=list.length?list.map(s=>{
     const ri=S.subjects.indexOf(s);
     const sc=S.sessions.filter(ss=>ss.subj===s.name&&ss.y===S.ay).length;
+    const semLabel=S.periods[s.sem-1]||('السداسي '+s.sem);
     return `<div class="subj-card">
       <div class="subj-left">
         <div class="subj-icon">📖</div>
         <div>
           <div class="subj-name">${s.name}</div>
           <div class="subj-meta">
-            <span class="sem-badge ${s.sem==1?'sem1':'sem2'}">${s.sem==1?'السداسي الأول':'السداسي الثاني'}</span>
+            <span class="sem-badge ${s.sem==1?'sem1':'sem2'}">${semLabel}</span>
             ${s.level?`<span>${s.level}</span>`:''}
-            ${s.spec?`<span>· ${s.spec}</span>`:''}
+            ${s.dept?`<span>· ${s.dept.replace('قسم ','')}</span>`:''}
+            ${s.spec?`<span style="color:#6366f1;font-weight:700;">· ${s.spec}</span>`:''}
             ${sc?`<span style="color:var(--teal);">· ${sc} حصة</span>`:''}
           </div>
         </div>
@@ -2216,7 +2267,23 @@ function renderSubjGrid(){
       </div>
     </div>`;
   }).join('')
-  :'<div style="color:var(--gray);font-size:12px;padding:30px;grid-column:1/-1;text-align:center;">لا توجد مقاييس مطابقة</div>';
+  :'<div style="color:var(--gray);font-size:12px;padding:30px;grid-column:1/-1;text-align:center;">لا توجد مقاييس مطابقة للفلتر</div>';
+}
+
+// cascade handlers
+function onSubjFLvChange(){
+  // عند تغيير المستوى نُعيد ضبط القسم والتخصص والسداسي
+  const dpEl=document.getElementById('subj-f-dept');
+  const spEl=document.getElementById('subj-f-spec');
+  const semEl=document.getElementById('subj-f-sem');
+  if(dpEl)dpEl.value='';if(spEl)spEl.value='';if(semEl)semEl.value='';
+  renderSubjGrid();
+}
+function onSubjFDpChange(){
+  const spEl=document.getElementById('subj-f-spec');
+  const semEl=document.getElementById('subj-f-sem');
+  if(spEl)spEl.value='';if(semEl)semEl.value='';
+  renderSubjGrid();
 }
 function addSubject(){
   const n=document.getElementById('subjIn').value.trim();
@@ -3049,11 +3116,16 @@ function syncMsSectionSel(val){}
 function syncMsGroupSel(val){}
 
 function syncSubjBySem(){
-  const sem=parseInt(document.getElementById('ms-sem')?.value||'1');
   const lv=S.activeTT?.lv||'';
   const dp=S.activeTT?.dp||'';
+  const spec=S.activeTT?.spec||'';
+  const period=parseInt(S.activeTT?.period||'0')||0;
+  // يُصفّي بالتخصص والسداسي من الجدول النشط
   const filtered=S.subjects.filter(s=>
-    (!sem||s.sem===sem)&&(!lv||s.level===lv)&&(!dp||s.dept===dp)
+    (!lv||!s.level||s.level===lv)&&
+    (!dp||!s.dept||s.dept===dp)&&
+    (!spec||!s.spec||s.spec===spec)&&
+    (!period||s.sem===period)
   );
   const sel=document.getElementById('ms-subj-sel');if(!sel)return;
   const cur=sel.value;
