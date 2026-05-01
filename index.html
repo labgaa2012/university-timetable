@@ -1351,7 +1351,12 @@ let S={};
 function load(){
   try{const d=localStorage.getItem(SK);S=d?JSON.parse(d):defState();}catch(e){S=defState();}
   if(!S.subjects||!S.subjects.length) S.subjects=DEFAULT_SUBJECTS();
-  if(!S.specs||!S.specs.length) S.specs=DEFAULT_SPECS();
+  // دمج التخصصات الافتراضية مع الموجودة (تجنب التكرار بالاسم+القسم+المستوى)
+  const defaults=DEFAULT_SPECS();
+  defaults.forEach(def=>{
+    const exists=S.specs.find(s=>s.name===def.name&&s.lv===def.lv&&s.dp===def.dp);
+    if(!exists) S.specs.push(def);
+  });
   if(S.teachers.length && typeof S.teachers[0]==='string'){
     S.teachers=S.teachers.map(n=>({name:n,kind:'permanent',rank:'mca',dept:''}));
     save();
