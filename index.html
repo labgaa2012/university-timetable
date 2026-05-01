@@ -3131,21 +3131,61 @@ function saveSess(){
   const day=modal.dataset.day;
   const slot=modal.dataset.slot;
   const grp=modal.dataset.group!==undefined ? modal.dataset.group : (S.activeTT.group||'');
-  const{lv,dp,spec,section,group}=S.activeTT;
+  const{lv,dp,spec,section}=S.activeTT;
   const sem=parseInt(document.getElementById('ms-sem')?.value||'1');
   const type=document.getElementById('ms-type').value;
+  const tch=document.getElementById('ms-tch')?.value||'';
+  const rm=document.getElementById('ms-rm')?.value||'';
+  const firstLec=parseInt(document.getElementById('ms-firstlec').value||'1');
+
   const data={
     id:id||uid(),y:S.ay,
     lv,dp,spec,section,group:grp,
-    day,slot,sem,subj,
-    tch:document.getElementById('ms-tch')?.value||'',
-    rm:document.getElementById('ms-rm')?.value||'',
-    type,
-    firstLec:parseInt(document.getElementById('ms-firstlec').value||'1')
+    day,slot,sem,subj,tch,rm,type,firstLec
   };
-  if(id){const i=S.sessions.findIndex(s=>s.id===id);if(i>-1)S.sessions[i]=data;}
-  else S.sessions.push(data);
-  save();renderTT();closeM('mSess');toast(id?'✅ تم التعديل':'✅ تمت الإضافة');
+
+  if(id){
+    const i=S.sessions.findIndex(s=>s.id===id);
+    if(i>-1)S.sessions[i]=data;
+  } else {
+    S.sessions.push(data);
+
+    // -- النسخ التلقائي للمحاضرات --
+    // يسري فقط على المحاضرة والمحاضرة عن بعد عند إضافة حصة جديدة
+    if(type==='tlc'||type==='tlc-remote'){
+      // الأفواج المستهدفة: كل الأفواج ضمن نفس الفصيلة والتخصص (باستثناء الفوج الحالي)
+      const targetGroups=S.groups.filter(g=>g!==grp&&g!=='');
+
+      // للأفواج التي لم تُضَف لها هذه الحصة بعد في نفس اليوم والفترة
+      let copied=0;
+      targetGroups.forEach(g=>{
+        // تحقق: هل هناك حصة لهذا الفوج في نفس اليوم/الفترة/التخصص/الفصيلة؟
+        const exists=S.sessions.find(s=>
+          s.y===S.ay&&s.lv===lv&&s.dp===dp&&s.spec===spec&&
+          s.section===section&&s.group===g&&
+          s.day===day&&s.slot===slot
+        );
+        if(!exists){
+          S.sessions.push({
+            ...data,
+            id:uid(),
+            group:g,
+            firstLec:0  // المحاضرات المنسوخة = مكررة (×1.5)
+          });
+          copied++;
+        }
+      });
+
+      if(copied>0){
+        save();renderTT();closeM('mSess');
+        toast(`✅ أُضيفت المحاضرة + نُسخت تلقائياً لـ ${copied} فوج آخر (محاضرة مكررة)`);
+        return;
+      }
+    }
+  }
+
+  save();renderTT();closeM('mSess');
+  toast(id?'✅ تم التعديل':'✅ تمت الإضافة');
 }
 function delSess(id){
   if(!confirm('حذف هذه الحصة؟'))return;
