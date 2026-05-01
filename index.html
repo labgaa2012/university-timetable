@@ -280,6 +280,66 @@ table#ttbl td.ec:hover::after{color:var(--teal);}
   text-align:center;cursor:pointer;font-size:11.5px;font-weight:700;
   color:var(--text-mid);transition:all .2s;background:#fff;}
 .fl-opt.sel{border-color:var(--navy);background:var(--navy);color:#fff;}
+/* SIDEBAR HANDLE TAB — always visible to reopen sidebar */
+#sb-handle{
+  position:fixed;top:50%;right:0;z-index:950;
+  transform:translateY(-50%) translateX(0);
+  transition:transform .35s cubic-bezier(.4,0,.2,1);
+  background:var(--navy);color:var(--gold);
+  width:20px;border-radius:8px 0 0 8px;
+  padding:14px 3px;cursor:pointer;border:none;
+  display:flex;flex-direction:column;align-items:center;gap:4px;
+  box-shadow:-3px 0 12px rgba(0,0,0,.2);
+  font-size:11px;font-weight:700;writing-mode:vertical-rl;
+  font-family:'Cairo',sans-serif;letter-spacing:1px;
+}
+#sb-handle:hover{background:var(--navy-light);}
+/* when sidebar is open, push handle left */
+#sb-handle.sb-open{transform:translateY(-50%) translateX(calc(-1 * var(--sidebar-w)));}
+
+/* SIDEBAR NAV BUTTONS (for التخصصات/الأساتذة/القاعات) */
+.sb-nav-btn{
+  width:100%;padding:13px 16px;background:#fff;border:none;cursor:pointer;
+  display:flex;align-items:center;justify-content:space-between;
+  font-family:'Cairo',sans-serif;font-size:12.5px;font-weight:700;
+  color:var(--navy);transition:all .2s;text-align:right;
+  border-bottom:1px solid #e8edf5;
+}
+.sb-nav-btn:hover{background:#f0f6ff;color:var(--teal);}
+.sb-nav-btn.active-pg{background:linear-gradient(90deg,rgba(13,138,125,.08),transparent);
+  color:var(--teal);border-right:3px solid var(--teal);}
+.sb-nav-btn .snb-left{display:flex;align-items:center;gap:9px;}
+.sb-nav-btn .snb-count{
+  background:var(--navy);color:var(--gold);
+  padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700;
+}
+.sb-nav-btn .snb-arrow{font-size:12px;color:var(--teal);transition:transform .2s;}
+.sb-nav-btn:hover .snb-arrow{transform:translateX(-4px);}
+
+/* MANAGEMENT PAGE STYLES */
+.mgmt-header{display:flex;align-items:center;justify-content:space-between;
+  margin-bottom:18px;padding-bottom:12px;border-bottom:2px solid var(--gray-light);flex-wrap:wrap;gap:10px;}
+.mgmt-add-bar{background:var(--gray-light);border-radius:10px;padding:14px 16px;
+  margin-bottom:16px;display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;}
+.mgmt-add-bar .fg{margin:0;flex:1;min-width:160px;}
+.mgmt-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px;}
+.mgmt-card{background:#fff;border:1.5px solid #e0e8f5;border-radius:10px;
+  padding:12px 14px;display:flex;align-items:center;justify-content:space-between;
+  transition:all .2s;}
+.mgmt-card:hover{border-color:var(--teal);box-shadow:0 3px 12px rgba(13,138,125,.1);}
+.mgmt-card .mc-left{display:flex;align-items:center;gap:10px;}
+.mgmt-card .mc-avatar{width:36px;height:36px;border-radius:9px;
+  background:linear-gradient(135deg,var(--navy),var(--navy-light));
+  display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;}
+.mgmt-card .mc-name{font-size:12.5px;font-weight:700;color:var(--text-dark);}
+.mgmt-card .mc-sub{font-size:10.5px;color:var(--gray);margin-top:2px;}
+.rooms-mgmt-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:7px;}
+.room-mgmt-card{padding:8px;border-radius:8px;border:1.5px solid #e0e8f5;background:#fff;
+  text-align:center;font-size:11.5px;font-weight:600;transition:all .2s;
+  display:flex;align-items:center;justify-content:space-between;gap:4px;}
+.room-mgmt-card:hover{border-color:var(--teal);}
+.room-mgmt-card span{flex:1;text-align:center;}
+
 /* TOAST */
 #toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);
   background:var(--navy);color:#fff;padding:10px 20px;border-radius:10px;
@@ -372,51 +432,53 @@ table#ttbl td.ec:hover::after{color:var(--teal);}
       <span class="aa">▼</span>
     </button>
     <div class="abb"><div class="abt">
-      <div class="fg"><div class="inlf">
-        <input class="fi" id="spIn" placeholder="اسم التخصص...">
-        <button class="btn bp" onclick="addSpec()">إضافة</button>
-      </div></div>
+      <!-- kept minimal in sidebar — full management in main page -->
+      <div class="fg">
+        <div class="inlf">
+          <input class="fi" id="spIn" placeholder="اسم التخصص...">
+          <button class="btn bp" onclick="addSpec()">إضافة</button>
+        </div>
+      </div>
       <div class="ilist" id="spList"></div>
     </div></div>
   </div>
 
-  <div class="aci">
-    <button class="acb" onclick="toggleAcc(this)">
-      <div class="al"><div class="ai">👨‍🏫</div><span>الأساتذة</span></div>
-      <span class="aa">▼</span>
-    </button>
-    <div class="abb"><div class="abt">
-      <div class="fg">
-        <label class="fl">اسم الأستاذ</label>
-        <input class="fi" id="tchIn" placeholder="اسم الأستاذ...">
-      </div>
-      <div class="fg">
-        <label class="fl">نوع الأستاذ</label>
-        <select class="fs" id="tchKind">
-          <option value="permanent">دائم (نصاب: 9 ساعات)</option>
-          <option value="temporary">مؤقت / مشارك (كل ساعاته إضافية)</option>
-        </select>
-      </div>
-      <button class="btn bp" style="width:100%;" onclick="addTeacher()">➕ إضافة أستاذ</button>
-      <div class="ilist" id="tchList"></div>
-    </div></div>
+  <!-- SEPARATOR -->
+  <div style="padding:8px 14px;font-size:10px;color:var(--gray);font-weight:700;
+    background:var(--gray-light);border-top:1px solid #e0e8f5;border-bottom:1px solid #e0e8f5;">
+    إدارة البيانات — انقر للفتح في الصفحة الرئيسية
   </div>
 
-  <div class="aci">
-    <button class="acb" onclick="toggleAcc(this)">
-      <div class="al"><div class="ai">🏫</div><span>القاعات</span></div>
-      <span class="aa">▼</span>
-    </button>
-    <div class="abb"><div class="abt">
-      <div class="fg"><div class="inlf">
-        <input class="fi" id="rmIn" placeholder="اسم القاعة...">
-        <button class="btn bp" onclick="addRoom()">إضافة</button>
-      </div></div>
-      <div style="font-size:10px;color:var(--gray);margin:4px 0;">✅ 51 قاعة افتراضية محملة</div>
-      <div class="ilist" id="rmList" style="max-height:160px;overflow-y:auto;"></div>
-    </div></div>
-  </div>
+  <!-- NAV BUTTON: الأساتذة -->
+  <button class="sb-nav-btn" id="snb-teachers" onclick="showMgmtPg('teachers')">
+    <div class="snb-left">
+      <div class="ai">👨‍🏫</div>
+      <span>إدارة الأساتذة</span>
+    </div>
+    <div style="display:flex;align-items:center;gap:6px;">
+      <span class="snb-count" id="snb-count-teachers">0</span>
+      <span class="snb-arrow">←</span>
+    </div>
+  </button>
+
+  <!-- NAV BUTTON: القاعات -->
+  <button class="sb-nav-btn" id="snb-rooms-manage" onclick="showMgmtPg('rooms-manage')">
+    <div class="snb-left">
+      <div class="ai">🏫</div>
+      <span>إدارة القاعات</span>
+    </div>
+    <div style="display:flex;align-items:center;gap:6px;">
+      <span class="snb-count" id="snb-count-rooms">0</span>
+      <span class="snb-arrow">←</span>
+    </div>
+  </button>
+
 </aside>
+
+<!-- SIDEBAR PERSISTENT HANDLE -->
+<button id="sb-handle" class="sb-open" onclick="toggleSB()" title="إظهار/إخفاء اللوحة">
+  ☰
+</button>
 
 <!-- MAIN -->
 <main id="main">
@@ -513,6 +575,67 @@ table#ttbl td.ec:hover::after{color:var(--teal);}
         </div>
         <div id="cp-res"><div style="color:var(--gray);font-size:12px;padding:20px;text-align:center;">⬅️ اختر يوم وقاعة ثم ابحث</div></div>
       </div>
+    </div>
+  </div>
+
+  <!-- TEACHERS MANAGEMENT PAGE -->
+  <div class="pg" id="pg-teachers">
+    <div class="mc">
+      <div class="mgmt-header">
+        <div class="mct"><div class="mcti">👨‍🏫</div>إدارة الأساتذة</div>
+        <div class="frow">
+          <button class="btn bn" onclick="expTeachersExcel()">📊 تصدير Excel</button>
+          <button class="btn bp bsm" onclick="showPg('timetable', document.querySelector('.nav-tab'))">← العودة للجدول</button>
+        </div>
+      </div>
+      <!-- Add bar -->
+      <div class="mgmt-add-bar">
+        <div class="fg">
+          <label class="fl">اسم الأستاذ</label>
+          <input class="fi" id="tchIn" placeholder="أدخل اسم الأستاذ...">
+        </div>
+        <div class="fg">
+          <label class="fl">نوع الأستاذ</label>
+          <select class="fs" id="tchKind">
+            <option value="permanent">دائم (نصاب: 9 ساعات)</option>
+            <option value="temporary">مؤقت / مشارك (كل ساعاته إضافية)</option>
+          </select>
+        </div>
+        <button class="btn bg" onclick="addTeacher()" style="white-space:nowrap;">➕ إضافة أستاذ</button>
+      </div>
+      <!-- Search -->
+      <div style="margin-bottom:12px;">
+        <input class="fi" id="tch-search" placeholder="🔍 بحث عن أستاذ..." oninput="filterTeachers()" style="max-width:300px;">
+      </div>
+      <!-- Grid -->
+      <div class="mgmt-grid" id="tchGrid"></div>
+    </div>
+  </div>
+
+  <!-- ROOMS MANAGEMENT PAGE -->
+  <div class="pg" id="pg-rooms-manage">
+    <div class="mc">
+      <div class="mgmt-header">
+        <div class="mct"><div class="mcti">🏫</div>إدارة القاعات</div>
+        <div class="frow">
+          <span style="font-size:11.5px;color:var(--gray);font-weight:600;" id="rm-total-lbl"></span>
+          <button class="btn bp bsm" onclick="showPg('timetable', document.querySelector('.nav-tab'))">← العودة للجدول</button>
+        </div>
+      </div>
+      <!-- Add bar -->
+      <div class="mgmt-add-bar">
+        <div class="fg">
+          <label class="fl">اسم القاعة أو المدرج</label>
+          <input class="fi" id="rmIn" placeholder="مثال: القاعة 49 أو مدرج د...">
+        </div>
+        <button class="btn bg" onclick="addRoom()" style="white-space:nowrap;">➕ إضافة</button>
+      </div>
+      <!-- Amphi section -->
+      <div style="font-size:11.5px;font-weight:700;color:var(--text-mid);margin-bottom:8px;">🏛️ المدرجات</div>
+      <div class="rooms-mgmt-grid" id="amphi-mgmt-grid" style="margin-bottom:16px;"></div>
+      <!-- Rooms section -->
+      <div style="font-size:11.5px;font-weight:700;color:var(--text-mid);margin-bottom:8px;">🚪 القاعات</div>
+      <div class="rooms-mgmt-grid" id="rooms-mgmt-grid"></div>
     </div>
   </div>
 
@@ -758,6 +881,9 @@ function toggleSB(){
   document.getElementById('sidebar').classList.toggle('hidden',!sbOpen);
   document.getElementById('main').classList.toggle('exp',!sbOpen);
   document.getElementById('sb-toggle').textContent=sbOpen?'☰':'◁';
+  const handle=document.getElementById('sb-handle');
+  handle.classList.toggle('sb-open',sbOpen);
+  handle.textContent=sbOpen?'☰':'☰';
 }
 
 // ── ACCORDION ─────────────────────────────────────
@@ -771,6 +897,7 @@ function toggleAcc(btn){
 function showPg(id,btn){
   document.querySelectorAll('.pg').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('.nav-tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.sb-nav-btn').forEach(b=>b.classList.remove('active-pg'));
   document.getElementById('pg-'+id).classList.add('active');
   if(btn)btn.classList.add('active');
   if(id==='rooms')renderRooms();
@@ -778,6 +905,17 @@ function showPg(id,btn){
   if(id==='exams')renderExams();
   if(id==='archive')renderArchive();
   if(id==='overtime')renderOvertime();
+}
+
+function showMgmtPg(id){
+  document.querySelectorAll('.pg').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.sb-nav-btn').forEach(b=>b.classList.remove('active-pg'));
+  document.getElementById('pg-'+id).classList.add('active');
+  const btn=document.getElementById('snb-'+id);
+  if(btn)btn.classList.add('active-pg');
+  if(id==='teachers')renderTchGrid();
+  if(id==='rooms-manage')renderRmGrid();
 }
 
 // ── RENDER SIDEBAR ────────────────────────────────
@@ -815,36 +953,110 @@ function renderSpList(){
       <div class="iac"><button class="icb idl" onclick="rmSp(${i})">🗑️</button></div></div>`).join('')
     :'<div style="font-size:10.5px;color:var(--gray);">لا توجد تخصصات</div>';
 }
-function renderTchList(){
-  document.getElementById('tchList').innerHTML=S.teachers.map((t,i)=>{
-    const kb=t.kind==='permanent'
-      ?'<span class="kb-p">دائم</span>'
-      :'<span class="kb-t">مؤقت</span>';
-    return `<div class="icard">
-      <span>👨‍🏫 ${t.name} ${kb}</span>
-      <div class="iac">
-        <button class="icb ied" onclick="openEdit('teacher',${i},'${t.name}')">✏️</button>
-        <button class="icb idl" onclick="rmTch(${i})">🗑️</button>
-      </div></div>`;
-  }).join('');
+function renderTchList(){renderTchGrid();}
+function renderTchGrid(){
+  const grid=document.getElementById('tchGrid');
+  if(grid){
+    const q=(document.getElementById('tch-search')?.value||'').trim().toLowerCase();
+    const list=q?S.teachers.filter(t=>t.name.toLowerCase().includes(q)):S.teachers;
+    grid.innerHTML=list.length?list.map((t)=>{
+      const realIdx=S.teachers.indexOf(t);
+      const kb=t.kind==='permanent'?'<span class="kb-p">دائم</span>':'<span class="kb-t">مؤقت</span>';
+      const sc=S.sessions.filter(s=>s.tch===t.name&&s.y===S.ay).length;
+      return `<div class="mgmt-card">
+        <div class="mc-left">
+          <div class="mc-avatar">👨‍🏫</div>
+          <div>
+            <div class="mc-name">${t.name}</div>
+            <div class="mc-sub">${kb} · ${sc} حصة هذا الفصل</div>
+          </div>
+        </div>
+        <div class="iac">
+          <button class="icb ied" onclick="openEdit('teacher',${realIdx},'${t.name}')">✏️</button>
+          <button class="icb idl" onclick="rmTch(${realIdx})">🗑️</button>
+        </div>
+      </div>`;
+    }).join(''):'<div style="color:var(--gray);font-size:12px;padding:20px;grid-column:1/-1;text-align:center;">لا يوجد أساتذة — أضف من الأعلى</div>';
+  }
   const opts=S.teachers.map(t=>`<option>${t.name}</option>`).join('');
   ['ms-tch','me-tch'].forEach(id=>{const el=document.getElementById(id);if(el)el.innerHTML=opts;});
   const cpT=document.getElementById('cp-teach');
   if(cpT)cpT.innerHTML='<option value="">-- الكل --</option>'+opts;
   const otF=document.getElementById('ot-filter');
   if(otF)otF.innerHTML='<option value="">-- جميع الأساتذة --</option>'+opts;
+  const cnt=document.getElementById('snb-count-teachers');
+  if(cnt)cnt.textContent=S.teachers.length;
   updStats();
 }
-function renderRmList(){
-  document.getElementById('rmList').innerHTML=S.rooms.slice(0,8).map((r,i)=>
-    `<div class="icard"><span>🏫 ${r}</span><div class="iac">
-    <button class="icb idl" onclick="rmRm(${i})">🗑️</button></div></div>`).join('')
-    +(S.rooms.length>8?`<div style="font-size:10px;color:var(--gray);padding:4px;text-align:center;">... و ${S.rooms.length-8} آخرين</div>`:'');
+function filterTeachers(){renderTchGrid();}
+function addTeacher(){
+  const n=document.getElementById('tchIn').value.trim();
+  const k=document.getElementById('tchKind')?.value||'permanent';
+  if(!n){toast('⚠️ أدخل اسم الأستاذ');return;}
+  S.teachers.push({name:n,kind:k});
+  document.getElementById('tchIn').value='';
+  save();renderTchGrid();toast('✅ أضيف: '+n);
+}
+function rmTch(i){
+  if(!confirm('حذف الأستاذ '+S.teachers[i]?.name+'؟'))return;
+  S.teachers.splice(i,1);save();renderTchGrid();toast('🗑️ تم الحذف');
+}
+function expTeachersExcel(){
+  const wb=XLSX.utils.book_new();
+  const data=[['الاسم','النوع','عدد الحصص ('+S.ay+')']];
+  S.teachers.forEach(t=>{
+    data.push([t.name,t.kind==='permanent'?'دائم':'مؤقت',
+      S.sessions.filter(s=>s.tch===t.name&&s.y===S.ay).length]);
+  });
+  const ws=XLSX.utils.aoa_to_sheet(data);
+  ws['!cols']=[{wch:28},{wch:12},{wch:16}];
+  XLSX.utils.book_append_sheet(wb,ws,'الأساتذة');
+  XLSX.writeFile(wb,'teachers-'+S.ay.replace('/','_')+'.xlsx');
+  toast('📊 تم تصدير قائمة الأساتذة');
+}
+
+function renderRmList(){renderRmGrid();}
+function renderRmGrid(){
+  const regularRooms=S.rooms.filter(r=>!AMPHI.includes(r));
+  const amphiRooms=S.rooms.filter(r=>AMPHI.includes(r));
+  // Amphi grid in mgmt page
+  const ag=document.getElementById('amphi-mgmt-grid');
+  if(ag){
+    ag.innerHTML=amphiRooms.map((r,i)=>{
+      const realIdx=S.rooms.indexOf(r);
+      return `<div class="room-mgmt-card">
+        <span>🏛️ ${r}</span>
+        <button class="icb idl" style="flex-shrink:0;" onclick="rmRm(${realIdx})">✕</button>
+      </div>`;
+    }).join('');
+  }
+  // Regular rooms grid
+  const rg=document.getElementById('rooms-mgmt-grid');
+  if(rg){
+    rg.innerHTML=regularRooms.map((r)=>{
+      const realIdx=S.rooms.indexOf(r);
+      return `<div class="room-mgmt-card">
+        <span>${r}</span>
+        <button class="icb idl" style="flex-shrink:0;" onclick="rmRm(${realIdx})">✕</button>
+      </div>`;
+    }).join('');
+  }
+  const lbl=document.getElementById('rm-total-lbl');
+  if(lbl)lbl.textContent=`إجمالي: ${S.rooms.length} (${amphiRooms.length} مدرج + ${regularRooms.length} قاعة)`;
   const opts=S.rooms.map(r=>`<option>${r}</option>`).join('');
   ['ms-rm','me-rm'].forEach(id=>{const el=document.getElementById(id);if(el)el.innerHTML=opts;});
   const cpR=document.getElementById('cp-room');if(cpR)cpR.innerHTML=opts;
+  const cnt=document.getElementById('snb-count-rooms');
+  if(cnt)cnt.textContent=S.rooms.length;
   updStats();
 }
+function addRoom(){
+  const v=document.getElementById('rmIn').value.trim();
+  if(!v){toast('⚠️ أدخل اسم القاعة');return;}
+  S.rooms.unshift(v);document.getElementById('rmIn').value='';
+  save();renderRmGrid();toast('✅ أضيفت: '+v);
+}
+function rmRm(i){S.rooms.splice(i,1);save();renderRmGrid();toast('🗑️ تم الحذف');}
 function updStats(){
   document.getElementById('st1').textContent=S.rooms.length;
   document.getElementById('st2').textContent=S.teachers.length;
@@ -857,7 +1069,7 @@ function syncSel(id,arr,selected){
 }
 function renderAll(){
   renderYrList();renderLvList();renderDptList();renderSpList();
-  renderTchList();renderRmList();renderTT();renderExams();renderArchive();
+  renderTchGrid();renderRmGrid();renderTT();renderExams();renderArchive();
 }
 
 // ── YEAR / LEVEL / DEPT CRUD ─────────────────────
@@ -892,19 +1104,6 @@ function onLvCh(){
 function rmLv(i){S.levels.splice(i,1);save();renderAll();}
 function onDptCh(){S.ad=document.getElementById('dptSel').value;save();renderTT();}
 function rmDpt(i){S.depts.splice(i,1);save();renderAll();}
-
-function addTeacher(){
-  const n=document.getElementById('tchIn').value.trim();
-  const k=document.getElementById('tchKind')?.value||'permanent';
-  if(!n)return;
-  S.teachers.push({name:n,kind:k});
-  document.getElementById('tchIn').value='';
-  save();renderTchList();toast('✅ أضيف: '+n);
-}
-function rmTch(i){S.teachers.splice(i,1);save();renderTchList();toast('🗑️ تم الحذف');}
-
-function addRoom(){const v=document.getElementById('rmIn').value.trim();if(!v)return;S.rooms.unshift(v);document.getElementById('rmIn').value='';save();renderRmList();toast('✅ أضيفت: '+v);}
-function rmRm(i){S.rooms.splice(i,1);save();renderRmList();toast('🗑️ تم الحذف');}
 
 function addSpec(){
   const n=document.getElementById('spIn').value.trim();
