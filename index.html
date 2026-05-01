@@ -340,6 +340,23 @@ table#ttbl td.ec:hover::after{color:var(--teal);}
 .room-mgmt-card:hover{border-color:var(--teal);}
 .room-mgmt-card span{flex:1;text-align:center;}
 
+/* YEAR / LEVEL / DEPT CARDS */
+.yl-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px;margin-top:4px;}
+.yl-card{background:#fff;border:1.5px solid #e0e8f5;border-radius:11px;
+  padding:14px 16px;display:flex;align-items:center;justify-content:space-between;
+  transition:all .2s;cursor:pointer;}
+.yl-card:hover{border-color:var(--teal);box-shadow:0 3px 12px rgba(13,138,125,.1);}
+.yl-card.active-item{border-color:var(--navy);background:linear-gradient(135deg,var(--navy),var(--navy-light));color:#fff;}
+.yl-card.active-item .yl-sub{color:var(--gold-light);}
+.yl-left{display:flex;align-items:center;gap:10px;}
+.yl-icon{width:36px;height:36px;border-radius:9px;
+  background:linear-gradient(135deg,var(--navy),var(--navy-light));
+  display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;}
+.yl-card.active-item .yl-icon{background:rgba(255,255,255,.2);}
+.yl-name{font-size:12.5px;font-weight:700;color:var(--text-dark);}
+.yl-card.active-item .yl-name{color:#fff;}
+.yl-sub{font-size:10px;color:var(--gray);margin-top:2px;}
+.yl-actions{display:flex;gap:4px;}
 /* IMPORT BUTTON */
 .bi{background:#16a34a;color:#fff;}.bi:hover{background:#15803d;transform:translateY(-1px);}
 .btpl{background:#f0fdf4;color:#15803d;border:1.5px solid #86efac;}.btpl:hover{background:#dcfce7;}
@@ -449,44 +466,41 @@ table.occ-matrix td.cell-occ:hover{background:#fee2e2;filter:brightness(.97);}
 <aside id="sidebar">
   <div class="sb-hdr"><h2>⚙️ لوحة الإدارة</h2></div>
 
-  <div class="aci">
-    <button class="acb" onclick="toggleAcc(this)">
-      <div class="al"><div class="ai">📆</div><span>السنة الدراسية</span></div>
-      <span class="aa">▼</span>
-    </button>
-    <div class="abb"><div class="abt">
-      <div class="fg"><label class="fl">اختر / أنشئ سنة</label>
-        <select class="fs" id="yrSel" onchange="onYearCh()"></select>
-      </div>
-      <div class="ilist" id="yrList"></div>
-    </div></div>
-  </div>
+  <!-- NAV BUTTON: السنة الدراسية -->
+  <button class="sb-nav-btn" id="snb-years" onclick="showMgmtPg('years')">
+    <div class="snb-left">
+      <div class="ai">📆</div>
+      <span>السنة الدراسية</span>
+    </div>
+    <div style="display:flex;align-items:center;gap:6px;">
+      <span class="snb-count" id="snb-count-years">0</span>
+      <span class="snb-arrow">←</span>
+    </div>
+  </button>
 
-  <div class="aci">
-    <button class="acb" onclick="toggleAcc(this)">
-      <div class="al"><div class="ai">🎓</div><span>المستوى</span></div>
-      <span class="aa">▼</span>
-    </button>
-    <div class="abb"><div class="abt">
-      <div class="fg"><label class="fl">اختر المستوى</label>
-        <select class="fs" id="lvSel" onchange="onLvCh()"></select>
-      </div>
-      <div class="ilist" id="lvList"></div>
-    </div></div>
-  </div>
+  <!-- NAV BUTTON: المستوى -->
+  <button class="sb-nav-btn" id="snb-levels" onclick="showMgmtPg('levels')">
+    <div class="snb-left">
+      <div class="ai">🎓</div>
+      <span>المستويات</span>
+    </div>
+    <div style="display:flex;align-items:center;gap:6px;">
+      <span class="snb-count" id="snb-count-levels">0</span>
+      <span class="snb-arrow">←</span>
+    </div>
+  </button>
 
-  <div class="aci">
-    <button class="acb" onclick="toggleAcc(this)">
-      <div class="al"><div class="ai">🏛️</div><span>الأقسام</span></div>
-      <span class="aa">▼</span>
-    </button>
-    <div class="abb"><div class="abt">
-      <div class="fg"><label class="fl">اختر القسم</label>
-        <select class="fs" id="dptSel" onchange="onDptCh()"></select>
-      </div>
-      <div class="ilist" id="dptList"></div>
-    </div></div>
-  </div>
+  <!-- NAV BUTTON: الأقسام -->
+  <button class="sb-nav-btn" id="snb-depts" onclick="showMgmtPg('depts')">
+    <div class="snb-left">
+      <div class="ai">🏛️</div>
+      <span>الأقسام</span>
+    </div>
+    <div style="display:flex;align-items:center;gap:6px;">
+      <span class="snb-count" id="snb-count-depts">0</span>
+      <span class="snb-arrow">←</span>
+    </div>
+  </button>
 
   <!-- SEPARATOR -->
   <div style="padding:8px 14px;font-size:10px;color:var(--gray);font-weight:700;
@@ -544,6 +558,79 @@ table.occ-matrix td.cell-occ:hover{background:#fee2e2;filter:brightness(.97);}
     <div class="stat s2"><div class="sval" id="st2">0</div><div class="slbl">الأساتذة</div></div>
     <div class="stat s3"><div class="sval" id="st3">0</div><div class="slbl">الحصص المجدولة</div></div>
     <div class="stat s4"><div class="sval" id="st4">0</div><div class="slbl">الامتحانات</div></div>
+  </div>
+
+  <!-- ══ YEARS MANAGEMENT PAGE ══ -->
+  <div class="pg" id="pg-years">
+    <div class="mc">
+      <div class="mgmt-header">
+        <div class="mct"><div class="mcti">📆</div>إدارة السنوات الدراسية</div>
+        <div class="frow">
+          <button class="btn bn" onclick="expYearsExcel()">📊 تصدير</button>
+          <button class="btn bp bsm" onclick="showPg('timetable',document.querySelector('.nav-tab'))">← العودة</button>
+        </div>
+      </div>
+      <div class="mgmt-add-bar">
+        <div class="fg" style="flex:1;">
+          <label class="fl">إضافة سنة دراسية</label>
+          <input class="fi" id="yrIn" placeholder="مثال: 2030/2031 (أو فارغ للإضافة التلقائية)">
+        </div>
+        <button class="btn bg" onclick="addYearManual()" style="white-space:nowrap;align-self:flex-end;">➕ إضافة</button>
+        <button class="btn bn" onclick="addNextYear()" style="white-space:nowrap;align-self:flex-end;">⚡ التالية تلقائياً</button>
+      </div>
+      <div style="font-size:11px;color:var(--gray);margin-bottom:14px;">
+        💡 انقر على سنة لتفعيلها (السنة النشطة = السنة التي تعمل عليها الآن)
+      </div>
+      <div class="yl-grid" id="yrGrid"></div>
+    </div>
+  </div>
+
+  <!-- ══ LEVELS MANAGEMENT PAGE ══ -->
+  <div class="pg" id="pg-levels">
+    <div class="mc">
+      <div class="mgmt-header">
+        <div class="mct"><div class="mcti">🎓</div>إدارة المستويات</div>
+        <div class="frow">
+          <button class="btn bn" onclick="expLevelsExcel()">📊 تصدير</button>
+          <button class="btn bp bsm" onclick="showPg('timetable',document.querySelector('.nav-tab'))">← العودة</button>
+        </div>
+      </div>
+      <div class="mgmt-add-bar">
+        <div class="fg" style="flex:1;">
+          <label class="fl">اسم المستوى الجديد</label>
+          <input class="fi" id="lvIn" placeholder="مثال: سنة ثالثة ماستر...">
+        </div>
+        <button class="btn bg" onclick="addLevelManual()" style="white-space:nowrap;align-self:flex-end;">➕ إضافة</button>
+      </div>
+      <div style="font-size:11px;color:var(--gray);margin-bottom:14px;">
+        💡 انقر على مستوى لتفعيله — سيُستخدم افتراضياً في الجداول
+      </div>
+      <div class="yl-grid" id="lvGrid"></div>
+    </div>
+  </div>
+
+  <!-- ══ DEPTS MANAGEMENT PAGE ══ -->
+  <div class="pg" id="pg-depts">
+    <div class="mc">
+      <div class="mgmt-header">
+        <div class="mct"><div class="mcti">🏛️</div>إدارة الأقسام</div>
+        <div class="frow">
+          <button class="btn bn" onclick="expDeptsExcel()">📊 تصدير</button>
+          <button class="btn bp bsm" onclick="showPg('timetable',document.querySelector('.nav-tab'))">← العودة</button>
+        </div>
+      </div>
+      <div class="mgmt-add-bar">
+        <div class="fg" style="flex:1;">
+          <label class="fl">اسم القسم الجديد</label>
+          <input class="fi" id="dptIn" placeholder="مثال: قسم الرياضيات...">
+        </div>
+        <button class="btn bg" onclick="addDeptManual()" style="white-space:nowrap;align-self:flex-end;">➕ إضافة</button>
+      </div>
+      <div style="font-size:11px;color:var(--gray);margin-bottom:14px;">
+        💡 انقر على قسم لتفعيله — سيُستخدم افتراضياً في الجداول
+      </div>
+      <div class="yl-grid" id="dptGrid"></div>
+    </div>
   </div>
 
   <!-- TIMETABLE -->
@@ -1104,39 +1191,160 @@ function showMgmtPg(id){
   if(id==='teachers')renderTchGrid();
   if(id==='rooms-manage')renderRmGrid();
   if(id==='specs')renderSpGrid();
+  if(id==='years')renderYrGrid();
+  if(id==='levels')renderLvGrid();
+  if(id==='depts')renderDptGrid();
 }
 
 // ── RENDER SIDEBAR ────────────────────────────────
-function renderYrList(){
-  const sel=document.getElementById('yrSel');
-  sel.innerHTML=S.years.map(y=>`<option${y===S.ay?' selected':''}>${y}</option>`).join('')
-    +'<option value="__add__">➕ إضافة سنة دراسية</option>';
-  document.getElementById('yrList').innerHTML=S.years.map((y,i)=>
-    `<div class="icard"><span>📅 ${y}</span><div class="iac">
-    <button class="icb ied" onclick="openEdit('year',${i},'${y}')">✏️</button>
-    <button class="icb idl" onclick="rmYear(${i})">🗑️</button>
-    </div></div>`).join('');
+// ── YEAR GRID ─────────────────────────────────────
+function renderYrList(){renderYrGrid();}
+function renderYrGrid(){
+  const grid=document.getElementById('yrGrid');
+  if(grid){
+    grid.innerHTML=S.years.map((y,i)=>{
+      const isActive=y===S.ay;
+      const sc=S.sessions.filter(s=>s.y===y).length;
+      const ec=S.exams.filter(e=>e.y===y).length;
+      return `<div class="yl-card${isActive?' active-item':''}" onclick="setActiveYear('${y}')">
+        <div class="yl-left">
+          <div class="yl-icon">📆</div>
+          <div>
+            <div class="yl-name">${y}</div>
+            <div class="yl-sub">${sc} حصة · ${ec} امتحان${isActive?' · ✅ نشطة':''}</div>
+          </div>
+        </div>
+        <div class="yl-actions" onclick="event.stopPropagation()">
+          <button class="icb ied" onclick="openEdit('year',${i},'${y}')">✏️</button>
+          <button class="icb idl" onclick="rmYear(${i})">🗑️</button>
+        </div>
+      </div>`;
+    }).join('');
+  }
+  const cnt=document.getElementById('snb-count-years');
+  if(cnt)cnt.textContent=S.years.length;
   document.getElementById('ybadge').textContent=S.ay;
 }
-function renderLvList(){
-  const sel=document.getElementById('lvSel');
-  sel.innerHTML=S.levels.map(l=>`<option${l===S.al?' selected':''}>${l}</option>`).join('')
-    +'<option value="__add__">➕ إضافة مستوى</option>';
-  document.getElementById('lvList').innerHTML=S.levels.map((l,i)=>
-    `<div class="icard"><span>${l}</span><div class="iac">
-    <button class="icb idl" onclick="rmLv(${i})">🗑️</button></div></div>`).join('');
-  syncSel('tt-lv',S.levels,S.al);syncSel('ms-lv',S.levels);syncSel('me-lv',S.levels);syncSel('sp-lv',S.levels);
-  syncSel('sp-lv-inline',S.levels);
+function setActiveYear(y){S.ay=y;save();renderYrGrid();renderTT();renderExams();updStats();toast('✅ السنة النشطة: '+y);}
+function addYearManual(){
+  const v=document.getElementById('yrIn').value.trim();
+  if(!v){addNextYear();return;}
+  if(S.years.includes(v)){toast('⚠️ السنة موجودة بالفعل');return;}
+  S.years.push(v);S.ay=v;document.getElementById('yrIn').value='';
+  save();renderYrGrid();updStats();toast('✅ أضيفت: '+v);
 }
-function renderDptList(){
-  syncSel('dptSel',S.depts,S.ad);
-  document.getElementById('dptList').innerHTML=S.depts.map((d,i)=>
-    `<div class="icard"><span>${d}</span><div class="iac">
-    <button class="icb ied" onclick="openEdit('dept',${i},'${d}')">✏️</button>
-    <button class="icb idl" onclick="rmDpt(${i})">🗑️</button></div></div>`).join('');
-  syncSel('tt-dp',S.depts,S.ad);syncSel('ms-dp',S.depts);syncSel('me-dp',S.depts);syncSel('sp-dp',S.depts);
-  // Sync inline selects in specs page
-  syncSel('sp-lv-inline',S.levels);syncSel('sp-dp-inline',S.depts);
+function addNextYear(){
+  const last=S.years[S.years.length-1];
+  const[a,b]=last.split('/').map(Number);
+  const next=`${a+1}/${b+1}`;
+  if(!S.years.includes(next))S.years.push(next);
+  S.ay=next;save();renderYrGrid();updStats();toast('✅ أضيفت تلقائياً: '+next);
+}
+function rmYear(i){
+  if(!confirm('حذف '+S.years[i]+'؟'))return;
+  const r=S.years.splice(i,1)[0];
+  S.sessions=S.sessions.filter(s=>s.y!==r);S.exams=S.exams.filter(e=>e.y!==r);
+  if(S.ay===r)S.ay=S.years[0]||'';
+  save();renderYrGrid();updStats();toast('🗑️ تم الحذف');
+}
+function expYearsExcel(){
+  const wb=XLSX.utils.book_new();
+  const data=[['السنة الدراسية','عدد الحصص','عدد الامتحانات','الحالة']];
+  S.years.forEach(y=>data.push([y,S.sessions.filter(s=>s.y===y).length,S.exams.filter(e=>e.y===y).length,y===S.ay?'نشطة':'']));
+  const ws=XLSX.utils.aoa_to_sheet(data);ws['!cols']=[{wch:14},{wch:12},{wch:14},{wch:8}];
+  XLSX.utils.book_append_sheet(wb,ws,'السنوات');XLSX.writeFile(wb,'years.xlsx');toast('📊 تم التصدير');
+}
+
+// ── LEVEL GRID ────────────────────────────────────
+function renderLvList(){renderLvGrid();}
+function renderLvGrid(){
+  const grid=document.getElementById('lvGrid');
+  if(grid){
+    grid.innerHTML=S.levels.map((l,i)=>{
+      const isActive=l===S.al;
+      const sc=S.sessions.filter(s=>s.lv===l&&s.y===S.ay).length;
+      return `<div class="yl-card${isActive?' active-item':''}" onclick="setActiveLevel(${i})">
+        <div class="yl-left">
+          <div class="yl-icon">🎓</div>
+          <div>
+            <div class="yl-name">${l}</div>
+            <div class="yl-sub">${sc} حصة${isActive?' · ✅ نشط':''}</div>
+          </div>
+        </div>
+        <div class="yl-actions" onclick="event.stopPropagation()">
+          <button class="icb idl" onclick="rmLv(${i})">🗑️</button>
+        </div>
+      </div>`;
+    }).join('');
+  }
+  const opts=S.levels.map(l=>`<option${l===S.al?' selected':''}>${l}</option>`).join('');
+  ['tt-lv','ms-lv','me-lv','sp-lv','sp-lv-inline'].forEach(id=>{const el=document.getElementById(id);if(el)el.innerHTML=opts;});
+  const cnt=document.getElementById('snb-count-levels');if(cnt)cnt.textContent=S.levels.length;
+}
+function setActiveLevel(i){S.al=S.levels[i];save();renderLvGrid();renderTT();toast('✅ المستوى النشط: '+S.al);}
+function addLevelManual(){
+  const n=document.getElementById('lvIn').value.trim();
+  if(!n){toast('⚠️ أدخل اسم المستوى');return;}
+  if(S.levels.includes(n)){toast('⚠️ المستوى موجود');return;}
+  S.levels.push(n);S.al=n;document.getElementById('lvIn').value='';
+  save();renderLvGrid();toast('✅ أضيف: '+n);
+}
+function rmLv(i){if(!confirm('حذف '+S.levels[i]+'؟'))return;S.levels.splice(i,1);save();renderAll();toast('🗑️ تم الحذف');}
+function expLevelsExcel(){
+  const wb=XLSX.utils.book_new();
+  const data=[['المستوى','عدد الحصص ('+S.ay+')','الحالة']];
+  S.levels.forEach(l=>data.push([l,S.sessions.filter(s=>s.lv===l&&s.y===S.ay).length,l===S.al?'نشط':'']));
+  const ws=XLSX.utils.aoa_to_sheet(data);ws['!cols']=[{wch:22},{wch:14},{wch:8}];
+  XLSX.utils.book_append_sheet(wb,ws,'المستويات');XLSX.writeFile(wb,'levels.xlsx');toast('📊 تم التصدير');
+}
+
+// ── DEPT GRID ─────────────────────────────────────
+function renderDptList(){renderDptGrid();}
+function renderDptGrid(){
+  const grid=document.getElementById('dptGrid');
+  if(grid){
+    grid.innerHTML=S.depts.map((d,i)=>{
+      const isActive=d===S.ad;
+      const tc=S.teachers.filter(t=>t.dept===d).length;
+      const sc=S.sessions.filter(s=>s.dp===d&&s.y===S.ay).length;
+      return `<div class="yl-card${isActive?' active-item':''}" onclick="setActiveDept(${i})">
+        <div class="yl-left">
+          <div class="yl-icon">🏛️</div>
+          <div>
+            <div class="yl-name">${d}</div>
+            <div class="yl-sub">${tc} أستاذ · ${sc} حصة${isActive?' · ✅ نشط':''}</div>
+          </div>
+        </div>
+        <div class="yl-actions" onclick="event.stopPropagation()">
+          <button class="icb ied" onclick="openEdit('dept',${i},'${encodeURIComponent(d)}')">✏️</button>
+          <button class="icb idl" onclick="rmDpt(${i})">🗑️</button>
+        </div>
+      </div>`;
+    }).join('');
+  }
+  const opts=S.depts.map(d=>`<option${d===S.ad?' selected':''}>${d}</option>`).join('');
+  ['tt-dp','ms-dp','me-dp','sp-dp','sp-dp-inline'].forEach(id=>{const el=document.getElementById(id);if(el)el.innerHTML=opts;});
+  const dOpts='<option value="">-- اختر --</option>'+S.depts.map(d=>`<option value="${d}">${d}</option>`).join('');
+  const tD=document.getElementById('tchDept');if(tD)tD.innerHTML=dOpts;
+  const fD=document.getElementById('tch-f-dept');
+  if(fD)fD.innerHTML='<option value="">كل الأقسام</option>'+S.depts.map(d=>`<option value="${d}">${d}</option>`).join('');
+  const cnt=document.getElementById('snb-count-depts');if(cnt)cnt.textContent=S.depts.length;
+}
+function setActiveDept(i){S.ad=S.depts[i];save();renderDptGrid();renderTT();toast('✅ القسم النشط: '+S.ad);}
+function addDeptManual(){
+  const n=document.getElementById('dptIn').value.trim();
+  if(!n){toast('⚠️ أدخل اسم القسم');return;}
+  if(S.depts.includes(n)){toast('⚠️ القسم موجود');return;}
+  S.depts.push(n);S.ad=n;document.getElementById('dptIn').value='';
+  save();renderDptGrid();toast('✅ أضيف: '+n);
+}
+function rmDpt(i){if(!confirm('حذف '+S.depts[i]+'؟'))return;S.depts.splice(i,1);save();renderAll();toast('🗑️ تم الحذف');}
+function expDeptsExcel(){
+  const wb=XLSX.utils.book_new();
+  const data=[['القسم','عدد الأساتذة','عدد الحصص ('+S.ay+')','الحالة']];
+  S.depts.forEach(d=>data.push([d,S.teachers.filter(t=>t.dept===d).length,S.sessions.filter(s=>s.dp===d&&s.y===S.ay).length,d===S.ad?'نشط':'']));
+  const ws=XLSX.utils.aoa_to_sheet(data);ws['!cols']=[{wch:30},{wch:12},{wch:16},{wch:8}];
+  XLSX.utils.book_append_sheet(wb,ws,'الأقسام');XLSX.writeFile(wb,'depts.xlsx');toast('📊 تم التصدير');
 }
 function renderSpList(){renderSpGrid();}
 function renderSpGrid(){
@@ -1341,42 +1549,14 @@ function syncSel(id,arr,selected){
   el.innerHTML=arr.map(v=>`<option${v===selected?' selected':''}>${v}</option>`).join('');
 }
 function renderAll(){
-  renderYrList();renderLvList();renderDptList();renderSpList();
+  renderYrGrid();renderLvGrid();renderDptGrid();renderSpGrid();
   renderTchGrid();renderRmGrid();renderTT();renderExams();renderArchive();
 }
 
 // ── YEAR / LEVEL / DEPT CRUD ─────────────────────
-function onYearCh(){
-  const v=document.getElementById('yrSel').value;
-  if(v==='__add__'){addNextYear();}
-  else{S.ay=v;save();renderAll();}
-}
-function addNextYear(){
-  const last=S.years[S.years.length-1];
-  const[a,b]=last.split('/').map(Number);
-  const next=`${a+1}/${b+1}`;
-  if(!S.years.includes(next)){S.years.push(next);}
-  S.ay=next;save();renderAll();toast('✅ أضيفت السنة '+next);
-}
-function rmYear(i){
-  if(!confirm('حذف '+S.years[i]+'؟'))return;
-  const r=S.years.splice(i,1)[0];
-  S.sessions=S.sessions.filter(s=>s.y!==r);
-  S.exams=S.exams.filter(e=>e.y!==r);
-  if(S.ay===r)S.ay=S.years[0]||'';
-  save();renderAll();toast('🗑️ تم الحذف');
-}
-function onLvCh(){
-  const v=document.getElementById('lvSel').value;
-  if(v==='__add__'){
-    const n=prompt('اسم المستوى الجديد:');
-    if(n&&!S.levels.includes(n)){S.levels.push(n);S.al=n;}
-  }else S.al=v;
-  save();renderAll();
-}
-function rmLv(i){S.levels.splice(i,1);save();renderAll();}
-function onDptCh(){S.ad=document.getElementById('dptSel').value;save();renderTT();}
-function rmDpt(i){S.depts.splice(i,1);save();renderAll();}
+function onYearCh(){/* no-op — managed in pg-years */}
+function onLvCh(){/* no-op — managed in pg-levels */}
+function onDptCh(){/* no-op — managed in pg-depts */}
 
 function addSpec(){addSpecInline();}  // alias for sidebar compatibility
 function addSpecInline(){
