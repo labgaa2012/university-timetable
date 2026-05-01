@@ -426,28 +426,23 @@ table#ttbl td.ec:hover::after{color:var(--teal);}
     </div></div>
   </div>
 
-  <div class="aci">
-    <button class="acb" onclick="toggleAcc(this)">
-      <div class="al"><div class="ai">📚</div><span>التخصصات</span></div>
-      <span class="aa">▼</span>
-    </button>
-    <div class="abb"><div class="abt">
-      <!-- kept minimal in sidebar — full management in main page -->
-      <div class="fg">
-        <div class="inlf">
-          <input class="fi" id="spIn" placeholder="اسم التخصص...">
-          <button class="btn bp" onclick="addSpec()">إضافة</button>
-        </div>
-      </div>
-      <div class="ilist" id="spList"></div>
-    </div></div>
-  </div>
-
   <!-- SEPARATOR -->
   <div style="padding:8px 14px;font-size:10px;color:var(--gray);font-weight:700;
     background:var(--gray-light);border-top:1px solid #e0e8f5;border-bottom:1px solid #e0e8f5;">
     إدارة البيانات — انقر للفتح في الصفحة الرئيسية
   </div>
+
+  <!-- NAV BUTTON: التخصصات -->
+  <button class="sb-nav-btn" id="snb-specs" onclick="showMgmtPg('specs')">
+    <div class="snb-left">
+      <div class="ai">📚</div>
+      <span>إدارة التخصصات</span>
+    </div>
+    <div style="display:flex;align-items:center;gap:6px;">
+      <span class="snb-count" id="snb-count-specs">0</span>
+      <span class="snb-arrow">←</span>
+    </div>
+  </button>
 
   <!-- NAV BUTTON: الأساتذة -->
   <button class="sb-nav-btn" id="snb-teachers" onclick="showMgmtPg('teachers')">
@@ -575,6 +570,36 @@ table#ttbl td.ec:hover::after{color:var(--teal);}
         </div>
         <div id="cp-res"><div style="color:var(--gray);font-size:12px;padding:20px;text-align:center;">⬅️ اختر يوم وقاعة ثم ابحث</div></div>
       </div>
+    </div>
+  </div>
+
+  <!-- SPECS MANAGEMENT PAGE -->
+  <div class="pg" id="pg-specs">
+    <div class="mc">
+      <div class="mgmt-header">
+        <div class="mct"><div class="mcti">📚</div>إدارة التخصصات</div>
+        <button class="btn bp bsm" onclick="showPg('timetable',document.querySelector('.nav-tab'))">← العودة للجدول</button>
+      </div>
+      <!-- Add bar -->
+      <div class="mgmt-add-bar">
+        <div class="fg">
+          <label class="fl">اسم التخصص</label>
+          <input class="fi" id="spIn" placeholder="أدخل اسم التخصص...">
+        </div>
+        <div class="fg">
+          <label class="fl">المستوى</label>
+          <select class="fs" id="sp-lv-inline"></select>
+        </div>
+        <div class="fg">
+          <label class="fl">القسم</label>
+          <select class="fs" id="sp-dp-inline"></select>
+        </div>
+        <button class="btn bg" onclick="addSpecInline()" style="white-space:nowrap;">➕ إضافة</button>
+      </div>
+      <div id="specs-empty" style="display:none;color:var(--gray);text-align:center;padding:30px;font-size:13px;">
+        لا توجد تخصصات بعد — أضف أول تخصص من الأعلى
+      </div>
+      <div class="mgmt-grid" id="spGrid"></div>
     </div>
   </div>
 
@@ -916,6 +941,7 @@ function showMgmtPg(id){
   if(btn)btn.classList.add('active-pg');
   if(id==='teachers')renderTchGrid();
   if(id==='rooms-manage')renderRmGrid();
+  if(id==='specs')renderSpGrid();
 }
 
 // ── RENDER SIDEBAR ────────────────────────────────
@@ -938,6 +964,7 @@ function renderLvList(){
     `<div class="icard"><span>${l}</span><div class="iac">
     <button class="icb idl" onclick="rmLv(${i})">🗑️</button></div></div>`).join('');
   syncSel('tt-lv',S.levels,S.al);syncSel('ms-lv',S.levels);syncSel('me-lv',S.levels);syncSel('sp-lv',S.levels);
+  syncSel('sp-lv-inline',S.levels);
 }
 function renderDptList(){
   syncSel('dptSel',S.depts,S.ad);
@@ -946,12 +973,43 @@ function renderDptList(){
     <button class="icb ied" onclick="openEdit('dept',${i},'${d}')">✏️</button>
     <button class="icb idl" onclick="rmDpt(${i})">🗑️</button></div></div>`).join('');
   syncSel('tt-dp',S.depts,S.ad);syncSel('ms-dp',S.depts);syncSel('me-dp',S.depts);syncSel('sp-dp',S.depts);
+  // Sync inline selects in specs page
+  syncSel('sp-lv-inline',S.levels);syncSel('sp-dp-inline',S.depts);
 }
-function renderSpList(){
-  document.getElementById('spList').innerHTML=S.specs.length
-    ?S.specs.map((s,i)=>`<div class="icard"><span><span class="bdg bgl">${s.ls}</span> ${s.name}</span>
-      <div class="iac"><button class="icb idl" onclick="rmSp(${i})">🗑️</button></div></div>`).join('')
-    :'<div style="font-size:10.5px;color:var(--gray);">لا توجد تخصصات</div>';
+function renderSpList(){renderSpGrid();}
+function renderSpGrid(){
+  // sync inline selects
+  syncSel('sp-lv-inline',S.levels);
+  syncSel('sp-dp-inline',S.depts);
+  const grid=document.getElementById('spGrid');
+  const empty=document.getElementById('specs-empty');
+  if(grid){
+    if(!S.specs.length){
+      grid.innerHTML='';
+      if(empty)empty.style.display='block';
+    } else {
+      if(empty)empty.style.display='none';
+      grid.innerHTML=S.specs.map((sp,i)=>`
+        <div class="mgmt-card">
+          <div class="mc-left">
+            <div class="mc-avatar" style="background:linear-gradient(135deg,var(--gold),var(--gold-light));font-size:14px;">📚</div>
+            <div>
+              <div class="mc-name">${sp.name}</div>
+              <div class="mc-sub">
+                <span class="bdg bgl">${sp.ls}</span>
+                ${sp.lv} · ${sp.dp}
+              </div>
+            </div>
+          </div>
+          <div class="iac">
+            <button class="icb idl" onclick="rmSp(${i})">🗑️</button>
+          </div>
+        </div>`).join('');
+    }
+  }
+  // update sidebar count
+  const cnt=document.getElementById('snb-count-specs');
+  if(cnt)cnt.textContent=S.specs.length;
 }
 function renderTchList(){renderTchGrid();}
 function renderTchGrid(){
@@ -1105,22 +1163,19 @@ function rmLv(i){S.levels.splice(i,1);save();renderAll();}
 function onDptCh(){S.ad=document.getElementById('dptSel').value;save();renderTT();}
 function rmDpt(i){S.depts.splice(i,1);save();renderAll();}
 
-function addSpec(){
+function addSpec(){addSpecInline();}  // alias for sidebar compatibility
+function addSpecInline(){
   const n=document.getElementById('spIn').value.trim();
   if(!n){toast('⚠️ أدخل اسم التخصص');return;}
-  document.getElementById('spName').value=n;openM('mSpec');
-}
-function confSpec(){
-  const n=document.getElementById('spName').value;
-  const lv=document.getElementById('sp-lv').value;
-  const dp=document.getElementById('sp-dp').value;
+  const lv=document.getElementById('sp-lv-inline')?.value||S.levels[0]||'';
+  const dp=document.getElementById('sp-dp-inline')?.value||S.depts[0]||'';
   const m={'ليسانس':'L','ماستر':'M'},nm={'أولى':'1','ثانية':'2','ثالثة':'3'};
   let ls='';for(const k in m)if(lv.includes(k))ls=m[k];for(const k in nm)if(lv.includes(k))ls+=nm[k];
   S.specs.push({name:n,lv,dp,ls:ls||'+'});
   document.getElementById('spIn').value='';
-  save();renderSpList();closeM('mSpec');toast('✅ أضيف التخصص: '+n);
+  save();renderSpGrid();toast('✅ أضيف التخصص: '+n);
 }
-function rmSp(i){S.specs.splice(i,1);save();renderSpList();}
+function rmSp(i){if(!confirm('حذف '+S.specs[i]?.name+'؟'))return;S.specs.splice(i,1);save();renderSpGrid();toast('🗑️ تم الحذف');}
 
 // ── EDIT MODAL ────────────────────────────────────
 function openEdit(type,idx,cur){
