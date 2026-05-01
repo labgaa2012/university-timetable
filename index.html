@@ -340,6 +340,45 @@ table#ttbl td.ec:hover::after{color:var(--teal);}
 .room-mgmt-card:hover{border-color:var(--teal);}
 .room-mgmt-card span{flex:1;text-align:center;}
 
+/* ROOMS OCCUPANCY MATRIX */
+.occ-wrap{overflow-x:auto;margin-top:4px;}
+table.occ-matrix{border-collapse:collapse;font-size:10.5px;white-space:nowrap;min-width:900px;width:100%;}
+table.occ-matrix th{
+  background:var(--navy);color:var(--gold-light);padding:7px 6px;
+  text-align:center;font-weight:700;border:1px solid rgba(255,255,255,.12);
+  font-size:10.5px;position:sticky;top:0;z-index:5;}
+table.occ-matrix th.day-hdr{background:var(--navy-light);font-size:11px;}
+table.occ-matrix td{
+  border:1px solid #e0e8f5;vertical-align:middle;
+  padding:0;min-width:88px;height:52px;text-align:center;}
+table.occ-matrix td.room-name{
+  background:var(--gray-light);font-weight:700;font-size:11px;
+  color:var(--text-dark);padding:6px 8px;text-align:right;
+  position:sticky;right:0;z-index:3;min-width:100px;max-width:130px;
+  border-left:2px solid var(--navy-light);white-space:normal;line-height:1.3;}
+table.occ-matrix td.cell-free{background:#f0fdf8;cursor:default;}
+table.occ-matrix td.cell-occ{background:#fef2f2;cursor:pointer;}
+table.occ-matrix td.cell-occ:hover{background:#fee2e2;filter:brightness(.97);}
+.cell-inner{padding:4px 5px;height:100%;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;gap:1px;}
+.cell-free .cell-inner{color:#86efac;font-size:11px;font-weight:600;}
+.cell-occ .cell-inner .ci-subj{font-size:10px;font-weight:800;color:#991b1b;line-height:1.2;text-align:center;}
+.cell-occ .cell-inner .ci-tch{font-size:9px;color:#b91c1c;opacity:.85;}
+.cell-occ .cell-inner .ci-grp{font-size:8.5px;background:#fee2e2;color:#991b1b;
+  padding:1px 5px;border-radius:10px;font-weight:700;margin-top:1px;}
+/* stats strip */
+.occ-stats{display:flex;gap:16px;align-items:center;flex-wrap:wrap;
+  background:var(--gray-light);border-radius:9px;padding:10px 14px;margin-bottom:12px;}
+.occ-stat{font-size:12px;font-weight:700;display:flex;align-items:center;gap:5px;}
+.occ-progress{flex:1;min-width:120px;background:#e0e8f5;border-radius:20px;height:8px;overflow:hidden;}
+.occ-progress-bar{height:8px;border-radius:20px;background:linear-gradient(90deg,var(--teal),var(--teal-light));transition:width .5s;}
+/* view mode tabs */
+.vm-tabs{display:flex;gap:5px;}
+.vmt{padding:5px 12px;border-radius:7px;border:1.5px solid #d0dae8;
+  background:#fff;color:var(--text-mid);font-family:'Cairo',sans-serif;
+  font-size:11px;font-weight:700;cursor:pointer;transition:all .2s;}
+.vmt.active{background:var(--navy);color:#fff;border-color:var(--navy);}
+
 /* TOAST */
 #toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);
   background:var(--navy);color:#fff;padding:10px 20px;border-radius:10px;
@@ -526,28 +565,34 @@ table#ttbl td.ec:hover::after{color:var(--teal);}
     </div>
   </div>
 
-  <!-- ROOMS -->
+  <!-- ROOMS OCCUPANCY PAGE -->
   <div class="pg" id="pg-rooms">
     <div class="mc">
       <div class="mch">
         <div class="mct"><div class="mcti">🏫</div>أشغال القاعات</div>
         <div class="frow">
-          <select class="fs" id="rm-day" onchange="renderRooms()">
+          <!-- Room filter -->
+          <select class="fs" id="rm-filter" onchange="renderRooms()" style="min-width:140px;">
+            <option value="">كل القاعات</option>
+          </select>
+          <!-- View mode -->
+          <div class="vm-tabs">
+            <button class="vmt active" id="vmt-week" onclick="setRmView('week',this)">📅 أسبوعي</button>
+            <button class="vmt" id="vmt-day" onclick="setRmView('day',this)">📆 يومي</button>
+          </div>
+          <!-- Day filter (shown in day mode) -->
+          <select class="fs" id="rm-day" onchange="renderRooms()" style="display:none;">
             <option>السبت</option><option>الأحد</option><option>الاثنين</option>
             <option>الثلاثاء</option><option>الأربعاء</option><option>الخميس</option>
           </select>
-          <select class="fs" id="rm-slot" onchange="renderRooms()">
-            <option value="08:00-09:30">08:00 - 09:30</option>
-            <option value="09:30-11:00">09:30 - 11:00</option>
-            <option value="11:15-12:45">11:15 - 12:45</option>
-            <option value="13:30-15:00">13:30 - 15:00</option>
-            <option value="15:00-16:30">15:00 - 16:30</option>
-          </select>
+          <button class="btn bn" onclick="expRoomsExcel()">📊 Excel</button>
+          <button class="btn bp" onclick="printRooms()">🖨️ طباعة</button>
         </div>
       </div>
-      <div id="rm-stats" style="font-size:12px;font-weight:600;display:flex;gap:14px;margin-bottom:10px;"></div>
-      <div id="rm-amphi" style="margin-bottom:12px;"></div>
-      <div class="rg" id="rm-grid"></div>
+      <!-- Stats strip -->
+      <div class="occ-stats" id="rm-stats-strip"></div>
+      <!-- Matrix -->
+      <div class="occ-wrap" id="rm-matrix-wrap"></div>
     </div>
   </div>
 
@@ -1104,6 +1149,13 @@ function renderRmGrid(){
   const opts=S.rooms.map(r=>`<option>${r}</option>`).join('');
   ['ms-rm','me-rm'].forEach(id=>{const el=document.getElementById(id);if(el)el.innerHTML=opts;});
   const cpR=document.getElementById('cp-room');if(cpR)cpR.innerHTML=opts;
+  // Refresh room filter in occupancy page
+  const fsel=document.getElementById('rm-filter');
+  if(fsel){
+    const cur=fsel.value;
+    fsel.innerHTML='<option value="">كل القاعات</option>'+opts;
+    if(S.rooms.includes(cur))fsel.value=cur;
+  }
   const cnt=document.getElementById('snb-count-rooms');
   if(cnt)cnt.textContent=S.rooms.length;
   updStats();
@@ -1409,35 +1461,168 @@ function saveExam(){
 }
 function delExam(id){if(!confirm('حذف؟'))return;S.exams=S.exams.filter(e=>e.id!==id);save();renderExams();toast('🗑️ تم الحذف');}
 
-// ── ROOMS ─────────────────────────────────────────
+// ── ROOMS OCCUPANCY MATRIX ────────────────────────
+let rmView='week'; // 'week' | 'day'
+
+function setRmView(v,btn){
+  rmView=v;
+  document.querySelectorAll('.vmt').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  const dayEl=document.getElementById('rm-day');
+  if(dayEl) dayEl.style.display=v==='day'?'':'none';
+  renderRooms();
+}
+
 function renderRooms(){
-  const day=document.getElementById('rm-day').value;
-  const slot=document.getElementById('rm-slot').value;
-  const occ=S.sessions.filter(s=>s.y===S.ay&&s.day===day&&s.slot===slot);
-  const occRms=occ.map(s=>s.rm);
+  // Sync room filter dropdown
+  const fsel=document.getElementById('rm-filter');
+  if(fsel&&fsel.options.length<=1){
+    S.rooms.forEach(r=>{const o=document.createElement('option');o.value=r;o.textContent=r;fsel.appendChild(o);});
+  }
+  const filterRoom=fsel?.value||'';
+  const rooms=filterRoom?S.rooms.filter(r=>r===filterRoom):S.rooms;
+  const activeSessions=S.sessions.filter(s=>s.y===S.ay);
 
-  // Amphi
-  document.getElementById('rm-amphi').innerHTML=
-    '<div style="font-size:11px;font-weight:700;color:var(--text-mid);margin-bottom:7px;">🏛️ المدرجات</div>'+
-    AMPHI.map(r=>{
-      const info=occ.find(x=>x.rm===r);
-      return `<div class="rcard ${info?'occ':'free'}" style="display:inline-flex;flex-direction:column;align-items:center;min-width:100px;margin-left:8px;">
-        ${r}<div class="rs">${info?'🔴 '+info.subj:'🟢 متاح'}</div></div>`;
-    }).join('');
+  // Determine columns
+  const days=rmView==='day'
+    ?[document.getElementById('rm-day')?.value||DAYS[0]]
+    :DAYS;
 
-  // Regular rooms
-  const reg=S.rooms.filter(r=>!AMPHI.includes(r));
-  const fc=reg.filter(r=>!occRms.includes(r)).length;
-  const oc=reg.length-fc;
-  document.getElementById('rm-stats').innerHTML=
-    `<span>🟢 متاحة: <strong>${fc}</strong></span>
-     <span>🔴 مشغولة: <strong>${oc}</strong></span>
-     <span>📊 <strong>${reg.length?Math.round(oc/reg.length*100):0}%</strong> نسبة الإشغال</span>`;
+  // Build matrix HTML
+  const totalCells=rooms.length*days.length*SLOTS.length;
+  let occCount=0;
 
-  document.getElementById('rm-grid').innerHTML=reg.map(r=>{
-    const info=occ.find(x=>x.rm===r);
-    return `<div class="rcard ${info?'occ':'free'}">${r}<div class="rs">${info?'🔴 '+info.subj:'🟢 متاح'}</div></div>`;
-  }).join('');
+  // Header rows
+  let thead=`<thead>
+    <tr>
+      <th rowspan="2" style="position:sticky;right:0;z-index:6;min-width:100px;">القاعة</th>
+      ${days.map(d=>`<th class="day-hdr" colspan="${SLOTS.length}">${d}</th>`).join('')}
+    </tr>
+    <tr>
+      ${days.flatMap(()=>SLOTS.map(sl=>`<th style="font-size:9.5px;font-weight:600;padding:5px 3px;">${SL[sl].replace(' - ','<br>')}</th>`)).join('')}
+    </tr>
+  </thead>`;
+
+  // Body rows
+  let tbody='<tbody>';
+  rooms.forEach(room=>{
+    tbody+=`<tr><td class="room-name">${room}</td>`;
+    days.forEach(day=>{
+      SLOTS.forEach(slot=>{
+        const entry=activeSessions.find(s=>s.rm===room&&s.day===day&&s.slot===slot);
+        if(entry){
+          occCount++;
+          const grp=`${entry.lv?.replace('سنة','').replace('ليسانس','L').replace('ماستر','M').trim()||''} ${entry.dp?.split(' ')[1]||''}`.trim();
+          tbody+=`<td class="cell-occ" title="${entry.subj} — ${entry.tch}">
+            <div class="cell-inner">
+              <div class="ci-subj">${entry.subj}</div>
+              <div class="ci-tch">👨‍🏫 ${entry.tch}</div>
+              <div class="ci-grp">${grp||entry.dp||''}</div>
+            </div></td>`;
+        } else {
+          tbody+=`<td class="cell-free"><div class="cell-inner">شاغرة</div></td>`;
+        }
+      });
+    });
+    tbody+='</tr>';
+  });
+  tbody+='</tbody>';
+
+  document.getElementById('rm-matrix-wrap').innerHTML=
+    `<table class="occ-matrix">${thead}${tbody}</table>`;
+
+  // Stats strip
+  const pct=totalCells?Math.round(occCount/totalCells*100):0;
+  const freeCount=totalCells-occCount;
+  document.getElementById('rm-stats-strip').innerHTML=`
+    <div class="occ-stat">🔴 مشغولة: <strong style="color:var(--danger);">${occCount}</strong></div>
+    <div class="occ-stat">🟢 شاغرة: <strong style="color:var(--success);">${freeCount}</strong></div>
+    <div class="occ-stat">📊 نسبة الإشغال: <strong>${pct}%</strong></div>
+    <div class="occ-progress" style="flex:1;">
+      <div class="occ-progress-bar" style="width:${pct}%;"></div>
+    </div>
+    <div class="occ-stat" style="color:var(--gray);font-size:10.5px;">${rooms.length} قاعة · ${days.length} يوم</div>`;
+}
+
+function expRoomsExcel(){
+  const wb=XLSX.utils.book_new();
+  const filterRoom=document.getElementById('rm-filter')?.value||'';
+  const rooms=filterRoom?S.rooms.filter(r=>r===filterRoom):S.rooms;
+  const activeSessions=S.sessions.filter(s=>s.y===S.ay);
+
+  // Header row 1: days
+  const hdr1=['القاعة'];
+  DAYS.forEach(d=>{ hdr1.push(d); for(let i=1;i<SLOTS.length;i++) hdr1.push(''); });
+  // Header row 2: slots
+  const hdr2=[''];
+  DAYS.forEach(()=>SLOTS.forEach(sl=>hdr2.push(SL[sl])));
+
+  const data=[hdr1,hdr2];
+  rooms.forEach(room=>{
+    const row=[room];
+    DAYS.forEach(day=>{
+      SLOTS.forEach(slot=>{
+        const e=activeSessions.find(s=>s.rm===room&&s.day===day&&s.slot===slot);
+        row.push(e?`${e.subj} / ${e.tch}`:'شاغرة');
+      });
+    });
+    data.push(row);
+  });
+
+  const ws=XLSX.utils.aoa_to_sheet(data);
+  // Merge day headers
+  ws['!merges']=DAYS.map((_,di)=>({
+    s:{r:0,c:1+di*SLOTS.length}, e:{r:0,c:di*SLOTS.length+SLOTS.length}
+  }));
+  ws['!cols']=[{wch:14},...Array(DAYS.length*SLOTS.length).fill({wch:18})];
+  XLSX.utils.book_append_sheet(wb,ws,'إشغال القاعات');
+  XLSX.writeFile(wb,'rooms-occupancy-'+S.ay.replace('/','_')+'.xlsx');
+  toast('📊 تم تصدير إشغال القاعات');
+}
+
+function printRooms(){
+  const filterRoom=document.getElementById('rm-filter')?.value||'';
+  const rooms=filterRoom?S.rooms.filter(r=>r===filterRoom):S.rooms;
+  const activeSessions=S.sessions.filter(s=>s.y===S.ay);
+  const days=rmView==='day'?[document.getElementById('rm-day')?.value||DAYS[0]]:DAYS;
+
+  let rows='';
+  rooms.forEach(room=>{
+    rows+=`<tr><td style="font-weight:700;background:#eef;padding:5px 8px;font-size:8pt;white-space:nowrap;">${room}</td>`;
+    days.forEach(day=>{
+      SLOTS.forEach(slot=>{
+        const e=activeSessions.find(s=>s.rm===room&&s.day===day&&s.slot===slot);
+        rows+=e
+          ?`<td style="background:#fef2f2;padding:4px;font-size:7.5pt;text-align:center;"><strong>${e.subj}</strong><br>${e.tch}</td>`
+          :`<td style="background:#f0fdf8;padding:4px;font-size:7.5pt;text-align:center;color:#aaa;">شاغرة</td>`;
+      });
+    });
+    rows+='</tr>';
+  });
+
+  const w=window.open('','_blank','width=1100,height=700');
+  w.document.write(`<!DOCTYPE html><html dir="rtl"><head><meta charset="UTF-8">
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;800&display=swap" rel="stylesheet">
+    <style>
+    body{font-family:'Cairo',sans-serif;direction:rtl;margin:8mm;}
+    h2{font-size:12pt;color:#0f1f3d;margin-bottom:2px;}
+    p{font-size:8pt;color:#666;margin-bottom:8px;}
+    table{width:100%;border-collapse:collapse;}
+    th{background:#0f1f3d;color:#e0be7a;padding:5px 3px;font-size:8pt;
+      border:1px solid #333;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+    td{border:1px solid #ddd;}
+    .day-h{background:#1e3a5f;color:#e0be7a;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+    @media print{body{margin:4mm;}}</style>
+    </head><body>
+    <h2>🏫 جدول إشغال القاعات — ${S.ay}</h2>
+    <p>تاريخ الطباعة: ${new Date().toLocaleDateString('ar-DZ')} · ${rooms.length} قاعة</p>
+    <table><thead>
+      <tr><th rowspan="2">القاعة</th>${days.map(d=>`<th class="day-h" colspan="${SLOTS.length}">${d}</th>`).join('')}</tr>
+      <tr>${days.flatMap(()=>SLOTS.map(sl=>`<th style="font-size:7pt;">${SL[sl]}</th>`)).join('')}</tr>
+    </thead><tbody>${rows}</tbody></table>
+    <script>window.onload=function(){window.print();}<\/script>
+    </body></html>`);
+  w.document.close();
 }
 
 // ── COMPENSATION ──────────────────────────────────
