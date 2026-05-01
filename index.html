@@ -424,6 +424,48 @@ table#ttbl td.ec:hover::after{color:var(--teal);}
 .lc-m2{background:#fff1f2;border-color:#fecdd3;color:#9f1239;}
 .lc-other{background:#f8fafc;border-color:#e2e8f0;color:#475569;}
 
+/* SECTIONS & GROUPS CHIPS */
+.sg-grid{display:flex;flex-wrap:wrap;gap:10px;margin-top:4px;}
+.sg-chip{
+  display:inline-flex;align-items:center;gap:8px;
+  padding:10px 16px;border-radius:12px;font-size:13px;font-weight:700;
+  border:2px solid transparent;transition:all .25s;position:relative;
+  box-shadow:0 2px 8px rgba(0,0,0,.07);cursor:default;
+}
+.sg-chip:hover{transform:translateY(-3px);box-shadow:0 6px 18px rgba(0,0,0,.12);}
+.sg-chip .sg-num{
+  font-size:10px;font-weight:800;opacity:.75;
+  background:rgba(255,255,255,.5);border-radius:10px;
+  padding:1px 6px;
+}
+.sg-chip .sg-actions{display:flex;gap:4px;margin-right:4px;}
+.sg-chip .sg-btn{
+  width:22px;height:22px;border-radius:6px;border:none;cursor:pointer;
+  font-size:10px;display:flex;align-items:center;justify-content:center;
+  background:rgba(255,255,255,.5);transition:all .2s;color:inherit;padding:0;
+  opacity:0;
+}
+.sg-chip:hover .sg-btn{opacity:1;}
+.sg-chip .sg-btn:hover{background:rgba(255,255,255,.85);}
+/* ألوان الفصائل */
+.sec-c0{background:#eff6ff;border-color:#93c5fd;color:#1e40af;}
+.sec-c1{background:#f0fdf4;border-color:#86efac;color:#166534;}
+.sec-c2{background:#fefce8;border-color:#fcd34d;color:#92400e;}
+.sec-c3{background:#fff7ed;border-color:#fdba74;color:#9a3412;}
+.sec-c4{background:#fdf4ff;border-color:#d8b4fe;color:#6b21a8;}
+.sec-c5{background:#f0fdfa;border-color:#5eead4;color:#134e4a;}
+.sec-c6{background:#fff1f2;border-color:#fda4af;color:#9f1239;}
+.sec-c7{background:#f8fafc;border-color:#94a3b8;color:#334155;}
+/* ألوان الأفواج */
+.grp-c0{background:#fef9c3;border-color:#fde047;color:#713f12;}
+.grp-c1{background:#e0f2fe;border-color:#38bdf8;color:#075985;}
+.grp-c2{background:#fee2e2;border-color:#fca5a5;color:#991b1b;}
+.grp-c3{background:#dcfce7;border-color:#4ade80;color:#14532d;}
+.grp-c4{background:#ede9fe;border-color:#a78bfa;color:#4c1d95;}
+.grp-c5{background:#ffedd5;border-color:#fb923c;color:#7c2d12;}
+.grp-c6{background:#e0e7ff;border-color:#818cf8;color:#3730a3;}
+.grp-c7{background:#f0fdf4;border-color:#34d399;color:#065f46;}
+
 /* IMPORT BUTTON */
 .bi{background:#16a34a;color:#fff;}.bi:hover{background:#15803d;transform:translateY(-1px);}
 .btpl{background:#f0fdf4;color:#15803d;border:1.5px solid #86efac;}.btpl:hover{background:#dcfce7;}
@@ -574,6 +616,30 @@ table.occ-matrix td.cell-occ:hover{background:#fee2e2;filter:brightness(.97);}
     background:var(--gray-light);border-top:1px solid #e0e8f5;border-bottom:1px solid #e0e8f5;">
     إدارة البيانات — انقر للفتح في الصفحة الرئيسية
   </div>
+
+  <!-- NAV BUTTON: الفصائل -->
+  <button class="sb-nav-btn" id="snb-sections" onclick="showMgmtPg('sections')">
+    <div class="snb-left">
+      <div class="ai">🗂️</div>
+      <span>الفصائل</span>
+    </div>
+    <div style="display:flex;align-items:center;gap:6px;">
+      <span class="snb-count" id="snb-count-sections">0</span>
+      <span class="snb-arrow">←</span>
+    </div>
+  </button>
+
+  <!-- NAV BUTTON: الأفواج -->
+  <button class="sb-nav-btn" id="snb-groups" onclick="showMgmtPg('groups')">
+    <div class="snb-left">
+      <div class="ai">👥</div>
+      <span>الأفواج</span>
+    </div>
+    <div style="display:flex;align-items:center;gap:6px;">
+      <span class="snb-count" id="snb-count-groups">0</span>
+      <span class="snb-arrow">←</span>
+    </div>
+  </button>
 
   <!-- NAV BUTTON: التخصصات -->
   <button class="sb-nav-btn" id="snb-specs" onclick="showMgmtPg('specs')">
@@ -894,6 +960,54 @@ table.occ-matrix td.cell-occ:hover{background:#fee2e2;filter:brightness(.97);}
 
       <!-- GRID -->
       <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:9px;" id="subjGrid"></div>
+    </div>
+  </div>
+
+  <!-- SECTIONS PAGE -->
+  <div class="pg" id="pg-sections">
+    <div class="mc">
+      <div class="mgmt-header">
+        <div class="mct"><div class="mcti">🗂️</div>إدارة الفصائل</div>
+        <div class="frow">
+          <span class="filter-count" id="sec-count-lbl"></span>
+          <button class="btn bp bsm" onclick="showPg('timetable',document.querySelector('.nav-tab'))">← العودة</button>
+        </div>
+      </div>
+      <div class="mgmt-add-bar">
+        <div class="fg" style="flex:1;">
+          <label class="fl">اسم الفصيلة</label>
+          <input class="fi" id="secIn" placeholder="مثال: الفصيلة 1 أو Section A..." onkeydown="if(event.key==='Enter')addSection()">
+        </div>
+        <button class="btn bg" onclick="addSection()" style="align-self:flex-end;white-space:nowrap;">➕ إضافة فصيلة</button>
+      </div>
+      <div id="sec-empty" style="display:none;color:var(--gray);text-align:center;padding:40px;font-size:13px;">
+        لا توجد فصائل بعد — أضف أول فصيلة من الأعلى
+      </div>
+      <div class="sg-grid" id="secGrid"></div>
+    </div>
+  </div>
+
+  <!-- GROUPS PAGE -->
+  <div class="pg" id="pg-groups">
+    <div class="mc">
+      <div class="mgmt-header">
+        <div class="mct"><div class="mcti">👥</div>إدارة الأفواج</div>
+        <div class="frow">
+          <span class="filter-count" id="grp-count-lbl"></span>
+          <button class="btn bp bsm" onclick="showPg('timetable',document.querySelector('.nav-tab'))">← العودة</button>
+        </div>
+      </div>
+      <div class="mgmt-add-bar">
+        <div class="fg" style="flex:1;">
+          <label class="fl">اسم الفوج</label>
+          <input class="fi" id="grpIn" placeholder="مثال: الفوج 1 أو Groupe A..." onkeydown="if(event.key==='Enter')addGroup()">
+        </div>
+        <button class="btn bg" onclick="addGroup()" style="align-self:flex-end;white-space:nowrap;">➕ إضافة فوج</button>
+      </div>
+      <div id="grp-empty" style="display:none;color:var(--gray);text-align:center;padding:40px;font-size:13px;">
+        لا توجد أفواج بعد — أضف أول فوج من الأعلى
+      </div>
+      <div class="sg-grid" id="grpGrid"></div>
     </div>
   </div>
 
@@ -1382,7 +1496,7 @@ function defState(){
     years:['2025/2026','2026/2027','2027/2028','2028/2029','2029/2030'],
     levels:['سنة أولى ليسانس','سنة ثانية ليسانس','سنة ثالثة ليسانس','سنة أولى ماستر','سنة ثانية ماستر'],
     depts:['قسم السنة أولى جذع مشترك','قسم العلوم الاقتصادية','قسم علوم التسيير','قسم علوم المالية والمحاسبة','قسم العلوم التجارية'],
-    specs:DEFAULT_SPECS(),subjects:[],
+    specs:DEFAULT_SPECS(),subjects:[],sections:[],groups:[],
     teachers:[
       {name:'أ. محمد بن عمر',kind:'permanent'},
       {name:'د. فاطمة زهراء',kind:'permanent'},
@@ -1397,6 +1511,8 @@ let S={};
 function load(){
   try{const d=localStorage.getItem(SK);S=d?JSON.parse(d):defState();}catch(e){S=defState();}
   if(!S.subjects||!S.subjects.length) S.subjects=DEFAULT_SUBJECTS();
+  if(!S.sections) S.sections=[];
+  if(!S.groups)   S.groups=[];
   // دمج التخصصات الافتراضية مع الموجودة (تجنب التكرار بالاسم+القسم+المستوى)
   const defaults=DEFAULT_SPECS();
   defaults.forEach(def=>{
@@ -1461,6 +1577,8 @@ function showMgmtPg(id){
   if(id==='years')renderYrGrid();
   if(id==='levels')renderLvGrid();
   if(id==='depts')renderDptGrid();
+  if(id==='sections')renderSecGrid();
+  if(id==='groups')renderGrpGrid();
 }
 
 // -- RENDER SIDEBAR --------------------------------
@@ -2043,6 +2161,7 @@ function syncSel(id,arr,selected){
 function renderAll(){
   renderYrGrid();renderLvGrid();renderDptGrid();renderSpGrid();
   renderSubjGrid();renderTchGrid();renderRmGrid();
+  renderSecGrid();renderGrpGrid();
   renderTT();renderExams();renderArchive();
 }
 
@@ -3091,6 +3210,91 @@ function dlTemplate(type){
   const names={subjects:'المقاييس',teachers:'الأساتذة',rooms:'القاعات',specs:'التخصصات',sessions:'جدول-التوقيت',exams:'الامتحانات'};
   XLSX.writeFile(wb,`قالب-${names[type]}.xlsx`);
   toast('📋 تم تحميل القالب — افتحه وأضف بياناتك ثم استورده');
+}
+
+// -- SECTIONS ------------------------------------------
+const SEC_COLORS=['sec-c0','sec-c1','sec-c2','sec-c3','sec-c4','sec-c5','sec-c6','sec-c7'];
+const GRP_COLORS=['grp-c0','grp-c1','grp-c2','grp-c3','grp-c4','grp-c5','grp-c6','grp-c7'];
+
+function renderSecGrid(){
+  const grid=document.getElementById('secGrid');
+  const empty=document.getElementById('sec-empty');
+  const lbl=document.getElementById('sec-count-lbl');
+  if(lbl)lbl.textContent=S.sections.length+' فصيلة';
+  const cnt=document.getElementById('snb-count-sections');
+  if(cnt)cnt.textContent=S.sections.length;
+  if(!grid)return;
+  if(!S.sections.length){grid.innerHTML='';if(empty)empty.style.display='block';return;}
+  if(empty)empty.style.display='none';
+  grid.innerHTML=S.sections.map((sec,i)=>{
+    const cls=SEC_COLORS[i%SEC_COLORS.length];
+    return `<div class="sg-chip ${cls}">
+      <span class="sg-num">${i+1}</span>
+      <span>${sec}</span>
+      <div class="sg-actions">
+        <button class="sg-btn" onclick="editSec(${i})" title="تعديل الاسم">✏️</button>
+        <button class="sg-btn" onclick="rmSec(${i})" title="حذف">✕</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+function addSection(){
+  const v=document.getElementById('secIn').value.trim();
+  if(!v){toast('⚠️ أدخل اسم الفصيلة');return;}
+  if(S.sections.includes(v)){toast('⚠️ الفصيلة موجودة بالفعل');return;}
+  S.sections.push(v);document.getElementById('secIn').value='';
+  save();renderSecGrid();toast('✅ أضيفت: '+v);
+}
+function rmSec(i){
+  if(!confirm('حذف الفصيلة "'+S.sections[i]+'"؟'))return;
+  S.sections.splice(i,1);save();renderSecGrid();toast('🗑️ تم الحذف');
+}
+function editSec(i){
+  const n=prompt('الاسم الجديد للفصيلة:',S.sections[i]);
+  if(!n||n===S.sections[i])return;
+  if(S.sections.includes(n)){toast('⚠️ الاسم موجود بالفعل');return;}
+  S.sections[i]=n;save();renderSecGrid();toast('✅ تم التعديل');
+}
+
+// -- GROUPS --------------------------------------------
+function renderGrpGrid(){
+  const grid=document.getElementById('grpGrid');
+  const empty=document.getElementById('grp-empty');
+  const lbl=document.getElementById('grp-count-lbl');
+  if(lbl)lbl.textContent=S.groups.length+' فوج';
+  const cnt=document.getElementById('snb-count-groups');
+  if(cnt)cnt.textContent=S.groups.length;
+  if(!grid)return;
+  if(!S.groups.length){grid.innerHTML='';if(empty)empty.style.display='block';return;}
+  if(empty)empty.style.display='none';
+  grid.innerHTML=S.groups.map((grp,i)=>{
+    const cls=GRP_COLORS[i%GRP_COLORS.length];
+    return `<div class="sg-chip ${cls}">
+      <span class="sg-num">${i+1}</span>
+      <span>${grp}</span>
+      <div class="sg-actions">
+        <button class="sg-btn" onclick="editGrp(${i})" title="تعديل الاسم">✏️</button>
+        <button class="sg-btn" onclick="rmGrp(${i})" title="حذف">✕</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+function addGroup(){
+  const v=document.getElementById('grpIn').value.trim();
+  if(!v){toast('⚠️ أدخل اسم الفوج');return;}
+  if(S.groups.includes(v)){toast('⚠️ الفوج موجود بالفعل');return;}
+  S.groups.push(v);document.getElementById('grpIn').value='';
+  save();renderGrpGrid();toast('✅ أضيف: '+v);
+}
+function rmGrp(i){
+  if(!confirm('حذف الفوج "'+S.groups[i]+'"؟'))return;
+  S.groups.splice(i,1);save();renderGrpGrid();toast('🗑️ تم الحذف');
+}
+function editGrp(i){
+  const n=prompt('الاسم الجديد للفوج:',S.groups[i]);
+  if(!n||n===S.groups[i])return;
+  if(S.groups.includes(n)){toast('⚠️ الاسم موجود بالفعل');return;}
+  S.groups[i]=n;save();renderGrpGrid();toast('✅ تم التعديل');
 }
 
 // -- INIT ------------------------------------------
