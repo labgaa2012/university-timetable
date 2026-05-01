@@ -466,6 +466,42 @@ table#ttbl td.ec:hover::after{color:var(--teal);}
 .grp-c6{background:#e0e7ff;border-color:#818cf8;color:#3730a3;}
 .grp-c7{background:#f0fdf4;border-color:#34d399;color:#065f46;}
 
+/* SESSION TYPE BUTTONS */
+.sess-type-btn{
+  padding:8px 6px;border-radius:8px;border:1.5px solid #d0dae8;
+  background:#fff;color:var(--text-mid);font-family:'Cairo',sans-serif;
+  font-size:11.5px;font-weight:700;cursor:pointer;transition:all .2s;
+  text-align:center;
+}
+.sess-type-btn:hover{border-color:var(--teal);color:var(--teal);}
+.sess-type-btn.active{background:var(--navy);color:var(--gold-light);border-color:var(--navy);}
+
+/* ACTIVE TIMETABLE BANNER */
+.tt-active-banner{
+  display:flex;align-items:center;justify-content:space-between;
+  background:linear-gradient(135deg,var(--navy),var(--navy-light));
+  border-radius:11px;padding:12px 18px;margin-bottom:14px;
+  flex-wrap:wrap;gap:8px;
+}
+.tt-active-banner .tab-info{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+.tab-chip{
+  padding:4px 12px;border-radius:20px;font-size:11.5px;font-weight:700;
+  background:rgba(255,255,255,.15);color:#fff;
+}
+.tab-chip.req{background:rgba(201,168,76,.25);color:var(--gold-light);}
+.tab-chip.opt{background:rgba(255,255,255,.1);color:rgba(255,255,255,.8);}
+.tt-empty-state{
+  text-align:center;padding:60px 20px;color:var(--gray);
+}
+.tt-empty-state .es-icon{font-size:48px;margin-bottom:12px;}
+.tt-empty-state h3{font-size:16px;font-weight:800;color:var(--navy);
+  font-family:'Tajawal',sans-serif;margin-bottom:6px;}
+.tt-empty-state p{font-size:12px;}
+
+/* SESSION TYPE COLORS — new types */
+.sc.tlc-remote{background:#e0f2fe;color:#075985;border-right:3px solid #0ea5e9;}
+.sc.ttd-remote{background:#fce7f3;color:#9d174d;border-right:3px solid #ec4899;}
+
 /* IMPORT BUTTON */
 .bi{background:#16a34a;color:#fff;}.bi:hover{background:#15803d;transform:translateY(-1px);}
 .btpl{background:#f0fdf4;color:#15803d;border:1.5px solid #86efac;}.btpl:hover{background:#dcfce7;}
@@ -784,15 +820,15 @@ table.occ-matrix td.cell-occ:hover{background:#fee2e2;filter:brightness(.97);}
       <div class="mch">
         <div class="mct"><div class="mcti">📅</div>جدول التوقيت الأسبوعي</div>
         <div class="frow">
-          <select class="fs" id="tt-lv" onchange="renderTT()"></select>
-          <select class="fs" id="tt-dp" onchange="renderTT()"></select>
-          <button class="btn bg" onclick="openAddSess()">➕ إضافة حصة</button>
+          <button class="btn bg" onclick="openAddTimetable()">📋 إضافة جدول</button>
           <button class="btn bn" onclick="expExcel()">📊 تصدير</button>
           <button class="btn bi" onclick="trigImp('imp-sessions')">📥 استيراد</button>
           <button class="btn btpl" onclick="dlTemplate('sessions')">📋 قالب</button>
           <button class="btn bp" onclick="printTT()">🖨️ طباعة</button>
         </div>
       </div>
+      <!-- بانر الجدول النشط -->
+      <div id="tt-active-banner-wrap"></div>
       <div class="ttw"><table id="ttbl"></table></div>
     </div>
   </div>
@@ -1233,28 +1269,63 @@ table.occ-matrix td.cell-occ:hover{background:#fee2e2;filter:brightness(.97);}
 </div>
 
 <!-- MODALS -->
+<!-- MODAL: إضافة جدول (اختيار المجموعة) -->
+<div class="mo" id="mAddTimetable">
+  <div class="mb" style="width:440px;">
+    <div class="mt">📋 إضافة جدول — اختر المجموعة</div>
+    <div class="fg">
+      <label class="fl">المستوى <span style="color:var(--danger);">*</span></label>
+      <select class="fs" id="att-lv" onchange="onAttLvChange()"></select>
+    </div>
+    <div class="fg">
+      <label class="fl">القسم <span style="color:var(--danger);">*</span></label>
+      <select class="fs" id="att-dp" onchange="onAttDpChange()"></select>
+    </div>
+    <div class="fg">
+      <label class="fl">التخصص <span style="color:var(--danger);">*</span></label>
+      <select class="fs" id="att-spec">
+        <option value="">-- اختر التخصص --</option>
+      </select>
+    </div>
+    <div class="frow2">
+      <div class="fg">
+        <label class="fl">الفصيلة <span style="color:var(--gray);font-size:9px;">(اختياري)</span></label>
+        <select class="fs" id="att-section">
+          <option value="">-- كل الفصائل --</option>
+        </select>
+      </div>
+      <div class="fg">
+        <label class="fl">الفوج <span style="color:var(--gray);font-size:9px;">(اختياري)</span></label>
+        <select class="fs" id="att-group">
+          <option value="">-- كل الأفواج --</option>
+        </select>
+      </div>
+    </div>
+    <div class="ma">
+      <button class="btn bg" onclick="confirmAddTimetable()" style="flex:1;justify-content:center;">✅ إضافة الجدول</button>
+      <button class="btn" style="background:var(--gray-light);color:var(--text-mid);" onclick="closeM('mAddTimetable')">إلغاء</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: إضافة / تعديل حصة (مبسط) -->
 <div class="mo" id="mSess">
-  <div class="mb" style="width:520px;">
+  <div class="mb" style="width:440px;">
     <div class="mt" id="mSessTitle">➕ إضافة حصة</div>
     <input type="hidden" id="esSessId">
-
-    <!-- اليوم + الفترة -->
-    <div class="frow2">
-      <div class="fg"><label class="fl">اليوم</label>
-        <select class="fs" id="ms-day">
-          <option>السبت</option><option>الأحد</option><option>الاثنين</option>
-          <option>الثلاثاء</option><option>الأربعاء</option><option>الخميس</option>
-        </select></div>
-      <div class="fg"><label class="fl">الفترة</label>
-        <select class="fs" id="ms-slot">
-          <option value="08:00-09:30">08:00 - 09:30</option>
-          <option value="09:30-11:00">09:30 - 11:00</option>
-          <option value="11:15-12:45">11:15 - 12:45</option>
-          <option value="13:30-15:00">13:30 - 15:00</option>
-          <option value="15:00-16:30">15:00 - 16:30</option>
-        </select></div>
+    <!-- السداسي -->
+    <div class="fg">
+      <label class="fl">السداسي</label>
+      <div style="display:flex;gap:8px;">
+        <button class="fl-opt sel" id="sem-btn-1" onclick="setSem(1)" style="flex:1;padding:9px;border-radius:8px;border:1.5px solid #d0dae8;background:#fff;cursor:pointer;font-family:'Cairo',sans-serif;font-size:12.5px;font-weight:700;">
+          📘 السداسي الأول
+        </button>
+        <button class="fl-opt" id="sem-btn-2" onclick="setSem(2)" style="flex:1;padding:9px;border-radius:8px;border:1.5px solid #d0dae8;background:#fff;cursor:pointer;font-family:'Cairo',sans-serif;font-size:12.5px;font-weight:700;">
+          📗 السداسي الثاني
+        </button>
+      </div>
+      <input type="hidden" id="ms-sem" value="1">
     </div>
-
     <!-- المقياس -->
     <div class="fg">
       <label class="fl">المقياس</label>
@@ -1264,60 +1335,32 @@ table.occ-matrix td.cell-occ:hover{background:#fee2e2;filter:brightness(.97);}
       </select>
       <input class="fi" id="ms-subj" placeholder="أدخل اسم المقياس يدوياً..." style="margin-top:6px;display:none;">
     </div>
-
-    <!-- المستوى + القسم -->
+    <!-- الأستاذ + القاعة -->
     <div class="frow2">
-      <div class="fg"><label class="fl">المستوى</label><select class="fs" id="ms-lv" onchange="onMsLvChange()"></select></div>
-      <div class="fg"><label class="fl">القسم</label><select class="fs" id="ms-dp" onchange="onMsDpChange()"></select></div>
-    </div>
-
-    <!-- التخصص + الفصيلة -->
-    <div class="frow2">
-      <div class="fg"><label class="fl">التخصص</label>
-        <select class="fs" id="ms-spec">
-          <option value="">-- عام (بدون تخصص) --</option>
-        </select>
-      </div>
-      <div class="fg"><label class="fl">الفصيلة</label>
-        <select class="fs" id="ms-section">
-          <option value="">-- كل الفصائل --</option>
-        </select>
-      </div>
-    </div>
-
-    <!-- الفوج + الأستاذ -->
-    <div class="frow2">
-      <div class="fg"><label class="fl">الفوج</label>
-        <select class="fs" id="ms-group">
-          <option value="">-- كل الأفواج --</option>
-        </select>
-      </div>
       <div class="fg"><label class="fl">الأستاذ</label><select class="fs" id="ms-tch"></select></div>
-    </div>
-
-    <!-- القاعة + النوع -->
-    <div class="frow2">
       <div class="fg"><label class="fl">القاعة</label><select class="fs" id="ms-rm"></select></div>
-      <div class="fg"><label class="fl">نوع الحصة</label>
-        <select class="fs" id="ms-type" onchange="onSessTypeChange()">
-          <option value="tlc">محاضرة</option>
-          <option value="ttd">أعمال موجهة</option>
-          <option value="ttp">أعمال تطبيقية</option>
-          <option value="tot">أخرى</option>
-        </select>
-      </div>
     </div>
-
-    <!-- نوع المحاضرة -->
+    <!-- نوع الدرس -->
+    <div class="fg">
+      <label class="fl">نوع الدرس</label>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;">
+        <button class="sess-type-btn active" data-type="tlc" onclick="setSessType('tlc',this)">📖 محاضرة</button>
+        <button class="sess-type-btn" data-type="tlc-remote" onclick="setSessType('tlc-remote',this)">🖥️ محاضرة عن بعد</button>
+        <button class="sess-type-btn" data-type="ttd" onclick="setSessType('ttd',this)">✏️ TD</button>
+        <button class="sess-type-btn" data-type="ttp" onclick="setSessType('ttp',this)">🔬 TP</button>
+        <button class="sess-type-btn" data-type="ttd-remote" onclick="setSessType('ttd-remote',this)">💻 TD عن بعد</button>
+      </div>
+      <input type="hidden" id="ms-type" value="tlc">
+    </div>
+    <!-- نوع المحاضرة للحساب -->
     <div class="fg" id="ms-firstlec-row">
-      <label class="fl">نوع المحاضرة (للحساب)</label>
+      <label class="fl">للحساب — نوع المحاضرة</label>
       <input type="hidden" id="ms-firstlec" value="1">
       <div class="fl-toggle">
         <div class="fl-opt sel" onclick="setFirstLec(1,this)">📖 أولى (×2.25)</div>
         <div class="fl-opt" onclick="setFirstLec(0,this)">🔁 مكررة (×1.5)</div>
       </div>
     </div>
-
     <div class="ma">
       <button class="btn bp" onclick="saveSess()">✅ حفظ</button>
       <button class="btn" style="background:var(--gray-light);color:var(--text-mid);" onclick="closeM('mSess')">إلغاء</button>
@@ -1419,8 +1462,10 @@ const DAYS=['السبت','الأحد','الاثنين','الثلاثاء','ال�
 const SLOTS=['08:00-09:30','09:30-11:00','11:15-12:45','13:30-15:00','15:00-16:30'];
 const SL={'08:00-09:30':'08:00 - 09:30','09:30-11:00':'09:30 - 11:00',
   '11:15-12:45':'11:15 - 12:45','13:30-15:00':'13:30 - 15:00','15:00-16:30':'15:00 - 16:30'};
-const TL={'tlc':'محاضرة','ttd':'أعمال موجهة','ttp':'أعمال تطبيقية','tot':'أخرى'};
-const TC={'tlc':'#dbeafe','ttd':'#dcfce7','ttp':'#fed7aa','tot':'#ede9fe'};
+const TL={tlc:'محاضرة',ttd:'أعمال موجهة',ttp:'أعمال تطبيقية',tot:'أخرى',
+  'tlc-remote':'محاضرة عن بعد','ttd-remote':'TD عن بعد'};
+const TC={tlc:'#dbeafe',ttd:'#dcfce7',ttp:'#fed7aa',tot:'#ede9fe',
+  'tlc-remote':'#e0f2fe','ttd-remote':'#fce7f3'};
 const AMPHI=['مدرج أ','مدرج ب','مدرج ج'];
 const SK='univ_tt_v4';
 
@@ -1534,6 +1579,7 @@ function defState(){
     specs:DEFAULT_SPECS(),subjects:[],
     sections:['الفصيلة1','الفصيلة2','الفصيلة3'],
     groups:['الفوج1','الفوج2','الفوج3','الفوج4','الفوج5','الفوج6','الفوج7','الفوج8'],
+    activeTT:null, // {lv,dp,spec,section,group,day,slot}
     teachers:[
       {name:'أ. محمد بن عمر',kind:'permanent'},
       {name:'د. فاطمة زهراء',kind:'permanent'},
@@ -1785,20 +1831,30 @@ function syncSubjSelects(){
   syncSubjModalSel();
 }
 function syncSubjModalSel(){
-  const lv=document.getElementById('ms-lv')?.value||S.al;
-  const dp=document.getElementById('ms-dp')?.value||S.ad;
+  // Now called from setSem — filter by activeTT + current sem
+  const lv=S.activeTT?.lv||'';
+  const dp=S.activeTT?.dp||'';
+  const sem=parseInt(document.getElementById('ms-sem')?.value||'0')||0;
   let filtered=S.subjects;
   if(lv)filtered=filtered.filter(s=>!s.level||s.level===lv);
   if(dp)filtered=filtered.filter(s=>!s.dept||s.dept===dp);
-  const others=S.subjects.filter(s=>!filtered.includes(s));
+  if(sem)filtered=filtered.filter(s=>s.sem==sem);
   const mk=arr=>arr.map(s=>`<option value="${s.name}">${s.name}</option>`).join('');
-  const s1=filtered.filter(s=>s.sem==1),s2=filtered.filter(s=>s.sem==2);
   const opts=`<option value="">-- اختر مقياس --</option>`
-    +(s1.length?`<optgroup label="السداسي الأول">${mk(s1)}</optgroup>`:'')
-    +(s2.length?`<optgroup label="السداسي الثاني">${mk(s2)}</optgroup>`:'')
-    +(others.length?`<optgroup label="أخرى">${mk(others)}</optgroup>`:'')
+    +mk(filtered)
     +`<option value="__manual__">✏️ كتابة يدوية...</option>`;
-  ['ms-subj-sel','em-subj-sel'].forEach(id=>{const el=document.getElementById(id);if(el)el.innerHTML=opts;});
+  const sel=document.getElementById('ms-subj-sel');
+  if(sel)sel.innerHTML=opts;
+  // exam subject sel still uses old grouped version
+  const emSel=document.getElementById('em-subj-sel');
+  if(emSel){
+    const s1=S.subjects.filter(s=>s.sem==1),s2=S.subjects.filter(s=>s.sem==2);
+    const mkG=arr=>arr.map(s=>`<option value="${s.name}">${s.name}</option>`).join('');
+    emSel.innerHTML=`<option value="">-- اختر مقياس --</option>`
+      +(s1.length?`<optgroup label="السداسي الأول">${mkG(s1)}</optgroup>`:'')
+      +(s2.length?`<optgroup label="السداسي الثاني">${mkG(s2)}</optgroup>`:'')
+      +`<option value="__manual__">✏️ كتابة يدوية...</option>`;
+  }
 }
 function onSubjSelChange(){
   const v=document.getElementById('ms-subj-sel').value;
@@ -2251,12 +2307,113 @@ function confEdit(){
 let dragId=null;
 
 function curSessions(){
-  const lv=document.getElementById('tt-lv')?.value||S.al;
-  const dp=document.getElementById('tt-dp')?.value||S.ad;
-  return S.sessions.filter(s=>s.y===S.ay&&s.lv===lv&&s.dp===dp);
+  if(!S.activeTT) return [];
+  const{lv,dp,spec,section,group}=S.activeTT;
+  return S.sessions.filter(s=>
+    s.y===S.ay &&
+    s.lv===lv && s.dp===dp &&
+    (spec?s.spec===spec:true) &&
+    (section?s.section===section:true) &&
+    (group?s.group===group:true)
+  );
+}
+
+// -- ADD TIMETABLE MODAL ---------------------------
+function openAddTimetable(){
+  // populate selects
+  const lvOpts=S.levels.map(l=>`<option>${l}</option>`).join('');
+  const el=document.getElementById('att-lv');if(el)el.innerHTML=lvOpts;
+  const dpOpts=S.depts.map(d=>`<option>${d}</option>`).join('');
+  const ed=document.getElementById('att-dp');if(ed)ed.innerHTML=dpOpts;
+  // sections
+  const secEl=document.getElementById('att-section');
+  if(secEl)secEl.innerHTML='<option value="">-- كل الفصائل --</option>'
+    +S.sections.map(s=>`<option value="${s}">${s}</option>`).join('');
+  // groups
+  const grpEl=document.getElementById('att-group');
+  if(grpEl)grpEl.innerHTML='<option value="">-- كل الأفواج --</option>'
+    +S.groups.map(g=>`<option value="${g}">${g}</option>`).join('');
+  onAttLvChange();
+  openM('mAddTimetable');
+}
+function onAttLvChange(){
+  const lv=document.getElementById('att-lv')?.value||'';
+  const dp=document.getElementById('att-dp')?.value||'';
+  syncAttSpec(lv,dp);
+}
+function onAttDpChange(){
+  const lv=document.getElementById('att-lv')?.value||'';
+  const dp=document.getElementById('att-dp')?.value||'';
+  syncAttSpec(lv,dp);
+}
+function syncAttSpec(lv,dp){
+  const specs=S.specs.filter(sp=>(!lv||sp.lv===lv)&&(!dp||sp.dp===dp));
+  const el=document.getElementById('att-spec');
+  if(!el)return;
+  el.innerHTML='<option value="">-- اختر التخصص --</option>'
+    +specs.map(sp=>`<option value="${sp.name}">${sp.name}</option>`).join('');
+}
+function confirmAddTimetable(){
+  const lv=document.getElementById('att-lv')?.value||'';
+  const dp=document.getElementById('att-dp')?.value||'';
+  const spec=document.getElementById('att-spec')?.value||'';
+  if(!lv){toast('⚠️ اختر المستوى');return;}
+  if(!dp){toast('⚠️ اختر القسم');return;}
+  if(!spec){toast('⚠️ اختر التخصص');return;}
+  const section=document.getElementById('att-section')?.value||'';
+  const group=document.getElementById('att-group')?.value||'';
+  S.activeTT={lv,dp,spec,section,group};
+  save();closeM('mAddTimetable');
+  renderTT();
+  toast('✅ جدول جديد: '+spec+(section?' — '+section:'')+(group?' — '+group:''));
+}
+
+// -- SESSION TYPE BUTTONS --------------------------
+function setSessType(type,btn){
+  document.getElementById('ms-type').value=type;
+  document.querySelectorAll('.sess-type-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  // show firstlec only for lecture types
+  const row=document.getElementById('ms-firstlec-row');
+  if(row) row.style.display=(type==='tlc'||type==='tlc-remote')?'block':'none';
+}
+function setSem(n){
+  document.getElementById('ms-sem').value=n;
+  document.getElementById('sem-btn-1').classList.toggle('active',n===1);
+  document.getElementById('sem-btn-2').classList.toggle('active',n===2);
+  // filter subjects by semester
+  syncSubjModalSel();
 }
 
 function renderTT(){
+  // -- Active banner --
+  const banner=document.getElementById('tt-active-banner-wrap');
+  if(banner){
+    if(!S.activeTT){
+      banner.innerHTML=`<div class="tt-empty-state">
+        <div class="es-icon">📋</div>
+        <h3>لا يوجد جدول نشط</h3>
+        <p>اضغط "📋 إضافة جدول" لاختيار المجموعة التي تريد برمجة جدولها</p>
+      </div>`;
+      document.getElementById('ttbl').innerHTML='';
+      return;
+    }
+    const{lv,dp,spec,section,group}=S.activeTT;
+    banner.innerHTML=`<div class="tt-active-banner">
+      <div class="tab-info">
+        <span style="color:var(--gold-light);font-weight:800;font-size:13px;">📅 الجدول النشط:</span>
+        <span class="tab-chip req">${lv}</span>
+        <span class="tab-chip req">${dp}</span>
+        <span class="tab-chip req">${spec}</span>
+        ${section?`<span class="tab-chip opt">🗂️ ${section}</span>`:''}
+        ${group?`<span class="tab-chip opt">👥 ${group}</span>`:''}
+      </div>
+      <button class="btn bg" onclick="openAddTimetable()" style="font-size:11px;padding:6px 12px;">
+        🔄 تغيير الجدول
+      </button>
+    </div>`;
+  }
+
   const ss=curSessions();
   const mp={};
   ss.forEach(s=>{
@@ -2265,13 +2422,11 @@ function renderTT(){
     mp[s.day][s.slot].push(s);
   });
 
-  // Header: فراغ + الفترات الزمنية
   let h=`<thead><tr>
     <th style="min-width:78px;position:sticky;right:0;z-index:4;">اليوم</th>
     ${SLOTS.map(sl=>`<th style="min-width:140px;">${SL[sl].replace(' - ','<br>')}</th>`).join('')}
   </tr></thead><tbody>`;
 
-  // صف لكل يوم
   DAYS.forEach(day=>{
     h+=`<tr><td class="tc" style="position:sticky;right:0;z-index:3;background:var(--gray-light);">${day}</td>`;
     SLOTS.forEach(slot=>{
@@ -2284,8 +2439,7 @@ function renderTT(){
         ${isEmpty?`onclick="openAddSess('${day}','${slot}')"`:''}
       >`;
       cells.forEach(s=>{
-        // بناء label المجموعة
-        const grpLabel=[s.spec,s.section,s.group].filter(Boolean).join(' / ');
+        const grpLabel=[s.section,s.group].filter(Boolean).join(' / ');
         h+=`<div class="sc ${s.type}" draggable="true"
           ondragstart="onDS(event,'${s.id}')"
           ondragend="document.querySelectorAll('.sc').forEach(x=>x.classList.remove('dragging'))"
@@ -2294,7 +2448,7 @@ function renderTT(){
         <div class="ss">${s.subj}</div>
         <div class="si">👨‍🏫 ${s.tch}</div>
         <div class="si">🏫 ${s.rm}</div>
-        ${grpLabel?`<div class="si" style="font-size:9px;color:inherit;opacity:.8;">👥 ${grpLabel}</div>`:''}
+        ${grpLabel?`<div class="si" style="font-size:9px;opacity:.8;">👥 ${grpLabel}</div>`:''}
         <div class="si" style="font-size:9px;opacity:.65;">${TL[s.type]||''}</div>
         </div>`;
       });
@@ -2326,109 +2480,100 @@ function onDrop(e,day,slot){
 }
 
 // -- SESSION MODAL HELPERS -------------------------
-function onSessTypeChange(){
-  const t=document.getElementById('ms-type').value;
-  const row=document.getElementById('ms-firstlec-row');
-  if(row)row.style.display=t==='tlc'?'block':'none';
-}
+function onSessTypeChange(){}  // kept for compat
 function setFirstLec(val,el){
   document.getElementById('ms-firstlec').value=val;
   document.querySelectorAll('.fl-opt').forEach(o=>o.classList.remove('sel'));
   el.classList.add('sel');
 }
-function onMsLvChange(){syncMsSpecSel();}
-function onMsDpChange(){syncMsSpecSel();}
-function syncMsSpecSel(){
-  const lv=document.getElementById('ms-lv')?.value||'';
-  const dp=document.getElementById('ms-dp')?.value||'';
-  const filtered=S.specs.filter(sp=>(!lv||sp.lv===lv)&&(!dp||sp.dp===dp));
-  const sel=document.getElementById('ms-spec');if(!sel)return;
+function onMsLvChange(){}
+function onMsDpChange(){}
+function syncMsSpecSel(){}
+function syncMsSectionSel(val){}
+function syncMsGroupSel(val){}
+
+function syncSubjBySem(){
+  const sem=parseInt(document.getElementById('ms-sem')?.value||'1');
+  const lv=S.activeTT?.lv||'';
+  const dp=S.activeTT?.dp||'';
+  const filtered=S.subjects.filter(s=>
+    (!sem||s.sem===sem)&&(!lv||s.level===lv)&&(!dp||s.dept===dp)
+  );
+  const sel=document.getElementById('ms-subj-sel');if(!sel)return;
   const cur=sel.value;
-  sel.innerHTML='<option value="">-- عام (بدون تخصص) --</option>'
-    +filtered.map(sp=>`<option value="${sp.name}">${sp.name}</option>`).join('');
+  sel.innerHTML='<option value="">-- اختر مقياس --</option>'
+    +'<option value="__manual__">✏️ كتابة يدوية...</option>'
+    +filtered.map(s=>`<option value="${s.name}">${s.name}</option>`).join('');
   if(cur&&[...sel.options].some(o=>o.value===cur))sel.value=cur;
-}
-function syncMsSectionSel(val){
-  const sel=document.getElementById('ms-section');if(!sel)return;
-  sel.innerHTML='<option value="">-- كل الفصائل --</option>'
-    +S.sections.map(s=>`<option value="${s}">${s}</option>`).join('');
-  if(val&&S.sections.includes(val))sel.value=val;
-}
-function syncMsGroupSel(val){
-  const sel=document.getElementById('ms-group');if(!sel)return;
-  sel.innerHTML='<option value="">-- كل الأفواج --</option>'
-    +S.groups.map(g=>`<option value="${g}">${g}</option>`).join('');
-  if(val&&S.groups.includes(val))sel.value=val;
 }
 
 // -- SESSION MODAL ---------------------------------
 function openAddSess(day,slot){
+  if(!S.activeTT){toast('⚠️ اضغط "إضافة جدول" أولاً لاختيار المجموعة');return;}
   document.getElementById('esSessId').value='';
-  document.getElementById('mSessTitle').textContent='➕ إضافة حصة';
+  document.getElementById('mSessTitle').textContent=
+    `➕ إضافة حصة — ${day} ${SL[slot]||slot}`;
   document.getElementById('ms-subj').value='';
   document.getElementById('ms-subj').style.display='none';
-  const sSel=document.getElementById('ms-subj-sel');if(sSel)sSel.value='';
-  if(day)document.getElementById('ms-day').value=day;
-  if(slot)document.getElementById('ms-slot').value=slot;
-  const lv=document.getElementById('tt-lv')?.value||S.al;
-  const dp=document.getElementById('tt-dp')?.value||S.ad;
-  document.getElementById('ms-lv').value=lv;
-  document.getElementById('ms-dp').value=dp;
-  syncSubjModalSel();
-  syncMsSpecSel();syncMsSectionSel();syncMsGroupSel();
-  document.getElementById('ms-spec').value='';
-  document.getElementById('ms-section').value='';
-  document.getElementById('ms-group').value='';
+  // store day/slot as data attrs on modal
+  document.getElementById('mSess').dataset.day=day;
+  document.getElementById('mSess').dataset.slot=slot;
+  // reset sem
+  setSem(1);syncSubjBySem();
+  // reset type buttons
+  document.querySelectorAll('.sess-type-btn').forEach((b,i)=>b.classList.toggle('active',i===0));
+  document.getElementById('ms-type').value='tlc';
+  document.getElementById('ms-firstlec-row').style.display='block';
   document.getElementById('ms-firstlec').value='1';
   document.querySelectorAll('.fl-opt').forEach((o,i)=>o.classList.toggle('sel',i===0));
-  document.getElementById('ms-firstlec-row').style.display='block';
-  document.getElementById('ms-type').value='tlc';
   openM('mSess');
 }
 function openEditSess(id){
   const s=S.sessions.find(x=>x.id===id);if(!s)return;
   document.getElementById('esSessId').value=id;
   document.getElementById('mSessTitle').textContent='✏️ تعديل الحصة';
-  document.getElementById('ms-day').value=s.day;
-  document.getElementById('ms-slot').value=s.slot;
-  document.getElementById('ms-lv').value=s.lv;
-  document.getElementById('ms-dp').value=s.dp;
-  syncSubjModalSel();syncMsSpecSel();
-  syncMsSectionSel(s.section||'');syncMsGroupSel(s.group||'');
+  document.getElementById('mSess').dataset.day=s.day;
+  document.getElementById('mSess').dataset.slot=s.slot;
+  // sem
+  const semNum=s.sem||1;
+  setSem(semNum);syncSubjBySem();
   // subject
   const sSel=document.getElementById('ms-subj-sel');
   const sInp=document.getElementById('ms-subj');
   const exists=S.subjects.find(sub=>sub.name===s.subj);
   if(exists&&sSel){sSel.value=s.subj;sInp.style.display='none';sInp.value=s.subj;}
   else if(sSel){sSel.value='__manual__';sInp.style.display='';sInp.value=s.subj;}
-  document.getElementById('ms-spec').value=s.spec||'';
-  document.getElementById('ms-section').value=s.section||'';
-  document.getElementById('ms-group').value=s.group||'';
-  document.getElementById('ms-tch').value=s.tch;
-  document.getElementById('ms-rm').value=s.rm;
-  document.getElementById('ms-type').value=s.type;
+  // teacher/room
+  document.getElementById('ms-tch').value=s.tch||'';
+  document.getElementById('ms-rm').value=s.rm||'';
+  // type
+  const t=s.type||'tlc';
+  document.getElementById('ms-type').value=t;
+  document.querySelectorAll('.sess-type-btn').forEach(b=>b.classList.toggle('active',b.dataset.type===t));
   const fl=s.firstLec!==undefined?s.firstLec:1;
   document.getElementById('ms-firstlec').value=fl;
   document.querySelectorAll('.fl-opt').forEach((o,i)=>o.classList.toggle('sel',(fl==1&&i===0)||(fl==0&&i===1)));
-  document.getElementById('ms-firstlec-row').style.display=s.type==='tlc'?'block':'none';
+  document.getElementById('ms-firstlec-row').style.display=(t==='tlc'||t==='tlc-remote')?'block':'none';
   openM('mSess');
 }
 function saveSess(){
   const id=document.getElementById('esSessId').value;
   const subj=getSessionSubj();
   if(!subj){toast('⚠️ اختر أو أدخل اسم المقياس');return;}
+  if(!S.activeTT){toast('⚠️ لا يوجد جدول نشط');return;}
+  const modal=document.getElementById('mSess');
+  const day=modal.dataset.day;
+  const slot=modal.dataset.slot;
+  const{lv,dp,spec,section,group}=S.activeTT;
+  const sem=parseInt(document.getElementById('ms-sem')?.value||'1');
+  const type=document.getElementById('ms-type').value;
   const data={
     id:id||uid(),y:S.ay,
-    lv:document.getElementById('ms-lv').value,
-    dp:document.getElementById('ms-dp').value,
-    spec:document.getElementById('ms-spec')?.value||'',
-    section:document.getElementById('ms-section')?.value||'',
-    group:document.getElementById('ms-group')?.value||'',
-    day:document.getElementById('ms-day').value,
-    slot:document.getElementById('ms-slot').value,
-    subj,tch:document.getElementById('ms-tch').value,
+    lv,dp,spec,section,group,
+    day,slot,sem,subj,
+    tch:document.getElementById('ms-tch').value,
     rm:document.getElementById('ms-rm').value,
-    type:document.getElementById('ms-type').value,
+    type,
     firstLec:parseInt(document.getElementById('ms-firstlec').value||'1')
   };
   if(id){const i=S.sessions.findIndex(s=>s.id===id);if(i>-1)S.sessions[i]=data;}
