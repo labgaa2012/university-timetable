@@ -1531,7 +1531,9 @@ function defState(){
     years:['2025/2026','2026/2027','2027/2028','2028/2029','2029/2030'],
     levels:['سنة أولى ليسانس','سنة ثانية ليسانس','سنة ثالثة ليسانس','سنة أولى ماستر','سنة ثانية ماستر'],
     depts:['قسم السنة أولى جذع مشترك','قسم العلوم الاقتصادية','قسم علوم التسيير','قسم علوم المالية والمحاسبة','قسم العلوم التجارية'],
-    specs:DEFAULT_SPECS(),subjects:[],sections:[],groups:[],
+    specs:DEFAULT_SPECS(),subjects:[],
+    sections:['الفصيلة1','الفصيلة2','الفصيلة3'],
+    groups:['الفوج1','الفوج2','الفوج3','الفوج4','الفوج5','الفوج6','الفوج7','الفوج8'],
     teachers:[
       {name:'أ. محمد بن عمر',kind:'permanent'},
       {name:'د. فاطمة زهراء',kind:'permanent'},
@@ -1546,8 +1548,8 @@ let S={};
 function load(){
   try{const d=localStorage.getItem(SK);S=d?JSON.parse(d):defState();}catch(e){S=defState();}
   if(!S.subjects||!S.subjects.length) S.subjects=DEFAULT_SUBJECTS();
-  if(!S.sections) S.sections=[];
-  if(!S.groups)   S.groups=[];
+  if(!S.sections||!S.sections.length) S.sections=['الفصيلة1','الفصيلة2','الفصيلة3'];
+  if(!S.groups||!S.groups.length)     S.groups=['الفوج1','الفوج2','الفوج3','الفوج4','الفوج5','الفوج6','الفوج7','الفوج8'];
   // دمج التخصصات الافتراضية مع الموجودة (تجنب التكرار بالاسم+القسم+المستوى)
   const defaults=DEFAULT_SPECS();
   defaults.forEach(def=>{
