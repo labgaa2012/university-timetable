@@ -237,6 +237,49 @@ table#ttbl td.ec:hover::after{color:var(--teal);}
   .sc{-webkit-print-color-adjust:exact;print-color-adjust:exact;}
 }
 
+/* OVERTIME PAGE */
+.ot-table{width:100%;border-collapse:collapse;font-size:12px;}
+.ot-table th{background:var(--navy);color:var(--gold-light);padding:10px 12px;
+  text-align:right;font-weight:700;border:1px solid rgba(255,255,255,.1);white-space:nowrap;}
+.ot-table td{padding:10px 12px;border:1px solid #e0e8f5;font-weight:500;vertical-align:middle;}
+.ot-table tr:nth-child(even) td{background:#fafbfd;}
+.ot-table tr:hover td{background:#f0f6ff;}
+.ot-table td.num{text-align:center;font-weight:700;font-family:'Tajawal',sans-serif;}
+.ot-pos{color:var(--danger);font-weight:800;}
+.ot-zero{color:var(--gray);}
+.ot-neg{color:var(--success);}
+.ot-bar-wrap{background:#e8edf5;border-radius:20px;height:8px;min-width:80px;overflow:hidden;}
+.ot-bar{height:8px;border-radius:20px;background:linear-gradient(90deg,var(--teal),var(--teal-light));transition:width .4s;}
+.ot-bar.over{background:linear-gradient(90deg,var(--warning),var(--danger));}
+.ot-info-box{background:linear-gradient(135deg,#f0faf9,#e8f4fd);border:1.5px solid var(--teal);
+  border-radius:12px;padding:16px;margin-bottom:16px;}
+.ot-info-box h4{font-size:12.5px;font-weight:800;color:var(--navy);margin-bottom:10px;
+  font-family:'Tajawal',sans-serif;display:flex;align-items:center;gap:8px;}
+.ot-rule-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;}
+.ot-rule{background:#fff;border-radius:9px;padding:10px 12px;border:1px solid #e0e8f5;text-align:center;}
+.ot-rule .r-icon{font-size:18px;margin-bottom:4px;}
+.ot-rule .r-label{font-size:10px;color:var(--gray);font-weight:600;}
+.ot-rule .r-val{font-size:13px;font-weight:800;color:var(--navy);font-family:'Tajawal',sans-serif;}
+/* teacher kind badge */
+.kb-p{background:rgba(13,138,125,.12);color:var(--teal);padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700;}
+.kb-t{background:rgba(201,168,76,.15);color:#8a6a1e;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700;}
+/* overtime detail modal */
+.ot-detail-row{display:flex;justify-content:space-between;align-items:center;
+  padding:8px 0;border-bottom:1px dashed #e0e8f5;font-size:12px;}
+.ot-detail-row:last-child{border:none;}
+.ot-detail-lbl{color:var(--text-mid);font-weight:600;}
+.ot-detail-val{font-weight:800;color:var(--navy);font-family:'Tajawal',sans-serif;}
+.ot-total-box{background:var(--navy);color:#fff;border-radius:10px;padding:14px;margin-top:12px;text-align:center;}
+.ot-total-box .ov-num{font-size:28px;font-weight:800;font-family:'Tajawal',sans-serif;line-height:1;}
+.ot-total-box .ov-lbl{font-size:11px;opacity:.8;margin-top:3px;}
+.ot-total-box.pos{background:linear-gradient(135deg,var(--danger),#e74c3c);}
+.ot-total-box.zero{background:var(--gray);}
+/* first-lecture toggle in session modal */
+.fl-toggle{display:flex;gap:6px;margin-top:4px;}
+.fl-opt{flex:1;padding:7px;border-radius:7px;border:1.5px solid #d0dae8;
+  text-align:center;cursor:pointer;font-size:11.5px;font-weight:700;
+  color:var(--text-mid);transition:all .2s;background:#fff;}
+.fl-opt.sel{border-color:var(--navy);background:var(--navy);color:#fff;}
 /* TOAST */
 #toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);
   background:var(--navy);color:#fff;padding:10px 20px;border-radius:10px;
@@ -269,6 +312,7 @@ table#ttbl td.ec:hover::after{color:var(--teal);}
     <button class="nav-tab" onclick="showPg('exams',this)">📝 الامتحانات</button>
     <button class="nav-tab" onclick="showPg('rooms',this)">🏫 أشغال القاعات</button>
     <button class="nav-tab" onclick="showPg('comp',this)">🔄 تعويض الحصص</button>
+    <button class="nav-tab" onclick="showPg('overtime',this)">⏰ الساعات الإضافية</button>
     <button class="nav-tab" onclick="showPg('archive',this)">📦 الأرشيف</button>
   </div>
   <div class="header-right">
@@ -342,10 +386,18 @@ table#ttbl td.ec:hover::after{color:var(--teal);}
       <span class="aa">▼</span>
     </button>
     <div class="abb"><div class="abt">
-      <div class="fg"><div class="inlf">
+      <div class="fg">
+        <label class="fl">اسم الأستاذ</label>
         <input class="fi" id="tchIn" placeholder="اسم الأستاذ...">
-        <button class="btn bp" onclick="addTeacher()">إضافة</button>
-      </div></div>
+      </div>
+      <div class="fg">
+        <label class="fl">نوع الأستاذ</label>
+        <select class="fs" id="tchKind">
+          <option value="permanent">دائم (نصاب: 9 ساعات)</option>
+          <option value="temporary">مؤقت / مشارك (كل ساعاته إضافية)</option>
+        </select>
+      </div>
+      <button class="btn bp" style="width:100%;" onclick="addTeacher()">➕ إضافة أستاذ</button>
       <div class="ilist" id="tchList"></div>
     </div></div>
   </div>
@@ -464,6 +516,59 @@ table#ttbl td.ec:hover::after{color:var(--teal);}
     </div>
   </div>
 
+  <!-- OVERTIME -->
+  <div class="pg" id="pg-overtime">
+    <div class="mc">
+      <div class="mch">
+        <div class="mct"><div class="mcti">⏰</div>الساعات الإضافية</div>
+        <div class="frow">
+          <select class="fs" id="ot-filter" onchange="renderOvertime()">
+            <option value="">-- جميع الأساتذة --</option>
+          </select>
+          <button class="btn bn" onclick="expOvertimeExcel()">📊 تصدير Excel</button>
+          <button class="btn bp" onclick="printOvertime()">🖨️ طباعة</button>
+        </div>
+      </div>
+      <!-- Info box -->
+      <div class="ot-info-box">
+        <h4>📋 قواعد الحساب المعتمدة — جامعة الأغواط</h4>
+        <div class="ot-rule-grid">
+          <div class="ot-rule">
+            <div class="r-icon">📖</div>
+            <div class="r-label">محاضرة أولى</div>
+            <div class="r-val">× 2.25 ساعة</div>
+          </div>
+          <div class="ot-rule">
+            <div class="r-icon">🔁</div>
+            <div class="r-label">محاضرة مكررة</div>
+            <div class="r-val">× 1.5 ساعة</div>
+          </div>
+          <div class="ot-rule">
+            <div class="r-icon">✏️</div>
+            <div class="r-label">أعمال موجهة / تطبيقية</div>
+            <div class="r-val">× 1.5 ساعة</div>
+          </div>
+          <div class="ot-rule">
+            <div class="r-icon">⚖️</div>
+            <div class="r-label">النصاب القانوني (دائم)</div>
+            <div class="r-val">9 ساعات / أسبوع</div>
+          </div>
+          <div class="ot-rule">
+            <div class="r-icon">🆓</div>
+            <div class="r-label">الأستاذ المؤقت</div>
+            <div class="r-val">بلا نصاب</div>
+          </div>
+          <div class="ot-rule">
+            <div class="r-icon">➕</div>
+            <div class="r-label">الساعات الإضافية</div>
+            <div class="r-val">المعادل − النصاب</div>
+          </div>
+        </div>
+      </div>
+      <div id="ot-container"></div>
+    </div>
+  </div>
+
   <!-- ARCHIVE -->
   <div class="pg" id="pg-archive">
     <div class="mc">
@@ -508,12 +613,20 @@ table#ttbl td.ec:hover::after{color:var(--teal);}
       <div class="fg"><label class="fl">القاعة</label><select class="fs" id="ms-rm"></select></div>
     </div>
     <div class="fg"><label class="fl">نوع الحصة</label>
-      <select class="fs" id="ms-type">
+      <select class="fs" id="ms-type" onchange="onSessTypeChange()">
         <option value="tlc">محاضرة</option>
         <option value="ttd">أعمال موجهة</option>
         <option value="ttp">أعمال تطبيقية</option>
         <option value="tot">أخرى</option>
       </select></div>
+    <div class="fg" id="ms-firstlec-row">
+      <label class="fl">نوع المحاضرة (للحساب)</label>
+      <input type="hidden" id="ms-firstlec" value="1">
+      <div class="fl-toggle">
+        <div class="fl-opt sel" onclick="setFirstLec(1,this)">📖 أولى (×2.25)</div>
+        <div class="fl-opt" onclick="setFirstLec(0,this)">🔁 مكررة (×1.5)</div>
+      </div>
+    </div>
     <div class="ma">
       <button class="btn bp" onclick="saveSess()">✅ حفظ</button>
       <button class="btn" style="background:var(--gray-light);color:var(--text-mid);" onclick="closeM('mSess')">إلغاء</button>
@@ -583,6 +696,16 @@ table#ttbl td.ec:hover::after{color:var(--teal);}
   </div>
 </div>
 
+<div class="mo" id="mOvDetail">
+  <div class="mb" style="width:500px;">
+    <div class="mt" id="mOvTitle">⏰ تفاصيل الساعات</div>
+    <div id="mOvBody"></div>
+    <div class="ma">
+      <button class="btn" style="background:var(--gray-light);color:var(--text-mid);" onclick="closeM('mOvDetail')">إغلاق</button>
+    </div>
+  </div>
+</div>
+
 <div id="toast"></div>
 
 <script>
@@ -605,13 +728,26 @@ function defState(){
     years:['2025/2026','2026/2027','2027/2028','2028/2029','2029/2030'],
     levels:['سنة أولى ليسانس','سنة ثانية ليسانس','سنة ثالثة ليسانس','سنة أولى ماستر','سنة ثانية ماستر'],
     depts:['قسم السنة أولى جذع مشترك','قسم العلوم الاقتصادية','قسم علوم التسيير','قسم علوم المالية والمحاسبة','قسم العلوم التجارية'],
-    specs:[],teachers:[],rooms,sessions:[],exams:[],archive:[],
+    specs:[],
+    teachers:[
+      {name:'أ. محمد بن عمر',kind:'permanent'},
+      {name:'د. فاطمة زهراء',kind:'permanent'},
+      {name:'أ. علي حسين',kind:'permanent'},
+      {name:'د. يوسف قاسمي',kind:'permanent'}
+    ],rooms,sessions:[],exams:[],archive:[],
     ay:'2025/2026',al:'سنة أولى ليسانس',ad:'قسم السنة أولى جذع مشترك',round:1
   };
 }
 
 let S={};
-function load(){try{const d=localStorage.getItem(SK);S=d?JSON.parse(d):defState();}catch(e){S=defState();}}
+function load(){
+  try{const d=localStorage.getItem(SK);S=d?JSON.parse(d):defState();}catch(e){S=defState();}
+  // Migrate old string-teachers to objects
+  if(S.teachers.length && typeof S.teachers[0]==='string'){
+    S.teachers=S.teachers.map(n=>({name:n,kind:'permanent'}));
+    save();
+  }
+}
 function save(){try{localStorage.setItem(SK,JSON.stringify(S));}catch(e){}}
 function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,6);}
 
@@ -641,6 +777,7 @@ function showPg(id,btn){
   if(id==='timetable')renderTT();
   if(id==='exams')renderExams();
   if(id==='archive')renderArchive();
+  if(id==='overtime')renderOvertime();
 }
 
 // ── RENDER SIDEBAR ────────────────────────────────
@@ -679,14 +816,23 @@ function renderSpList(){
     :'<div style="font-size:10.5px;color:var(--gray);">لا توجد تخصصات</div>';
 }
 function renderTchList(){
-  document.getElementById('tchList').innerHTML=S.teachers.map((t,i)=>
-    `<div class="icard"><span>👨‍🏫 ${t}</span><div class="iac">
-    <button class="icb ied" onclick="openEdit('teacher',${i},'${t}')">✏️</button>
-    <button class="icb idl" onclick="rmTch(${i})">🗑️</button></div></div>`).join('');
-  const opts=S.teachers.map(t=>`<option>${t}</option>`).join('');
+  document.getElementById('tchList').innerHTML=S.teachers.map((t,i)=>{
+    const kb=t.kind==='permanent'
+      ?'<span class="kb-p">دائم</span>'
+      :'<span class="kb-t">مؤقت</span>';
+    return `<div class="icard">
+      <span>👨‍🏫 ${t.name} ${kb}</span>
+      <div class="iac">
+        <button class="icb ied" onclick="openEdit('teacher',${i},'${t.name}')">✏️</button>
+        <button class="icb idl" onclick="rmTch(${i})">🗑️</button>
+      </div></div>`;
+  }).join('');
+  const opts=S.teachers.map(t=>`<option>${t.name}</option>`).join('');
   ['ms-tch','me-tch'].forEach(id=>{const el=document.getElementById(id);if(el)el.innerHTML=opts;});
   const cpT=document.getElementById('cp-teach');
   if(cpT)cpT.innerHTML='<option value="">-- الكل --</option>'+opts;
+  const otF=document.getElementById('ot-filter');
+  if(otF)otF.innerHTML='<option value="">-- جميع الأساتذة --</option>'+opts;
   updStats();
 }
 function renderRmList(){
@@ -747,7 +893,14 @@ function rmLv(i){S.levels.splice(i,1);save();renderAll();}
 function onDptCh(){S.ad=document.getElementById('dptSel').value;save();renderTT();}
 function rmDpt(i){S.depts.splice(i,1);save();renderAll();}
 
-function addTeacher(){const v=document.getElementById('tchIn').value.trim();if(!v)return;S.teachers.push(v);document.getElementById('tchIn').value='';save();renderTchList();toast('✅ أضيف: '+v);}
+function addTeacher(){
+  const n=document.getElementById('tchIn').value.trim();
+  const k=document.getElementById('tchKind')?.value||'permanent';
+  if(!n)return;
+  S.teachers.push({name:n,kind:k});
+  document.getElementById('tchIn').value='';
+  save();renderTchList();toast('✅ أضيف: '+n);
+}
 function rmTch(i){S.teachers.splice(i,1);save();renderTchList();toast('🗑️ تم الحذف');}
 
 function addRoom(){const v=document.getElementById('rmIn').value.trim();if(!v)return;S.rooms.unshift(v);document.getElementById('rmIn').value='';save();renderRmList();toast('✅ أضيفت: '+v);}
@@ -785,7 +938,11 @@ function confEdit(){
   const val=document.getElementById('enInput').value.trim();
   if(!val)return;
   if(type==='year'){const o=S.years[idx];S.years[idx]=val;S.sessions.forEach(s=>{if(s.y===o)s.y=val;});S.exams.forEach(e=>{if(e.y===o)e.y=val;});if(S.ay===o)S.ay=val;}
-  else if(type==='teacher'){const o=S.teachers[idx];S.teachers[idx]=val;S.sessions.forEach(s=>{if(s.tch===o)s.tch=val;});}
+  else if(type==='teacher'){
+    const old=S.teachers[idx].name;
+    S.teachers[idx].name=val;
+    S.sessions.forEach(s=>{if(s.tch===old)s.tch=val;});
+  }
   else if(type==='dept'){S.depts[idx]=val;}
   save();renderAll();closeM('mEdit');toast('✅ تم التعديل');
 }
@@ -858,6 +1015,18 @@ function onDrop(e,day,slot){
   dragId=null;save();renderTT();toast('✅ تم نقل الحصة');
 }
 
+// ── SESSION MODAL HELPERS ─────────────────────────
+function onSessTypeChange(){
+  const t=document.getElementById('ms-type').value;
+  const row=document.getElementById('ms-firstlec-row');
+  if(row) row.style.display=t==='tlc'?'block':'none';
+}
+function setFirstLec(val, el){
+  document.getElementById('ms-firstlec').value=val;
+  document.querySelectorAll('.fl-opt').forEach(o=>o.classList.remove('sel'));
+  el.classList.add('sel');
+}
+
 // ── SESSION MODAL ─────────────────────────────────
 function openAddSess(day,slot){
   document.getElementById('esSessId').value='';
@@ -869,6 +1038,11 @@ function openAddSess(day,slot){
   const dp=document.getElementById('tt-dp')?.value||S.ad;
   document.getElementById('ms-lv').value=lv;
   document.getElementById('ms-dp').value=dp;
+  // Reset first-lecture toggle
+  document.getElementById('ms-firstlec').value='1';
+  document.querySelectorAll('.fl-opt').forEach((o,i)=>{o.classList.toggle('sel',i===0);});
+  document.getElementById('ms-firstlec-row').style.display='block';
+  document.getElementById('ms-type').value='tlc';
   openM('mSess');
 }
 function openEditSess(id){
@@ -883,6 +1057,11 @@ function openEditSess(id){
   document.getElementById('ms-tch').value=s.tch;
   document.getElementById('ms-rm').value=s.rm;
   document.getElementById('ms-type').value=s.type;
+  // restore first-lecture toggle
+  const fl=s.firstLec!==undefined?s.firstLec:1;
+  document.getElementById('ms-firstlec').value=fl;
+  document.querySelectorAll('.fl-opt').forEach((o,i)=>{o.classList.toggle('sel',(fl==1&&i===0)||(fl==0&&i===1));});
+  document.getElementById('ms-firstlec-row').style.display=s.type==='tlc'?'block':'none';
   openM('mSess');
 }
 function saveSess(){
@@ -897,7 +1076,8 @@ function saveSess(){
     slot:document.getElementById('ms-slot').value,
     subj,tch:document.getElementById('ms-tch').value,
     rm:document.getElementById('ms-rm').value,
-    type:document.getElementById('ms-type').value
+    type:document.getElementById('ms-type').value,
+    firstLec:parseInt(document.getElementById('ms-firstlec').value||'1')
   };
   if(id){const i=S.sessions.findIndex(s=>s.id===id);if(i>-1)S.sessions[i]=data;}
   else S.sessions.push(data);
@@ -1020,6 +1200,212 @@ function findFree(){
     ?`<div class="cr"><h4 style="font-size:12px;font-weight:700;color:var(--teal);margin-bottom:8px;">✅ أوقات الفراغ - ${day} - ${room}</h4>
        ${freeSlots.map(sl=>`<span class="tt-tag">⏰ ${SL[sl]}</span>`).join('')}</div>`
     :'<div class="cr" style="border-color:var(--danger)"><p style="color:var(--danger);font-size:12px;font-weight:600;">⛔ لا توجد أوقات فراغ</p></div>';
+}
+
+// ── OVERTIME ENGINE ───────────────────────────────
+const QUORUM=9; // ساعات معادلة / أسبوع
+
+function calcTeacherOvertime(tchName){
+  const sessions=S.sessions.filter(s=>s.y===S.ay&&s.tch===tchName);
+  const tchObj=S.teachers.find(t=>t.name===tchName)||{kind:'permanent'};
+
+  let firstLecCount=0,repLecCount=0,tdTpCount=0,otherCount=0;
+  sessions.forEach(s=>{
+    if(s.type==='tlc'){
+      if(s.firstLec===0) repLecCount++;
+      else firstLecCount++;
+    } else if(s.type==='ttd'||s.type==='ttp'){
+      tdTpCount++;
+    } else {
+      otherCount++;
+    }
+  });
+
+  // Equivalent hours:  1 session = 1.5 real hours
+  const eqFirstLec = firstLecCount * 2.25;   // 1.5 × 1.5
+  const eqRepLec   = repLecCount  * 1.5;     // 1.5 × 1
+  const eqTdTp     = tdTpCount    * 1.5;     // 1.5 × 1
+  const eqOther    = otherCount   * 1.5;
+  const totalEq    = eqFirstLec + eqRepLec + eqTdTp + eqOther;
+
+  const quorum     = tchObj.kind==='permanent' ? QUORUM : 0;
+  const overtime   = Math.max(0, totalEq - quorum);
+
+  return{
+    name:tchName, kind:tchObj.kind, sessions:sessions.length,
+    firstLecCount, repLecCount, tdTpCount, otherCount,
+    eqFirstLec, eqRepLec, eqTdTp, eqOther, totalEq,
+    quorum, overtime
+  };
+}
+
+function renderOvertime(){
+  const filter=document.getElementById('ot-filter')?.value||'';
+  const teachers=filter ? [filter] : S.teachers.map(t=>t.name);
+  if(!teachers.length){
+    document.getElementById('ot-container').innerHTML=
+      '<div style="color:var(--gray);text-align:center;padding:20px;font-size:12px;">أضف أساتذة أولاً من اللوحة الجانبية</div>';
+    return;
+  }
+  const rows=teachers.map(n=>calcTeacherOvertime(n));
+  const totalOT=rows.reduce((a,r)=>a+r.overtime,0);
+
+  let html=`
+  <div style="display:flex;gap:12px;margin-bottom:14px;flex-wrap:wrap;">
+    <div class="stat" style="flex:1;min-width:130px;border-top-color:var(--teal);">
+      <div class="sval">${rows.length}</div><div class="slbl">أستاذ في الحساب</div></div>
+    <div class="stat" style="flex:1;min-width:130px;border-top-color:var(--warning);">
+      <div class="sval">${totalOT.toFixed(1)}</div><div class="slbl">مجموع الساعات الإضافية</div></div>
+    <div class="stat" style="flex:1;min-width:130px;border-top-color:#8b5cf6;">
+      <div class="sval">${rows.filter(r=>r.overtime>0).length}</div><div class="slbl">أستاذ لديه ساعات إضافية</div></div>
+    <div class="stat" style="flex:1;min-width:130px;border-top-color:var(--success);">
+      <div class="sval">${rows.filter(r=>r.overtime===0&&r.kind==='permanent').length}</div><div class="slbl">دائم ضمن النصاب</div></div>
+  </div>
+  <table class="ot-table">
+    <thead><tr>
+      <th>الأستاذ</th><th>النوع</th><th>محاضرة أولى</th><th>محاضرة مكررة</th>
+      <th>أع. موجهة/تطبيقية</th><th>المعادل الكلي</th><th>النصاب</th>
+      <th>الساعات الإضافية</th><th>التقدم</th><th></th>
+    </tr></thead>
+    <tbody>`;
+
+  rows.forEach(r=>{
+    const otClass=r.overtime>0?'ot-pos':r.quorum>0&&r.totalEq>=r.quorum?'ot-zero':'ot-neg';
+    const barPct=r.quorum>0?Math.min(100,r.totalEq/r.quorum*100):100;
+    const isOver=r.totalEq>r.quorum;
+    const kb=r.kind==='permanent'?'<span class="kb-p">دائم</span>':'<span class="kb-t">مؤقت</span>';
+    html+=`<tr>
+      <td><strong>${r.name}</strong></td>
+      <td>${kb}</td>
+      <td class="num">${r.firstLecCount} <span style="font-size:9px;color:var(--gray);">(${r.eqFirstLec.toFixed(2)})</span></td>
+      <td class="num">${r.repLecCount} <span style="font-size:9px;color:var(--gray);">(${r.eqRepLec.toFixed(2)})</span></td>
+      <td class="num">${r.tdTpCount} <span style="font-size:9px;color:var(--gray);">(${r.eqTdTp.toFixed(2)})</span></td>
+      <td class="num"><strong>${r.totalEq.toFixed(2)}</strong></td>
+      <td class="num">${r.quorum>0?r.quorum+'h':'—'}</td>
+      <td class="num ${otClass}">${r.overtime>0?'+'+r.overtime.toFixed(2)+'h':r.kind==='temporary'?r.totalEq.toFixed(2)+'h':'ضمن النصاب'}</td>
+      <td>
+        <div class="ot-bar-wrap">
+          <div class="ot-bar ${isOver?'over':''}" style="width:${barPct.toFixed(0)}%"></div>
+        </div>
+        <div style="font-size:9px;color:var(--gray);text-align:center;margin-top:2px;">${barPct.toFixed(0)}%</div>
+      </td>
+      <td><button class="btn bp bsm" onclick="showOtDetail('${r.name}')">تفاصيل</button></td>
+    </tr>`;
+  });
+  html+='</tbody></table>';
+  document.getElementById('ot-container').innerHTML=html;
+}
+
+function showOtDetail(tchName){
+  const r=calcTeacherOvertime(tchName);
+  const kb=r.kind==='permanent'?'<span class="kb-p">دائم</span>':'<span class="kb-t">مؤقت</span>';
+  const otColor=r.overtime>0?'pos':r.overtime===0&&r.quorum>0?'':'zero';
+  document.getElementById('mOvTitle').textContent='⏰ تفاصيل ساعات: '+tchName;
+  document.getElementById('mOvBody').innerHTML=`
+    <div style="margin-bottom:12px;">${kb} — السنة: ${S.ay}</div>
+    <div class="ot-detail-row">
+      <span class="ot-detail-lbl">📖 عدد المحاضرات الأولى</span>
+      <span class="ot-detail-val">${r.firstLecCount} حصة × 2.25 = <strong>${r.eqFirstLec.toFixed(2)}h</strong></span>
+    </div>
+    <div class="ot-detail-row">
+      <span class="ot-detail-lbl">🔁 عدد المحاضرات المكررة</span>
+      <span class="ot-detail-val">${r.repLecCount} حصة × 1.5 = <strong>${r.eqRepLec.toFixed(2)}h</strong></span>
+    </div>
+    <div class="ot-detail-row">
+      <span class="ot-detail-lbl">✏️ عدد حصص أع. موجهة/تطبيقية</span>
+      <span class="ot-detail-val">${r.tdTpCount} حصة × 1.5 = <strong>${r.eqTdTp.toFixed(2)}h</strong></span>
+    </div>
+    <div style="height:1px;background:var(--navy);margin:10px 0;opacity:.2;"></div>
+    <div class="ot-detail-row">
+      <span class="ot-detail-lbl" style="font-weight:800;color:var(--navy);">🔢 مجموع الساعات المعادلة</span>
+      <span class="ot-detail-val" style="font-size:15px;color:var(--navy);">${r.totalEq.toFixed(2)} ساعة</span>
+    </div>
+    <div class="ot-detail-row">
+      <span class="ot-detail-lbl">⚖️ النصاب القانوني</span>
+      <span class="ot-detail-val">${r.quorum>0?r.quorum+' ساعة':'— (مؤقت)'}</span>
+    </div>
+    <div class="ot-total-box ${r.overtime>0?'pos':r.kind==='temporary'?'pos':'zero'}">
+      <div class="ov-num">${r.kind==='temporary'?r.totalEq.toFixed(2):r.overtime>0?'+'+r.overtime.toFixed(2):'0'} h</div>
+      <div class="ov-lbl">${r.kind==='temporary'?'إجمالي الساعات الإضافية (مؤقت — كل ساعاته إضافية)':r.overtime>0?'الساعات الإضافية الأسبوعية':'ضمن النصاب القانوني'}</div>
+    </div>
+    <div style="margin-top:12px;">
+      <div style="font-size:11.5px;font-weight:700;color:var(--navy);margin-bottom:8px;">📋 الحصص المسجلة (${r.sessions})</div>
+      ${S.sessions.filter(s=>s.y===S.ay&&s.tch===tchName).map(s=>`
+        <div style="font-size:11px;padding:5px 8px;background:var(--gray-light);border-radius:6px;margin-bottom:4px;display:flex;justify-content:space-between;">
+          <span><strong>${s.subj}</strong> — ${s.day} ${SL[s.slot]}</span>
+          <span style="color:var(--text-mid);">${TL[s.type]}${s.type==='tlc'?(s.firstLec===0?' (مكررة)':' (أولى)'):''}</span>
+        </div>`).join('')||'<div style="font-size:11px;color:var(--gray);">لا توجد حصص</div>'}
+    </div>`;
+  openM('mOvDetail');
+}
+
+function expOvertimeExcel(){
+  const filter=document.getElementById('ot-filter')?.value||'';
+  const teachers=filter?[filter]:S.teachers.map(t=>t.name);
+  const wb=XLSX.utils.book_new();
+  // Summary sheet
+  const hdr=['الأستاذ','النوع','محاضرة أولى','محاضرة مكررة','TD/TP','المعادل الكلي','النصاب','الساعات الإضافية'];
+  const data=[hdr];
+  teachers.forEach(n=>{
+    const r=calcTeacherOvertime(n);
+    data.push([r.name, r.kind==='permanent'?'دائم':'مؤقت',
+      r.firstLecCount, r.repLecCount, r.tdTpCount,
+      r.totalEq.toFixed(2), r.quorum||'—',
+      r.kind==='temporary'?r.totalEq.toFixed(2):r.overtime.toFixed(2)
+    ]);
+  });
+  const ws=XLSX.utils.aoa_to_sheet(data);
+  ws['!cols']=[{wch:24},{wch:10},{wch:14},{wch:16},{wch:12},{wch:14},{wch:10},{wch:16}];
+  XLSX.utils.book_append_sheet(wb,ws,'الساعات الإضافية');
+  // Detail sheet — all sessions
+  const dHdr=['الأستاذ','المادة','اليوم','الفترة','النوع','نوع المحاضرة','المعامل','ساعات معادلة'];
+  const dData=[dHdr];
+  teachers.forEach(n=>{
+    S.sessions.filter(s=>s.y===S.ay&&s.tch===n).forEach(s=>{
+      const coef=s.type==='tlc'?(s.firstLec===0?1.5:2.25):1.5;
+      dData.push([n,s.subj,s.day,SL[s.slot],TL[s.type],
+        s.type==='tlc'?(s.firstLec===0?'مكررة':'أولى'):'—',coef,coef]);
+    });
+  });
+  const dws=XLSX.utils.aoa_to_sheet(dData);
+  dws['!cols']=[{wch:24},{wch:20},{wch:10},{wch:14},{wch:16},{wch:12},{wch:10},{wch:14}];
+  XLSX.utils.book_append_sheet(wb,dws,'تفصيل الحصص');
+  XLSX.writeFile(wb,'overtime-'+S.ay.replace('/','_')+'.xlsx');
+  toast('📊 تم تصدير الساعات الإضافية');
+}
+
+function printOvertime(){
+  const filter=document.getElementById('ot-filter')?.value||'';
+  const teachers=filter?[filter]:S.teachers.map(t=>t.name);
+  const rows=teachers.map(n=>calcTeacherOvertime(n));
+  let trs='';
+  rows.forEach(r=>{
+    const ot=r.kind==='temporary'?r.totalEq.toFixed(2):r.overtime.toFixed(2);
+    trs+=`<tr><td>${r.name}</td><td>${r.kind==='permanent'?'دائم':'مؤقت'}</td>
+      <td>${r.firstLecCount}</td><td>${r.repLecCount}</td><td>${r.tdTpCount}</td>
+      <td>${r.totalEq.toFixed(2)}</td><td>${r.quorum||'—'}</td>
+      <td style="font-weight:800;color:${r.overtime>0||r.kind==='temporary'?'#c0392b':'#27ae60'};">${ot}</td></tr>`;
+  });
+  const w=window.open('','_blank','width=900,height=600');
+  w.document.write(`<!DOCTYPE html><html dir="rtl"><head><meta charset="UTF-8">
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;800&display=swap" rel="stylesheet">
+    <style>body{font-family:'Cairo',sans-serif;direction:rtl;margin:12mm;}
+    h2{font-size:13pt;color:#0f1f3d;}p{font-size:9pt;color:#555;margin:4px 0 10px;}
+    table{width:100%;border-collapse:collapse;}
+    th{background:#0f1f3d;color:#e0be7a;padding:7px 8px;font-size:9pt;border:1px solid #333;
+      -webkit-print-color-adjust:exact;print-color-adjust:exact;}
+    td{padding:6px 8px;border:1px solid #ddd;font-size:9pt;}
+    tr:nth-child(even) td{background:#f5f5f5;}</style>
+    </head><body>
+    <h2>⏰ كشف الساعات الإضافية — ${S.ay}</h2>
+    <p>تاريخ الطباعة: ${new Date().toLocaleDateString('ar-DZ')}</p>
+    <table><thead><tr>
+      <th>الأستاذ</th><th>النوع</th><th>محاضرة أولى</th><th>مكررة</th><th>TD/TP</th>
+      <th>المعادل</th><th>النصاب</th><th>الإضافي</th>
+    </tr></thead><tbody>${trs}</tbody></table>
+    <script>window.onload=function(){window.print();}<\/script>
+    </body></html>`);
+  w.document.close();
 }
 
 // ── ARCHIVE ───────────────────────────────────────
