@@ -1777,7 +1777,7 @@ function defState(){
       {id:'ttp',      label:'أعمال تطبيقية TP',          code:'TP',  icon:'🔬'},
       {id:'ttd-remote',label:'تقييم مستمر عن بعد',       code:'TD-E',icon:'💻'}
     ],
-    activeTT:null, // {lv,dp,spec,section,group,day,slot}
+    activeTT:null, // {period,lv,dp,spec,section,group}
     teachers:[
       {name:'أ. محمد بن عمر',kind:'permanent'},
       {name:'د. فاطمة زهراء',kind:'permanent'},
@@ -2515,10 +2515,12 @@ let dragId=null;
 
 function curSessions(){
   if(!S.activeTT) return [];
-  const{lv,dp,spec,section,group}=S.activeTT;
+  const{period,lv,dp,spec,section,group}=S.activeTT;
   return S.sessions.filter(s=>
     s.y===S.ay &&
-    s.lv===lv && s.dp===dp &&
+    (period?s.sem==period:true) &&
+    (lv?s.lv===lv:true) &&
+    (dp?s.dp===dp:true) &&
     (spec?s.spec===spec:true) &&
     (section?s.section===section:true) &&
     (group?s.group===group:true)
@@ -2529,7 +2531,7 @@ function curSessions(){
 function onTTFilterChange(field, value){
   if(!S.activeTT){
     // أنشئ activeTT جديد بالحد الأدنى
-    S.activeTT={lv:S.levels[0]||'',dp:S.depts[0]||'',spec:'',section:'',group:''};
+    S.activeTT={period:'',lv:S.levels[0]||'',dp:S.depts[0]||'',spec:'',section:'',group:''};
   }
   S.activeTT[field]=value;
   // إذا تغيّر المستوى أو القسم → امسح التخصص لأنه قد لا يكون متوافقاً
@@ -2632,9 +2634,21 @@ function renderTT(){
   const grpOpts='<option value="">-- كل الأفواج --</option>'
     +S.groups.map(g=>`<option value="${g}"${S.activeTT?.group===g?' selected':''}>${g}</option>`).join('');
 
+  // الفترة (السداسي)
+  const periodOpts='<option value="">-- كل الفترات --</option>'
+    +S.periods.map((p,i)=>{
+      const val=i+1;
+      const sel=(S.activeTT?.period===val)?' selected':'';
+      return `<option value="${val}"${sel}>${p}</option>`;
+    }).join('');
+
   banner.innerHTML=`<div class="tt-filter-bar">
     <span class="tt-filter-title">📅 الجدول النشط</span>
     <div class="tt-filter-sep"></div>
+    <div style="display:flex;flex-direction:column;gap:2px;">
+      <label>الفترة</label>
+      <select onchange="onTTFilterChange('period',this.value?parseInt(this.value):'')">${periodOpts}</select>
+    </div>
     <div style="display:flex;flex-direction:column;gap:2px;">
       <label>المستوى</label>
       <select onchange="onTTFilterChange('lv',this.value)">${lvOpts}</select>
