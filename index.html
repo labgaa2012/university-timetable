@@ -1234,9 +1234,11 @@ table.occ-matrix td.cell-occ:hover{background:#fee2e2;filter:brightness(.97);}
 
 <!-- MODALS -->
 <div class="mo" id="mSess">
-  <div class="mb">
+  <div class="mb" style="width:520px;">
     <div class="mt" id="mSessTitle">➕ إضافة حصة</div>
     <input type="hidden" id="esSessId">
+
+    <!-- اليوم + الفترة -->
     <div class="frow2">
       <div class="fg"><label class="fl">اليوم</label>
         <select class="fs" id="ms-day">
@@ -1252,6 +1254,8 @@ table.occ-matrix td.cell-occ:hover{background:#fee2e2;filter:brightness(.97);}
           <option value="15:00-16:30">15:00 - 16:30</option>
         </select></div>
     </div>
+
+    <!-- المقياس -->
     <div class="fg">
       <label class="fl">المقياس</label>
       <select class="fs" id="ms-subj-sel" onchange="onSubjSelChange()">
@@ -1260,21 +1264,51 @@ table.occ-matrix td.cell-occ:hover{background:#fee2e2;filter:brightness(.97);}
       </select>
       <input class="fi" id="ms-subj" placeholder="أدخل اسم المقياس يدوياً..." style="margin-top:6px;display:none;">
     </div>
+
+    <!-- المستوى + القسم -->
     <div class="frow2">
-      <div class="fg"><label class="fl">المستوى</label><select class="fs" id="ms-lv"></select></div>
-      <div class="fg"><label class="fl">القسم</label><select class="fs" id="ms-dp"></select></div>
+      <div class="fg"><label class="fl">المستوى</label><select class="fs" id="ms-lv" onchange="onMsLvChange()"></select></div>
+      <div class="fg"><label class="fl">القسم</label><select class="fs" id="ms-dp" onchange="onMsDpChange()"></select></div>
     </div>
+
+    <!-- التخصص + الفصيلة -->
     <div class="frow2">
+      <div class="fg"><label class="fl">التخصص</label>
+        <select class="fs" id="ms-spec">
+          <option value="">-- عام (بدون تخصص) --</option>
+        </select>
+      </div>
+      <div class="fg"><label class="fl">الفصيلة</label>
+        <select class="fs" id="ms-section">
+          <option value="">-- كل الفصائل --</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- الفوج + الأستاذ -->
+    <div class="frow2">
+      <div class="fg"><label class="fl">الفوج</label>
+        <select class="fs" id="ms-group">
+          <option value="">-- كل الأفواج --</option>
+        </select>
+      </div>
       <div class="fg"><label class="fl">الأستاذ</label><select class="fs" id="ms-tch"></select></div>
-      <div class="fg"><label class="fl">القاعة</label><select class="fs" id="ms-rm"></select></div>
     </div>
-    <div class="fg"><label class="fl">نوع الحصة</label>
-      <select class="fs" id="ms-type" onchange="onSessTypeChange()">
-        <option value="tlc">محاضرة</option>
-        <option value="ttd">أعمال موجهة</option>
-        <option value="ttp">أعمال تطبيقية</option>
-        <option value="tot">أخرى</option>
-      </select></div>
+
+    <!-- القاعة + النوع -->
+    <div class="frow2">
+      <div class="fg"><label class="fl">القاعة</label><select class="fs" id="ms-rm"></select></div>
+      <div class="fg"><label class="fl">نوع الحصة</label>
+        <select class="fs" id="ms-type" onchange="onSessTypeChange()">
+          <option value="tlc">محاضرة</option>
+          <option value="ttd">أعمال موجهة</option>
+          <option value="ttp">أعمال تطبيقية</option>
+          <option value="tot">أخرى</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- نوع المحاضرة -->
     <div class="fg" id="ms-firstlec-row">
       <label class="fl">نوع المحاضرة (للحساب)</label>
       <input type="hidden" id="ms-firstlec" value="1">
@@ -1283,6 +1317,7 @@ table.occ-matrix td.cell-occ:hover{background:#fee2e2;filter:brightness(.97);}
         <div class="fl-opt" onclick="setFirstLec(0,this)">🔁 مكررة (×1.5)</div>
       </div>
     </div>
+
     <div class="ma">
       <button class="btn bp" onclick="saveSess()">✅ حفظ</button>
       <button class="btn" style="background:var(--gray-light);color:var(--text-mid);" onclick="closeM('mSess')">إلغاء</button>
@@ -2227,10 +2262,17 @@ function renderTT(){
     if(!mp[s.day][s.slot])mp[s.day][s.slot]=[];
     mp[s.day][s.slot].push(s);
   });
-  let h=`<thead><tr><th style="width:72px;">الوقت</th>${DAYS.map(d=>`<th>${d}</th>`).join('')}</tr></thead><tbody>`;
-  SLOTS.forEach(slot=>{
-    h+=`<tr><td class="tc">${SL[slot].replace(' - ','<br>')}</td>`;
-    DAYS.forEach(day=>{
+
+  // Header: فراغ + الفترات الزمنية
+  let h=`<thead><tr>
+    <th style="min-width:78px;position:sticky;right:0;z-index:4;">اليوم</th>
+    ${SLOTS.map(sl=>`<th style="min-width:140px;">${SL[sl].replace(' - ','<br>')}</th>`).join('')}
+  </tr></thead><tbody>`;
+
+  // صف لكل يوم
+  DAYS.forEach(day=>{
+    h+=`<tr><td class="tc" style="position:sticky;right:0;z-index:3;background:var(--gray-light);">${day}</td>`;
+    SLOTS.forEach(slot=>{
       const cells=(mp[day]&&mp[day][slot])||[];
       const isEmpty=!cells.length;
       h+=`<td class="${isEmpty?'ec':''}"
@@ -2240,6 +2282,8 @@ function renderTT(){
         ${isEmpty?`onclick="openAddSess('${day}','${slot}')"`:''}
       >`;
       cells.forEach(s=>{
+        // بناء label المجموعة
+        const grpLabel=[s.spec,s.section,s.group].filter(Boolean).join(' / ');
         h+=`<div class="sc ${s.type}" draggable="true"
           ondragstart="onDS(event,'${s.id}')"
           ondragend="document.querySelectorAll('.sc').forEach(x=>x.classList.remove('dragging'))"
@@ -2248,7 +2292,8 @@ function renderTT(){
         <div class="ss">${s.subj}</div>
         <div class="si">👨‍🏫 ${s.tch}</div>
         <div class="si">🏫 ${s.rm}</div>
-        <div class="si" style="font-size:9px;opacity:.7;">${TL[s.type]||''}</div>
+        ${grpLabel?`<div class="si" style="font-size:9px;color:inherit;opacity:.8;">👥 ${grpLabel}</div>`:''}
+        <div class="si" style="font-size:9px;opacity:.65;">${TL[s.type]||''}</div>
         </div>`;
       });
       h+='</td>';
@@ -2282,12 +2327,36 @@ function onDrop(e,day,slot){
 function onSessTypeChange(){
   const t=document.getElementById('ms-type').value;
   const row=document.getElementById('ms-firstlec-row');
-  if(row) row.style.display=t==='tlc'?'block':'none';
+  if(row)row.style.display=t==='tlc'?'block':'none';
 }
-function setFirstLec(val, el){
+function setFirstLec(val,el){
   document.getElementById('ms-firstlec').value=val;
   document.querySelectorAll('.fl-opt').forEach(o=>o.classList.remove('sel'));
   el.classList.add('sel');
+}
+function onMsLvChange(){syncMsSpecSel();}
+function onMsDpChange(){syncMsSpecSel();}
+function syncMsSpecSel(){
+  const lv=document.getElementById('ms-lv')?.value||'';
+  const dp=document.getElementById('ms-dp')?.value||'';
+  const filtered=S.specs.filter(sp=>(!lv||sp.lv===lv)&&(!dp||sp.dp===dp));
+  const sel=document.getElementById('ms-spec');if(!sel)return;
+  const cur=sel.value;
+  sel.innerHTML='<option value="">-- عام (بدون تخصص) --</option>'
+    +filtered.map(sp=>`<option value="${sp.name}">${sp.name}</option>`).join('');
+  if(cur&&[...sel.options].some(o=>o.value===cur))sel.value=cur;
+}
+function syncMsSectionSel(val){
+  const sel=document.getElementById('ms-section');if(!sel)return;
+  sel.innerHTML='<option value="">-- كل الفصائل --</option>'
+    +S.sections.map(s=>`<option value="${s}">${s}</option>`).join('');
+  if(val&&S.sections.includes(val))sel.value=val;
+}
+function syncMsGroupSel(val){
+  const sel=document.getElementById('ms-group');if(!sel)return;
+  sel.innerHTML='<option value="">-- كل الأفواج --</option>'
+    +S.groups.map(g=>`<option value="${g}">${g}</option>`).join('');
+  if(val&&S.groups.includes(val))sel.value=val;
 }
 
 // -- SESSION MODAL ---------------------------------
@@ -2295,20 +2364,21 @@ function openAddSess(day,slot){
   document.getElementById('esSessId').value='';
   document.getElementById('mSessTitle').textContent='➕ إضافة حصة';
   document.getElementById('ms-subj').value='';
+  document.getElementById('ms-subj').style.display='none';
+  const sSel=document.getElementById('ms-subj-sel');if(sSel)sSel.value='';
   if(day)document.getElementById('ms-day').value=day;
   if(slot)document.getElementById('ms-slot').value=slot;
   const lv=document.getElementById('tt-lv')?.value||S.al;
   const dp=document.getElementById('tt-dp')?.value||S.ad;
   document.getElementById('ms-lv').value=lv;
   document.getElementById('ms-dp').value=dp;
-  // sync subject dropdown for this level/dept
   syncSubjModalSel();
-  const seSel=document.getElementById('ms-subj-sel');if(seSel)seSel.value='';
-  document.getElementById('ms-subj').style.display='none';
-  document.getElementById('ms-subj').value='';
-  // Reset first-lecture toggle
+  syncMsSpecSel();syncMsSectionSel();syncMsGroupSel();
+  document.getElementById('ms-spec').value='';
+  document.getElementById('ms-section').value='';
+  document.getElementById('ms-group').value='';
   document.getElementById('ms-firstlec').value='1';
-  document.querySelectorAll('.fl-opt').forEach((o,i)=>{o.classList.toggle('sel',i===0);});
+  document.querySelectorAll('.fl-opt').forEach((o,i)=>o.classList.toggle('sel',i===0));
   document.getElementById('ms-firstlec-row').style.display='block';
   document.getElementById('ms-type').value='tlc';
   openM('mSess');
@@ -2317,24 +2387,27 @@ function openEditSess(id){
   const s=S.sessions.find(x=>x.id===id);if(!s)return;
   document.getElementById('esSessId').value=id;
   document.getElementById('mSessTitle').textContent='✏️ تعديل الحصة';
-  document.getElementById('ms-subj').value=s.subj;
   document.getElementById('ms-day').value=s.day;
   document.getElementById('ms-slot').value=s.slot;
   document.getElementById('ms-lv').value=s.lv;
   document.getElementById('ms-dp').value=s.dp;
-  syncSubjModalSel();
+  syncSubjModalSel();syncMsSpecSel();
+  syncMsSectionSel(s.section||'');syncMsGroupSel(s.group||'');
+  // subject
   const sSel=document.getElementById('ms-subj-sel');
   const sInp=document.getElementById('ms-subj');
   const exists=S.subjects.find(sub=>sub.name===s.subj);
   if(exists&&sSel){sSel.value=s.subj;sInp.style.display='none';sInp.value=s.subj;}
   else if(sSel){sSel.value='__manual__';sInp.style.display='';sInp.value=s.subj;}
+  document.getElementById('ms-spec').value=s.spec||'';
+  document.getElementById('ms-section').value=s.section||'';
+  document.getElementById('ms-group').value=s.group||'';
   document.getElementById('ms-tch').value=s.tch;
   document.getElementById('ms-rm').value=s.rm;
   document.getElementById('ms-type').value=s.type;
-  // restore first-lecture toggle
   const fl=s.firstLec!==undefined?s.firstLec:1;
   document.getElementById('ms-firstlec').value=fl;
-  document.querySelectorAll('.fl-opt').forEach((o,i)=>{o.classList.toggle('sel',(fl==1&&i===0)||(fl==0&&i===1));});
+  document.querySelectorAll('.fl-opt').forEach((o,i)=>o.classList.toggle('sel',(fl==1&&i===0)||(fl==0&&i===1)));
   document.getElementById('ms-firstlec-row').style.display=s.type==='tlc'?'block':'none';
   openM('mSess');
 }
@@ -2346,6 +2419,9 @@ function saveSess(){
     id:id||uid(),y:S.ay,
     lv:document.getElementById('ms-lv').value,
     dp:document.getElementById('ms-dp').value,
+    spec:document.getElementById('ms-spec')?.value||'',
+    section:document.getElementById('ms-section')?.value||'',
+    group:document.getElementById('ms-group')?.value||'',
     day:document.getElementById('ms-day').value,
     slot:document.getElementById('ms-slot').value,
     subj,tch:document.getElementById('ms-tch').value,
