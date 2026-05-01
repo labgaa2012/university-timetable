@@ -466,6 +466,28 @@ table#ttbl td.ec:hover::after{color:var(--teal);}
 .grp-c6{background:#e0e7ff;border-color:#818cf8;color:#3730a3;}
 .grp-c7{background:#f0fdf4;border-color:#34d399;color:#065f46;}
 
+/* GROUP SUB-TABLE */
+.grp-block{margin-bottom:20px;}
+.grp-block-header{
+  display:flex;align-items:center;gap:10px;
+  padding:8px 14px;border-radius:9px 9px 0 0;
+  font-size:12.5px;font-weight:800;
+  border-bottom:2px solid rgba(255,255,255,.3);
+  margin-bottom:0;
+}
+.grp-block-header .grp-dot{
+  width:10px;height:10px;border-radius:50%;background:rgba(255,255,255,.6);
+}
+/* الألوان الدوارة لرؤوس الأفواج */
+.gh-0{background:linear-gradient(90deg,#1e40af,#3b82f6);color:#fff;}
+.gh-1{background:linear-gradient(90deg,#065f46,#10b981);color:#fff;}
+.gh-2{background:linear-gradient(90deg,#92400e,#f59e0b);color:#fff;}
+.gh-3{background:linear-gradient(90deg,#9f1239,#f43f5e);color:#fff;}
+.gh-4{background:linear-gradient(90deg,#4c1d95,#8b5cf6);color:#fff;}
+.gh-5{background:linear-gradient(90deg,#134e4a,#14b8a6);color:#fff;}
+.gh-6{background:linear-gradient(90deg,#7c2d12,#f97316);color:#fff;}
+.gh-7{background:linear-gradient(90deg,#1e3a5f,#6366f1);color:#fff;}
+
 /* SESSION TYPE BUTTONS */
 .sess-type-btn{
   padding:8px 6px;border-radius:8px;border:1.5px solid #d0dae8;
@@ -829,7 +851,7 @@ table.occ-matrix td.cell-occ:hover{background:#fee2e2;filter:brightness(.97);}
       </div>
       <!-- بانر الجدول النشط -->
       <div id="tt-active-banner-wrap"></div>
-      <div class="ttw"><table id="ttbl"></table></div>
+      <div class="ttw" id="ttbl-container"></div>
     </div>
   </div>
 
@@ -2388,77 +2410,135 @@ function setSem(n){
 function renderTT(){
   // -- Active banner --
   const banner=document.getElementById('tt-active-banner-wrap');
-  if(banner){
-    if(!S.activeTT){
-      banner.innerHTML=`<div class="tt-empty-state">
-        <div class="es-icon">📋</div>
-        <h3>لا يوجد جدول نشط</h3>
-        <p>اضغط "📋 إضافة جدول" لاختيار المجموعة التي تريد برمجة جدولها</p>
-      </div>`;
-      document.getElementById('ttbl').innerHTML='';
-      return;
-    }
-    const{lv,dp,spec,section,group}=S.activeTT;
-    banner.innerHTML=`<div class="tt-active-banner">
-      <div class="tab-info">
-        <span style="color:var(--gold-light);font-weight:800;font-size:13px;">📅 الجدول النشط:</span>
-        <span class="tab-chip req">${lv}</span>
-        <span class="tab-chip req">${dp}</span>
-        <span class="tab-chip req">${spec}</span>
-        ${section?`<span class="tab-chip opt">🗂️ ${section}</span>`:''}
-        ${group?`<span class="tab-chip opt">👥 ${group}</span>`:''}
-      </div>
-      <button class="btn bg" onclick="openAddTimetable()" style="font-size:11px;padding:6px 12px;">
-        🔄 تغيير الجدول
-      </button>
+  const container=document.getElementById('ttbl-container');
+  if(!banner||!container)return;
+
+  if(!S.activeTT){
+    banner.innerHTML=`<div class="tt-empty-state">
+      <div class="es-icon">📋</div>
+      <h3>لا يوجد جدول نشط</h3>
+      <p>اضغط "📋 إضافة جدول" لاختيار المجموعة التي تريد برمجة جدولها</p>
     </div>`;
+    container.innerHTML='';
+    return;
   }
 
-  const ss=curSessions();
-  const mp={};
-  ss.forEach(s=>{
-    if(!mp[s.day])mp[s.day]={};
-    if(!mp[s.day][s.slot])mp[s.day][s.slot]=[];
-    mp[s.day][s.slot].push(s);
-  });
+  const{lv,dp,spec,section,group}=S.activeTT;
+  banner.innerHTML=`<div class="tt-active-banner">
+    <div class="tab-info">
+      <span style="color:var(--gold-light);font-weight:800;font-size:13px;">📅 الجدول النشط:</span>
+      <span class="tab-chip req">${lv}</span>
+      <span class="tab-chip req">${dp}</span>
+      <span class="tab-chip req">${spec}</span>
+      ${section?`<span class="tab-chip opt">🗂️ ${section}</span>`:''}
+      ${group?`<span class="tab-chip opt">👥 ${group}</span>`:''}
+    </div>
+    <button class="btn bg" onclick="openAddTimetable()" style="font-size:11px;padding:6px 12px;">
+      🔄 تغيير الجدول
+    </button>
+  </div>`;
 
-  let h=`<thead><tr>
-    <th style="min-width:78px;position:sticky;right:0;z-index:4;">اليوم</th>
-    ${SLOTS.map(sl=>`<th style="min-width:140px;">${SL[sl].replace(' - ','<br>')}</th>`).join('')}
-  </tr></thead><tbody>`;
+  // -- تحديد الأفواج المطلوب عرضها --
+  // إذا اختار فوج محدد → فوج واحد فقط
+  // إذا لم يختر فوج → كل الأفواج الموجودة في الحصص + الأفواج المعرّفة
+  let groupsToRender=[];
+  if(group){
+    // فوج محدد
+    groupsToRender=[group];
+  } else {
+    // كل الأفواج المعرّفة (بالترتيب) + حصص بدون فوج
+    const usedGroups=new Set(
+      S.sessions
+        .filter(s=>s.y===S.ay&&s.lv===lv&&s.dp===dp&&s.spec===spec&&
+          (!section||s.section===section))
+        .map(s=>s.group||'')
+    );
+    // أفواج معرّفة بالترتيب
+    groupsToRender=S.groups.filter(g=>usedGroups.has(g));
+    // إذا فيه حصص بدون فوج، نضيف "كل الأفواج"
+    if(usedGroups.has(''))groupsToRender.unshift('');
+    // إذا لا توجد حصص بعد، نعرض أفواجاً فارغة للبرمجة
+    if(groupsToRender.length===0)groupsToRender=[''];
+  }
 
-  DAYS.forEach(day=>{
-    h+=`<tr><td class="tc" style="position:sticky;right:0;z-index:3;background:var(--gray-light);">${day}</td>`;
-    SLOTS.forEach(slot=>{
-      const cells=(mp[day]&&mp[day][slot])||[];
-      const isEmpty=!cells.length;
-      h+=`<td class="${isEmpty?'ec':''}"
-        ondragover="event.preventDefault();this.classList.add('drop-over')"
-        ondragleave="this.classList.remove('drop-over')"
-        ondrop="onDrop(event,'${day}','${slot}')"
-        ${isEmpty?`onclick="openAddSess('${day}','${slot}')"`:''}
-      >`;
-      cells.forEach(s=>{
-        const grpLabel=[s.section,s.group].filter(Boolean).join(' / ');
-        h+=`<div class="sc ${s.type}" draggable="true"
-          ondragstart="onDS(event,'${s.id}')"
-          ondragend="document.querySelectorAll('.sc').forEach(x=>x.classList.remove('dragging'))"
-        ><button class="sceb" onclick="event.stopPropagation();openEditSess('${s.id}')">✏️</button>
-        <button class="scdb" onclick="event.stopPropagation();delSess('${s.id}')">✕</button>
-        <div class="ss">${s.subj}</div>
-        <div class="si">👨‍🏫 ${s.tch}</div>
-        <div class="si">🏫 ${s.rm}</div>
-        ${grpLabel?`<div class="si" style="font-size:9px;opacity:.8;">👥 ${grpLabel}</div>`:''}
-        <div class="si" style="font-size:9px;opacity:.65;">${TL[s.type]||''}</div>
+  // -- بناء HTML لكل فوج --
+  container.innerHTML=groupsToRender.map((grp,gIdx)=>{
+    const colorCls=`gh-${gIdx%8}`;
+    const grpLabel=grp||'(بدون فوج)';
+    const header= group
+      ? '' // لا نعرض header إذا فوج واحد فقط
+      : `<div class="grp-block-header ${colorCls}">
+          <div class="grp-dot"></div>
+          <span>👥 ${grpLabel}</span>
+          <span style="font-size:10px;opacity:.8;margin-right:auto;">
+            ${section?'🗂️ '+section+' — ':''} ${spec}
+          </span>
         </div>`;
-      });
-      h+='</td>';
+
+    // الحصص لهذا الفوج
+    const ss=S.sessions.filter(s=>
+      s.y===S.ay && s.lv===lv && s.dp===dp && s.spec===spec &&
+      (!section||s.section===section) &&
+      (s.group||'')===(grp||'')
+    );
+    const mp={};
+    ss.forEach(s=>{
+      if(!mp[s.day])mp[s.day]={};
+      if(!mp[s.day][s.slot])mp[s.day][s.slot]=[];
+      mp[s.day][s.slot].push(s);
     });
-    h+='</tr>';
-  });
-  h+='</tbody>';
-  document.getElementById('ttbl').innerHTML=h;
+
+    let tbl=`<table class="tt" style="border-top:${group?'':'0'}">
+      <thead><tr>
+        <th style="min-width:78px;position:sticky;right:0;z-index:4;">اليوم</th>
+        ${SLOTS.map(sl=>`<th style="min-width:140px;">${SL[sl].replace(' - ','<br>')}</th>`).join('')}
+      </tr></thead><tbody>`;
+
+    DAYS.forEach(day=>{
+      tbl+=`<tr><td class="tc" style="position:sticky;right:0;z-index:3;background:var(--gray-light);">${day}</td>`;
+      SLOTS.forEach(slot=>{
+        const cells=(mp[day]&&mp[day][slot])||[];
+        const isEmpty=!cells.length;
+        // encode params for onclick
+        const dayE=day.replace(/'/g,"\\'");
+        const slotE=slot.replace(/'/g,"\\'");
+        const grpE=(grp||'').replace(/'/g,"\\'");
+        tbl+=`<td class="${isEmpty?'ec':''}"
+          ondragover="event.preventDefault();this.classList.add('drop-over')"
+          ondragleave="this.classList.remove('drop-over')"
+          ondrop="onDrop(event,'${dayE}','${slotE}')"
+          ${isEmpty?`onclick="openAddSessForGroup('${dayE}','${slotE}','${grpE}')"`:''}
+        >`;
+        cells.forEach(s=>{
+          tbl+=`<div class="sc ${s.type}" draggable="true"
+            ondragstart="onDS(event,'${s.id}')"
+            ondragend="document.querySelectorAll('.sc').forEach(x=>x.classList.remove('dragging'))"
+          ><button class="sceb" onclick="event.stopPropagation();openEditSess('${s.id}')">✏️</button>
+          <button class="scdb" onclick="event.stopPropagation();delSess('${s.id}')">✕</button>
+          <div class="ss">${s.subj}</div>
+          <div class="si">👨‍🏫 ${s.tch}</div>
+          <div class="si">🏫 ${s.rm}</div>
+          <div class="si" style="font-size:9px;opacity:.65;">${TL[s.type]||''}</div>
+          </div>`;
+        });
+        tbl+='</td>';
+      });
+      tbl+='</tr>';
+    });
+    tbl+='</tbody></table>';
+
+    return `<div class="grp-block">${header}<div class="ttw">${tbl}</div></div>`;
+  }).join('');
+
   updStats();
+}
+
+// فتح modal الإضافة مع تحديد الفوج مسبقاً
+function openAddSessForGroup(day,slot,grp){
+  if(!S.activeTT){toast('⚠️ اضغط "إضافة جدول" أولاً');return;}
+  // حفّظ الفوج المستهدف مؤقتاً
+  S._pendingGroup=grp;
+  openAddSess(day,slot);
 }
 
 function onDS(e,id){
@@ -2515,12 +2595,14 @@ function openAddSess(day,slot){
     `➕ إضافة حصة — ${day} ${SL[slot]||slot}`;
   document.getElementById('ms-subj').value='';
   document.getElementById('ms-subj').style.display='none';
-  // store day/slot as data attrs on modal
   document.getElementById('mSess').dataset.day=day;
   document.getElementById('mSess').dataset.slot=slot;
-  // reset sem
+  // الفوج المستهدف: من _pendingGroup أو من activeTT
+  const grp=S._pendingGroup!==undefined ? S._pendingGroup : (S.activeTT.group||'');
+  document.getElementById('mSess').dataset.group=grp;
+  S._pendingGroup=undefined;
+  // reset
   setSem(1);syncSubjBySem();
-  // reset type buttons
   document.querySelectorAll('.sess-type-btn').forEach((b,i)=>b.classList.toggle('active',i===0));
   document.getElementById('ms-type').value='tlc';
   document.getElementById('ms-firstlec-row').style.display='block';
@@ -2564,12 +2646,13 @@ function saveSess(){
   const modal=document.getElementById('mSess');
   const day=modal.dataset.day;
   const slot=modal.dataset.slot;
+  const grp=modal.dataset.group!==undefined ? modal.dataset.group : (S.activeTT.group||'');
   const{lv,dp,spec,section,group}=S.activeTT;
   const sem=parseInt(document.getElementById('ms-sem')?.value||'1');
   const type=document.getElementById('ms-type').value;
   const data={
     id:id||uid(),y:S.ay,
-    lv,dp,spec,section,group,
+    lv,dp,spec,section,group:grp,
     day,slot,sem,subj,
     tch:document.getElementById('ms-tch').value,
     rm:document.getElementById('ms-rm').value,
