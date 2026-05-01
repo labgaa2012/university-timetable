@@ -557,6 +557,58 @@ table.tt td.ec:hover::after{color:var(--teal);}
 .gh-6{background:linear-gradient(90deg,#7c2d12,#f97316);color:#fff;}
 .gh-7{background:linear-gradient(90deg,#1e3a5f,#6366f1);color:#fff;}
 
+/* SEARCHABLE DROPDOWN */
+.srch-wrap{position:relative;}
+.srch-input{
+  width:100%;padding:8px 10px 8px 32px;border-radius:7px;
+  border:1.5px solid #d0dae8;background:#fff;color:var(--text-dark);
+  font-family:'Cairo',sans-serif;font-size:12.5px;outline:none;direction:rtl;
+  transition:border-color .2s;
+}
+.srch-input:focus{border-color:var(--teal);box-shadow:0 0 0 3px rgba(13,138,125,.1);}
+.srch-icon{
+  position:absolute;left:9px;top:50%;transform:translateY(-50%);
+  font-size:13px;pointer-events:none;color:var(--gray);
+}
+.srch-dropdown{
+  position:absolute;top:calc(100% + 4px);right:0;left:0;z-index:9999;
+  background:#fff;border:1.5px solid #d0dae8;border-radius:9px;
+  box-shadow:0 8px 30px rgba(15,31,61,.15);max-height:220px;overflow-y:auto;
+  display:none;
+}
+.srch-dropdown.open{display:block;}
+.srch-dropdown::-webkit-scrollbar{width:4px;}
+.srch-dropdown::-webkit-scrollbar-thumb{background:#c0cce0;border-radius:2px;}
+.srch-item{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:9px 12px;cursor:pointer;font-size:12px;font-weight:600;
+  transition:background .15s;gap:8px;
+}
+.srch-item:hover{background:#f0f6ff;}
+.srch-item.selected{background:#e8f4fd;}
+.srch-item .si-name{flex:1;color:var(--text-dark);}
+.srch-item .si-sub{font-size:10px;color:var(--gray);font-weight:400;}
+.avail-dot{
+  width:10px;height:10px;border-radius:50%;flex-shrink:0;
+  border:1.5px solid rgba(0,0,0,.1);
+}
+.avail-free{background:#22c55e;}
+.avail-busy{background:#ef4444;}
+.avail-badge{
+  font-size:9.5px;font-weight:700;padding:2px 6px;border-radius:10px;
+  white-space:nowrap;flex-shrink:0;
+}
+.avail-badge.free{background:#dcfce7;color:#166534;}
+.avail-badge.busy{background:#fee2e2;color:#991b1b;}
+.srch-empty{padding:12px;text-align:center;color:var(--gray);font-size:12px;}
+.srch-selected-val{
+  display:flex;align-items:center;gap:6px;margin-top:5px;
+  font-size:11.5px;font-weight:700;color:var(--text-dark);
+  padding:5px 10px;background:var(--gray-light);border-radius:6px;
+  min-height:28px;
+}
+.srch-selected-val .sv-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+
 /* SESSION TYPE BUTTONS */
 .sess-type-btn{
   padding:8px 6px;border-radius:8px;border:1.5px solid #d0dae8;
@@ -1515,8 +1567,38 @@ table.occ-matrix td.cell-occ:hover{background:#fee2e2;filter:brightness(.97);}
     </div>
     <!-- الأستاذ + القاعة -->
     <div class="frow2">
-      <div class="fg"><label class="fl">الأستاذ</label><select class="fs" id="ms-tch"></select></div>
-      <div class="fg"><label class="fl">القاعة</label><select class="fs" id="ms-rm"></select></div>
+      <div class="fg">
+        <label class="fl">الأستاذ</label>
+        <div class="srch-wrap" id="tch-srch-wrap">
+          <span class="srch-icon">🔍</span>
+          <input class="srch-input" id="ms-tch-search" placeholder="ابحث عن أستاذ..."
+            autocomplete="off"
+            oninput="filterSrchList('tch')"
+            onfocus="openSrchDrop('tch')"
+            onblur="closeSrchDrop('tch',300)">
+          <div class="srch-dropdown" id="tch-srch-drop"></div>
+        </div>
+        <div class="srch-selected-val" id="tch-selected-val">
+          <span style="color:var(--gray);">لم يُختر بعد</span>
+        </div>
+        <input type="hidden" id="ms-tch">
+      </div>
+      <div class="fg">
+        <label class="fl">القاعة</label>
+        <div class="srch-wrap" id="rm-srch-wrap">
+          <span class="srch-icon">🔍</span>
+          <input class="srch-input" id="ms-rm-search" placeholder="ابحث عن قاعة..."
+            autocomplete="off"
+            oninput="filterSrchList('rm')"
+            onfocus="openSrchDrop('rm')"
+            onblur="closeSrchDrop('rm',300)">
+          <div class="srch-dropdown" id="rm-srch-drop"></div>
+        </div>
+        <div class="srch-selected-val" id="rm-selected-val">
+          <span style="color:var(--gray);">لم تُختر بعد</span>
+        </div>
+        <input type="hidden" id="ms-rm">
+      </div>
     </div>
     <!-- نوع الدرس -->
     <div class="fg">
@@ -2584,6 +2666,149 @@ function confirmAddTimetable(){
   toast('✅ جدول جديد: '+spec+(section?' — '+section:'')+(group?' — '+group:''));
 }
 
+// -- SEARCHABLE DROPDOWN ---------------------------
+// تحقق من توفر الأستاذ في اليوم والفترة الحالية
+function isTchBusy(tchName){
+  const modal=document.getElementById('mSess');
+  if(!modal)return false;
+  const day=modal.dataset.day;
+  const slot=modal.dataset.slot;
+  const sessId=document.getElementById('esSessId').value;
+  if(!day||!slot)return false;
+  return S.sessions.some(s=>
+    s.y===S.ay && s.day===day && s.slot===slot &&
+    s.tch===tchName && s.id!==sessId
+  );
+}
+function isRmBusy(rmName){
+  const modal=document.getElementById('mSess');
+  if(!modal)return false;
+  const day=modal.dataset.day;
+  const slot=modal.dataset.slot;
+  const sessId=document.getElementById('esSessId').value;
+  if(!day||!slot)return false;
+  return S.sessions.some(s=>
+    s.y===S.ay && s.day===day && s.slot===slot &&
+    s.rm===rmName && s.id!==sessId
+  );
+}
+
+function buildTchItems(q){
+  return S.teachers
+    .filter(t=>!q||t.name.includes(q)||
+      (RANKS[t.rank]?.label||'').includes(q)||
+      t.dept.includes(q))
+    .map(t=>{
+      const busy=isTchBusy(t.name);
+      const rankLabel=RANKS[t.rank]?.short||'';
+      return {
+        value:t.name,
+        name:t.name,
+        sub:rankLabel+(t.dept?' · '+t.dept.replace('قسم ',''):''),
+        busy
+      };
+    });
+}
+function buildRmItems(q){
+  return S.rooms
+    .filter(r=>!q||r.includes(q))
+    .map(r=>{
+      const busy=isRmBusy(r);
+      const isAmphi=AMPHI.includes(r);
+      return {value:r,name:r,sub:isAmphi?'مدرج':'قاعة',busy};
+    });
+}
+
+function renderSrchDrop(type,items){
+  const drop=document.getElementById(type+'-srch-drop');
+  if(!drop)return;
+  if(!items.length){
+    drop.innerHTML='<div class="srch-empty">لا توجد نتائج</div>';
+    return;
+  }
+  drop.innerHTML=items.map(item=>`
+    <div class="srch-item" onclick="selectSrch('${type}','${item.value.replace(/'/g,"\\'")}')">
+      <div>
+        <div class="si-name">${item.name}</div>
+        ${item.sub?`<div class="si-sub">${item.sub}</div>`:''}
+      </div>
+      ${item.busy
+        ?'<span class="avail-badge busy">🔴 مشغول</span>'
+        :'<span class="avail-badge free">🟢 متاح</span>'}
+    </div>`).join('');
+}
+
+function filterSrchList(type){
+  const q=document.getElementById('ms-'+type+'-search')?.value.trim()||'';
+  const items=type==='tch'?buildTchItems(q):buildRmItems(q);
+  renderSrchDrop(type,items);
+  openSrchDrop(type);
+}
+
+function openSrchDrop(type){
+  const drop=document.getElementById(type+'-srch-drop');
+  if(!drop)return;
+  const q=document.getElementById('ms-'+type+'-search')?.value.trim()||'';
+  const items=type==='tch'?buildTchItems(q):buildRmItems(q);
+  renderSrchDrop(type,items);
+  drop.classList.add('open');
+}
+
+function closeSrchDrop(type,delay){
+  setTimeout(()=>{
+    const drop=document.getElementById(type+'-srch-drop');
+    if(drop)drop.classList.remove('open');
+  },delay||0);
+}
+
+function selectSrch(type,value){
+  const hidden=document.getElementById('ms-'+type);
+  if(hidden)hidden.value=value;
+  const search=document.getElementById('ms-'+type+'-search');
+  if(search)search.value='';
+  closeSrchDrop(type,0);
+  // تحديث العرض المحدد
+  const valEl=document.getElementById(type+'-selected-val');
+  if(valEl){
+    const busy=type==='tch'?isTchBusy(value):isRmBusy(value);
+    const dotColor=busy?'#ef4444':'#22c55e';
+    const badge=busy
+      ?' <span style="font-size:9.5px;color:#ef4444;font-weight:700;">(مشغول — سيُضاف قسراً)</span>'
+      :'';
+    valEl.innerHTML=`<div class="sv-dot" style="background:${dotColor};"></div>
+      <span>${value}</span>${badge}`;
+  }
+}
+
+function resetSrchField(type,label){
+  const hidden=document.getElementById('ms-'+type);
+  if(hidden)hidden.value='';
+  const search=document.getElementById('ms-'+type+'-search');
+  if(search)search.value='';
+  const valEl=document.getElementById(type+'-selected-val');
+  if(valEl)valEl.innerHTML=`<span style="color:var(--gray);">${label||'لم يُختر بعد'}</span>`;
+}
+
+function initSrchField(type,value){
+  const hidden=document.getElementById('ms-'+type);
+  if(hidden)hidden.value=value||'';
+  const search=document.getElementById('ms-'+type+'-search');
+  if(search)search.value='';
+  const valEl=document.getElementById(type+'-selected-val');
+  if(!valEl)return;
+  if(!value){
+    valEl.innerHTML=`<span style="color:var(--gray);">لم يُختر بعد</span>`;
+    return;
+  }
+  const busy=type==='tch'?isTchBusy(value):isRmBusy(value);
+  const dotColor=busy?'#ef4444':'#22c55e';
+  const badge=busy
+    ?' <span style="font-size:9.5px;color:#ef4444;font-weight:700;">(مشغول)</span>'
+    :'';
+  valEl.innerHTML=`<div class="sv-dot" style="background:${dotColor};"></div>
+    <span>${value}</span>${badge}`;
+}
+
 // -- SESSION TYPE BUTTONS --------------------------
 function setSessType(type,btn){
   document.getElementById('ms-type').value=type;
@@ -2844,6 +3069,9 @@ function openAddSess(day,slot){
   document.getElementById('ms-firstlec-row').style.display='block';
   document.getElementById('ms-firstlec').value='1';
   document.querySelectorAll('.fl-opt').forEach((o,i)=>o.classList.toggle('sel',i===0));
+  // reset teacher + room search
+  resetSrchField('tch','لم يُختر بعد');
+  resetSrchField('rm','لم تُختر بعد');
   openM('mSess');
 }
 function openEditSess(id){
@@ -2865,6 +3093,8 @@ function openEditSess(id){
   // teacher/room
   document.getElementById('ms-tch').value=s.tch||'';
   document.getElementById('ms-rm').value=s.rm||'';
+  initSrchField('tch',s.tch||'');
+  initSrchField('rm',s.rm||'');
   // type
   const t=s.type||'tlc';
   document.getElementById('ms-type').value=t;
@@ -2891,8 +3121,8 @@ function saveSess(){
     id:id||uid(),y:S.ay,
     lv,dp,spec,section,group:grp,
     day,slot,sem,subj,
-    tch:document.getElementById('ms-tch').value,
-    rm:document.getElementById('ms-rm').value,
+    tch:document.getElementById('ms-tch')?.value||'',
+    rm:document.getElementById('ms-rm')?.value||'',
     type,
     firstLec:parseInt(document.getElementById('ms-firstlec').value||'1')
   };
