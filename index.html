@@ -1,0 +1,1590 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>نظام جداول التوقيت والامتحانات</title>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800;900&family=Tajawal:wght@300;400;500;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --navy: #0f1f3d;
+  --navy-mid: #162847;
+  --navy-light: #1e3a5f;
+  --teal: #0d8a7d;
+  --teal-light: #11b3a3;
+  --gold: #c9a84c;
+  --gold-light: #e0be7a;
+  --cream: #f5f0e8;
+  --white: #ffffff;
+  --gray-light: #f0f4f8;
+  --gray: #8a9ab5;
+  --text-dark: #1a2a4a;
+  --text-mid: #3d5278;
+  --danger: #c0392b;
+  --success: #27ae60;
+  --warning: #e67e22;
+  --sidebar-w: 380px;
+  --header-h: 64px;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: 'Cairo', sans-serif;
+  background: var(--cream);
+  color: var(--text-dark);
+  min-height: 100vh;
+  direction: rtl;
+}
+
+/* ─── HEADER ─────────────────────────────────── */
+header {
+  position: fixed; top: 0; right: 0; left: 0; z-index: 1000;
+  height: var(--header-h);
+  background: linear-gradient(135deg, var(--navy) 0%, var(--navy-light) 100%);
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 20px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+  border-bottom: 2px solid var(--gold);
+}
+
+.header-logo {
+  display: flex; align-items: center; gap: 12px;
+}
+
+.logo-icon {
+  width: 42px; height: 42px;
+  background: linear-gradient(135deg, var(--gold), var(--gold-light));
+  border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 20px; box-shadow: 0 2px 12px rgba(201,168,76,0.4);
+}
+
+.header-title {
+  display: flex; flex-direction: column;
+}
+
+.header-title h1 {
+  font-size: 16px; font-weight: 800; color: var(--white); line-height: 1.2;
+  font-family: 'Tajawal', sans-serif;
+}
+
+.header-title span {
+  font-size: 11px; color: var(--gold-light); font-weight: 400;
+}
+
+.header-center {
+  display: flex; gap: 6px;
+}
+
+.nav-tab {
+  padding: 7px 14px; border-radius: 8px; border: none;
+  background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.75);
+  font-family: 'Cairo', sans-serif; font-size: 12px; font-weight: 600;
+  cursor: pointer; transition: all 0.2s;
+}
+.nav-tab:hover, .nav-tab.active {
+  background: var(--teal); color: var(--white);
+}
+
+.header-actions { display: flex; align-items: center; gap: 10px; }
+
+#sidebarToggle {
+  width: 40px; height: 40px; border-radius: 10px; border: 1.5px solid var(--gold);
+  background: rgba(201,168,76,0.15); color: var(--gold);
+  cursor: pointer; font-size: 18px; transition: all 0.2s;
+  display: flex; align-items: center; justify-content: center;
+}
+#sidebarToggle:hover { background: var(--gold); color: var(--navy); }
+
+/* ─── LAYOUT ─────────────────────────────────── */
+#layout {
+  display: flex; padding-top: var(--header-h);
+  min-height: 100vh; transition: all 0.35s cubic-bezier(.4,0,.2,1);
+  position: relative;
+}
+
+/* ─── SIDEBAR ─────────────────────────────────── */
+#sidebar {
+  position: fixed; top: var(--header-h); right: 0;
+  width: var(--sidebar-w); height: calc(100vh - var(--header-h));
+  background: var(--white);
+  border-left: 3px solid var(--navy-light);
+  overflow-y: auto; overflow-x: hidden;
+  z-index: 900;
+  transform: translateX(0);
+  transition: transform 0.35s cubic-bezier(.4,0,.2,1);
+  box-shadow: -8px 0 40px rgba(15,31,61,0.15);
+}
+
+#sidebar.hidden { transform: translateX(100%); }
+
+#sidebar::-webkit-scrollbar { width: 4px; }
+#sidebar::-webkit-scrollbar-track { background: var(--gray-light); }
+#sidebar::-webkit-scrollbar-thumb { background: var(--navy-light); border-radius: 2px; }
+
+/* ─── MAIN ─────────────────────────────────── */
+#main {
+  flex: 1;
+  margin-right: var(--sidebar-w);
+  padding: 24px;
+  transition: margin-right 0.35s cubic-bezier(.4,0,.2,1);
+  min-width: 0;
+}
+
+#main.expanded { margin-right: 0; }
+
+/* ─── SIDEBAR HEADER ─────────────────────────── */
+.sidebar-header {
+  background: linear-gradient(135deg, var(--navy), var(--navy-light));
+  padding: 16px 18px;
+  color: var(--white);
+  position: sticky; top: 0; z-index: 10;
+  border-bottom: 2px solid var(--gold);
+}
+
+.sidebar-header h2 {
+  font-size: 14px; font-weight: 700;
+  font-family: 'Tajawal', sans-serif;
+  display: flex; align-items: center; gap: 8px;
+}
+
+/* ─── ACCORDION ─────────────────────────────── */
+.accordion-item {
+  border-bottom: 1px solid #e8edf5;
+}
+
+.accordion-btn {
+  width: 100%; padding: 13px 18px;
+  background: var(--white); border: none; cursor: pointer;
+  display: flex; align-items: center; justify-content: space-between;
+  font-family: 'Cairo', sans-serif; font-size: 13px; font-weight: 700;
+  color: var(--navy); transition: all 0.2s; text-align: right;
+}
+
+.accordion-btn:hover { background: var(--gray-light); }
+.accordion-btn.open { background: #f0f6ff; color: var(--teal); }
+
+.accordion-btn .acc-icon {
+  width: 30px; height: 30px; border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 14px; flex-shrink: 0;
+  background: linear-gradient(135deg, var(--navy), var(--navy-light));
+  color: var(--gold);
+}
+
+.acc-label { display: flex; align-items: center; gap: 10px; }
+
+.acc-arrow {
+  font-size: 11px; transition: transform 0.3s;
+  color: var(--gray);
+}
+.accordion-btn.open .acc-arrow { transform: rotate(180deg); color: var(--teal); }
+
+.accordion-body {
+  max-height: 0; overflow: hidden;
+  transition: max-height 0.35s cubic-bezier(.4,0,.2,1);
+  background: #fafbfd;
+}
+.accordion-body.open { max-height: 900px; }
+
+.acc-content { padding: 14px 16px; }
+
+/* ─── FORM ELEMENTS ─────────────────────────── */
+.form-group { margin-bottom: 12px; }
+
+.form-label {
+  font-size: 11px; font-weight: 700; color: var(--text-mid);
+  display: block; margin-bottom: 5px; text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.form-select, .form-input {
+  width: 100%; padding: 9px 12px; border-radius: 8px;
+  border: 1.5px solid #d0dae8;
+  background: var(--white); color: var(--text-dark);
+  font-family: 'Cairo', sans-serif; font-size: 13px;
+  transition: border-color 0.2s; outline: none;
+  direction: rtl;
+}
+
+.form-select:focus, .form-input:focus {
+  border-color: var(--teal);
+  box-shadow: 0 0 0 3px rgba(13,138,125,0.1);
+}
+
+.btn {
+  padding: 9px 16px; border-radius: 8px; border: none;
+  font-family: 'Cairo', sans-serif; font-size: 12px; font-weight: 700;
+  cursor: pointer; transition: all 0.2s; display: inline-flex;
+  align-items: center; gap: 6px;
+}
+
+.btn-primary { background: var(--teal); color: var(--white); }
+.btn-primary:hover { background: var(--teal-light); transform: translateY(-1px); }
+
+.btn-navy { background: var(--navy); color: var(--white); }
+.btn-navy:hover { background: var(--navy-light); }
+
+.btn-gold { background: var(--gold); color: var(--navy); font-weight: 800; }
+.btn-gold:hover { background: var(--gold-light); }
+
+.btn-danger { background: var(--danger); color: var(--white); }
+.btn-sm { padding: 5px 10px; font-size: 11px; border-radius: 6px; }
+
+.btn-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+
+/* ─── LIST ITEMS ─────────────────────────────── */
+.item-list { display: flex; flex-direction: column; gap: 6px; margin-top: 10px; }
+
+.item-card {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 8px 12px; border-radius: 8px;
+  background: var(--white); border: 1.5px solid #e0e8f5;
+  font-size: 12px; font-weight: 600; color: var(--text-dark);
+  transition: all 0.2s;
+}
+
+.item-card:hover { border-color: var(--teal); background: #f0faf9; }
+
+.item-actions { display: flex; gap: 4px; }
+
+.ic-btn {
+  width: 26px; height: 26px; border-radius: 6px; border: none;
+  cursor: pointer; font-size: 12px; transition: all 0.2s;
+  display: flex; align-items: center; justify-content: center;
+}
+
+.ic-edit { background: #e8f4fd; color: #2980b9; }
+.ic-edit:hover { background: #2980b9; color: var(--white); }
+.ic-delete { background: #fdecea; color: var(--danger); }
+.ic-delete:hover { background: var(--danger); color: var(--white); }
+
+/* ─── BADGE ─────────────────────────────────── */
+.badge {
+  padding: 2px 8px; border-radius: 20px; font-size: 10px; font-weight: 700;
+}
+.badge-teal { background: rgba(13,138,125,0.12); color: var(--teal); }
+.badge-navy { background: rgba(15,31,61,0.1); color: var(--navy); }
+.badge-gold { background: rgba(201,168,76,0.15); color: #8a6a1e; }
+
+/* ─── MAIN CONTENT CARDS ─────────────────────── */
+.main-card {
+  background: var(--white); border-radius: 16px;
+  padding: 24px; margin-bottom: 20px;
+  box-shadow: 0 2px 16px rgba(15,31,61,0.07);
+  border: 1px solid #e0e8f5;
+}
+
+.card-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 20px; padding-bottom: 14px;
+  border-bottom: 2px solid var(--gray-light);
+}
+
+.card-title {
+  font-size: 17px; font-weight: 800; color: var(--navy);
+  font-family: 'Tajawal', sans-serif;
+  display: flex; align-items: center; gap: 10px;
+}
+
+.card-title .ct-icon {
+  width: 36px; height: 36px; border-radius: 10px;
+  background: linear-gradient(135deg, var(--teal), var(--teal-light));
+  display: flex; align-items: center; justify-content: center;
+  font-size: 16px; color: var(--white);
+}
+
+/* ─── TIMETABLE ─────────────────────────────── */
+.timetable-wrapper { overflow-x: auto; }
+
+.timetable {
+  width: 100%; border-collapse: collapse;
+  font-size: 12px; min-width: 700px;
+}
+
+.timetable th {
+  background: var(--navy);
+  color: var(--gold-light);
+  padding: 10px 8px; text-align: center;
+  font-weight: 700; font-size: 12px;
+  border: 1px solid rgba(255,255,255,0.1);
+}
+
+.timetable td {
+  padding: 6px; border: 1px solid #e0e8f5;
+  vertical-align: top; min-height: 60px;
+  min-width: 110px;
+}
+
+.timetable .time-col {
+  background: var(--gray-light);
+  font-weight: 700; font-size: 11px;
+  color: var(--text-mid); text-align: center;
+  width: 80px;
+}
+
+.slot-card {
+  border-radius: 8px; padding: 6px 8px;
+  font-size: 11px; font-weight: 600; line-height: 1.4;
+  margin: 2px 0;
+}
+
+.slot-blue { background: #dbeafe; color: #1d4ed8; border-right: 3px solid #1d4ed8; }
+.slot-green { background: #dcfce7; color: #15803d; border-right: 3px solid #15803d; }
+.slot-orange { background: #fed7aa; color: #c2410c; border-right: 3px solid #c2410c; }
+.slot-purple { background: #ede9fe; color: #6d28d9; border-right: 3px solid #6d28d9; }
+.slot-teal { background: #ccfbf1; color: #0d7b6e; border-right: 3px solid #0d7b6e; }
+
+/* ─── ROOMS GRID ─────────────────────────────── */
+.rooms-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 8px; margin-top: 12px;
+}
+
+.room-card {
+  padding: 10px 12px; border-radius: 10px; border: 1.5px solid #e0e8f5;
+  background: var(--white); text-align: center; font-size: 12px; font-weight: 600;
+  cursor: pointer; transition: all 0.2s;
+}
+
+.room-card.occupied {
+  background: #fdecea; border-color: var(--danger); color: var(--danger);
+}
+.room-card.free {
+  background: #edfdf8; border-color: var(--success); color: var(--success);
+}
+.room-card:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+
+.room-status { font-size: 10px; font-weight: 400; margin-top: 3px; opacity: 0.8; }
+
+/* ─── STATS BAR ─────────────────────────────── */
+.stats-row {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px;
+  margin-bottom: 20px;
+}
+
+.stat-card {
+  background: var(--white); border-radius: 12px;
+  padding: 16px 18px;
+  box-shadow: 0 2px 10px rgba(15,31,61,0.06);
+  border: 1px solid #e0e8f5;
+  border-top: 3px solid transparent;
+  position: relative; overflow: hidden;
+}
+
+.stat-card.s1 { border-top-color: var(--teal); }
+.stat-card.s2 { border-top-color: var(--gold); }
+.stat-card.s3 { border-top-color: #8b5cf6; }
+.stat-card.s4 { border-top-color: var(--danger); }
+
+.stat-value {
+  font-size: 28px; font-weight: 800;
+  color: var(--navy); font-family: 'Tajawal', sans-serif;
+  line-height: 1;
+}
+
+.stat-label {
+  font-size: 11px; color: var(--gray); margin-top: 4px; font-weight: 600;
+}
+
+/* ─── MODAL ─────────────────────────────────── */
+.modal-overlay {
+  position: fixed; inset: 0; background: rgba(10,20,40,0.6);
+  z-index: 2000; display: none;
+  align-items: center; justify-content: center;
+  backdrop-filter: blur(4px);
+}
+
+.modal-overlay.show { display: flex; }
+
+.modal-box {
+  background: var(--white); border-radius: 16px;
+  padding: 28px; width: 420px; max-width: 95vw;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+  animation: modalIn 0.3s ease;
+  direction: rtl;
+}
+
+@keyframes modalIn {
+  from { opacity: 0; transform: scale(0.9) translateY(20px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.modal-title {
+  font-size: 16px; font-weight: 800; color: var(--navy);
+  margin-bottom: 18px; padding-bottom: 12px;
+  border-bottom: 2px solid var(--gray-light);
+  font-family: 'Tajawal', sans-serif;
+  display: flex; align-items: center; gap: 8px;
+}
+
+.modal-actions {
+  display: flex; gap: 8px; margin-top: 18px; justify-content: flex-end;
+}
+
+/* ─── TABS ─────────────────────────────────── */
+.view-tabs {
+  display: flex; gap: 6px; margin-bottom: 18px; flex-wrap: wrap;
+}
+
+.view-tab {
+  padding: 8px 16px; border-radius: 10px; border: 1.5px solid #d0dae8;
+  background: var(--white); color: var(--text-mid);
+  font-family: 'Cairo', sans-serif; font-size: 12px; font-weight: 700;
+  cursor: pointer; transition: all 0.2s;
+}
+.view-tab.active {
+  background: var(--navy); color: var(--white); border-color: var(--navy);
+}
+.view-tab:hover:not(.active) { border-color: var(--teal); color: var(--teal); }
+
+/* ─── PAGE SECTIONS ─────────────────────────── */
+.page-section { display: none; }
+.page-section.active { display: block; }
+
+/* ─── EXAM TABLE ─────────────────────────────── */
+.exam-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.exam-table th {
+  background: var(--navy); color: var(--gold-light);
+  padding: 10px 14px; text-align: right; font-weight: 700;
+  border: 1px solid rgba(255,255,255,0.1);
+}
+.exam-table td {
+  padding: 10px 14px; border: 1px solid #e0e8f5;
+  color: var(--text-dark); font-weight: 500;
+}
+.exam-table tr:nth-child(even) td { background: #fafbfd; }
+.exam-table tr:hover td { background: #f0f6ff; }
+
+/* ─── COMP FORM ─────────────────────────────── */
+.comp-result {
+  background: #f0faf9; border: 1.5px solid var(--teal);
+  border-radius: 10px; padding: 14px; margin-top: 14px;
+}
+
+.comp-result h4 {
+  font-size: 13px; font-weight: 700; color: var(--teal);
+  margin-bottom: 10px;
+}
+
+.time-slot-tag {
+  display: inline-block;
+  padding: 4px 12px; margin: 3px;
+  background: var(--white); border: 1.5px solid var(--teal);
+  border-radius: 20px; font-size: 11px; font-weight: 600;
+  color: var(--teal);
+}
+
+/* ─── ARCHIVE ─────────────────────────────── */
+.archive-card {
+  padding: 14px 18px; border-radius: 12px;
+  border: 1.5px solid #e0e8f5; background: var(--white);
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 10px; transition: all 0.2s;
+}
+
+.archive-card:hover { border-color: var(--navy); box-shadow: 0 4px 14px rgba(15,31,61,0.1); }
+
+.archive-info h4 { font-size: 14px; font-weight: 700; color: var(--navy); }
+.archive-info p { font-size: 11px; color: var(--gray); margin-top: 3px; }
+
+.archive-actions { display: flex; gap: 6px; }
+
+/* ─── DIVIDER ─────────────────────────────── */
+.divider {
+  border: none; border-top: 1px dashed #d0dae8; margin: 12px 0;
+}
+
+/* ─── TOAST ─────────────────────────────────── */
+#toast {
+  position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+  background: var(--navy); color: var(--white);
+  padding: 12px 24px; border-radius: 12px; font-size: 13px; font-weight: 600;
+  box-shadow: 0 8px 30px rgba(0,0,0,0.25);
+  opacity: 0; pointer-events: none;
+  transition: opacity 0.3s; z-index: 3000;
+  font-family: 'Cairo', sans-serif;
+  border-right: 4px solid var(--gold);
+}
+#toast.show { opacity: 1; }
+
+/* ─── RESPONSIVE ─────────────────────────────── */
+@media (max-width: 900px) {
+  .stats-row { grid-template-columns: repeat(2, 1fr); }
+  #main { margin-right: 0 !important; padding: 16px; }
+  #sidebar { width: 320px; }
+}
+
+@media (max-width: 600px) {
+  .stats-row { grid-template-columns: 1fr 1fr; }
+  .header-center { display: none; }
+  :root { --sidebar-w: 300px; }
+}
+
+/* ─── SCROLLBAR ─────────────────────────────── */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #c0cce0; border-radius: 3px; }
+
+.separator-line {
+  height: 2px; background: linear-gradient(to left, var(--gold), transparent);
+  margin: 8px 0;
+}
+
+.inline-form {
+  display: flex; gap: 6px; align-items: center;
+}
+.inline-form .form-input { flex: 1; }
+</style>
+</head>
+<body>
+
+<!-- ═══ HEADER ════════════════════════════════ -->
+<header>
+  <div class="header-logo">
+    <div class="logo-icon">🎓</div>
+    <div class="header-title">
+      <h1>نظام جداول التوقيت والامتحانات</h1>
+      <span>كلية العلوم الاقتصادية والتجارية وعلوم التسيير</span>
+    </div>
+  </div>
+
+  <div class="header-center">
+    <button class="nav-tab active" onclick="showPage('timetable', this)">📅 جدول التوقيت</button>
+    <button class="nav-tab" onclick="showPage('exams', this)">📝 جدول الامتحانات</button>
+    <button class="nav-tab" onclick="showPage('rooms', this)">🏫 أشغال القاعات</button>
+    <button class="nav-tab" onclick="showPage('compensation', this)">🔄 تعويض الحصص</button>
+    <button class="nav-tab" onclick="showPage('archive', this)">📦 الأرشيف</button>
+  </div>
+
+  <div class="header-actions">
+    <select class="form-select" style="width:140px;padding:6px 10px;font-size:12px;" id="globalYear">
+      <option>2025/2026</option>
+      <option>2026/2027</option>
+      <option>2027/2028</option>
+      <option>2028/2029</option>
+      <option>2029/2030</option>
+    </select>
+    <button id="sidebarToggle" onclick="toggleSidebar()" title="إظهار/إخفاء اللوحة">☰</button>
+  </div>
+</header>
+
+<!-- ═══ LAYOUT ════════════════════════════════ -->
+<div id="layout">
+
+  <!-- ═══ SIDEBAR ════════════════════════════ -->
+  <aside id="sidebar">
+    <div class="sidebar-header">
+      <h2>⚙️ لوحة الإدارة</h2>
+    </div>
+
+    <!-- ①  السنة الدراسية -->
+    <div class="accordion-item">
+      <button class="accordion-btn" onclick="toggleAcc(this)">
+        <div class="acc-label">
+          <div class="acc-icon">📆</div>
+          <span>السنة الدراسية</span>
+        </div>
+        <span class="acc-arrow">▼</span>
+      </button>
+      <div class="accordion-body">
+        <div class="acc-content">
+          <div class="form-group">
+            <label class="form-label">إنشاء / اختيار سنة</label>
+            <select class="form-select" id="yearSelect" onchange="handleYearChange()">
+              <option>2025/2026</option>
+              <option>2026/2027</option>
+              <option>2027/2028</option>
+              <option>2028/2029</option>
+              <option>2029/2030</option>
+              <option value="__add__">➕ إضافة سنة دراسية</option>
+            </select>
+          </div>
+          <div class="item-list" id="yearList">
+            <div class="item-card">
+              <span>📅 2025/2026</span>
+              <div class="item-actions">
+                <button class="ic-btn ic-edit" onclick="editItem(this, 'سنة دراسية')">✏️</button>
+                <button class="ic-btn ic-delete" onclick="deleteItem(this)">🗑️</button>
+              </div>
+            </div>
+            <div class="item-card">
+              <span>📅 2026/2027</span>
+              <div class="item-actions">
+                <button class="ic-btn ic-edit" onclick="editItem(this, 'سنة دراسية')">✏️</button>
+                <button class="ic-btn ic-delete" onclick="deleteItem(this)">🗑️</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ②  المستوى -->
+    <div class="accordion-item">
+      <button class="accordion-btn" onclick="toggleAcc(this)">
+        <div class="acc-label">
+          <div class="acc-icon">🎓</div>
+          <span>المستوى</span>
+        </div>
+        <span class="acc-arrow">▼</span>
+      </button>
+      <div class="accordion-body">
+        <div class="acc-content">
+          <div class="form-group">
+            <label class="form-label">اختر المستوى</label>
+            <select class="form-select" id="levelSelect" onchange="handleLevelChange()">
+              <option>سنة أولى ليسانس</option>
+              <option>سنة ثانية ليسانس</option>
+              <option>سنة ثالثة ليسانس</option>
+              <option>سنة أولى ماستر</option>
+              <option>سنة ثانية ماستر</option>
+              <option value="__add__">➕ إضافة مستوى آخر</option>
+            </select>
+          </div>
+          <div class="item-list" id="levelList">
+            <div class="item-card"><span><span class="badge badge-teal">L1</span> سنة أولى ليسانس</span><div class="item-actions"><button class="ic-btn ic-delete" onclick="deleteItem(this)">🗑️</button></div></div>
+            <div class="item-card"><span><span class="badge badge-teal">L2</span> سنة ثانية ليسانس</span><div class="item-actions"><button class="ic-btn ic-delete" onclick="deleteItem(this)">🗑️</button></div></div>
+            <div class="item-card"><span><span class="badge badge-teal">L3</span> سنة ثالثة ليسانس</span><div class="item-actions"><button class="ic-btn ic-delete" onclick="deleteItem(this)">🗑️</button></div></div>
+            <div class="item-card"><span><span class="badge badge-navy">M1</span> سنة أولى ماستر</span><div class="item-actions"><button class="ic-btn ic-delete" onclick="deleteItem(this)">🗑️</button></div></div>
+            <div class="item-card"><span><span class="badge badge-navy">M2</span> سنة ثانية ماستر</span><div class="item-actions"><button class="ic-btn ic-delete" onclick="deleteItem(this)">🗑️</button></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ③  الأقسام -->
+    <div class="accordion-item">
+      <button class="accordion-btn" onclick="toggleAcc(this)">
+        <div class="acc-label">
+          <div class="acc-icon">🏛️</div>
+          <span>الأقسام</span>
+        </div>
+        <span class="acc-arrow">▼</span>
+      </button>
+      <div class="accordion-body">
+        <div class="acc-content">
+          <div class="form-group">
+            <label class="form-label">اختر القسم</label>
+            <select class="form-select" id="deptSelect">
+              <option>قسم السنة أولى جذع مشترك</option>
+              <option>قسم العلوم الاقتصادية</option>
+              <option>قسم علوم التسيير</option>
+              <option>قسم علوم المالية والمحاسبة</option>
+              <option>قسم العلوم التجارية</option>
+            </select>
+          </div>
+          <div class="item-list">
+            <div class="item-card"><span>🏛 جذع مشترك</span></div>
+            <div class="item-card"><span>📊 علوم اقتصادية</span></div>
+            <div class="item-card"><span>📈 علوم التسيير</span></div>
+            <div class="item-card"><span>💰 مالية ومحاسبة</span></div>
+            <div class="item-card"><span>🛒 علوم تجارية</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ④  التخصصات -->
+    <div class="accordion-item">
+      <button class="accordion-btn" onclick="toggleAcc(this)">
+        <div class="acc-label">
+          <div class="acc-icon">📚</div>
+          <span>التخصصات</span>
+        </div>
+        <span class="acc-arrow">▼</span>
+      </button>
+      <div class="accordion-body">
+        <div class="acc-content">
+          <div class="form-group">
+            <label class="form-label">إضافة تخصص جديد</label>
+            <div class="inline-form">
+              <input class="form-input" id="specInput" placeholder="اسم التخصص..." type="text">
+              <button class="btn btn-primary" onclick="addSpeciality()">إضافة</button>
+            </div>
+          </div>
+          <div class="item-list" id="specList">
+            <div class="item-card">
+              <span><span class="badge badge-gold">L3</span> اقتصاد نقدي وبنكي</span>
+              <div class="item-actions">
+                <button class="ic-btn ic-delete" onclick="deleteItem(this)">🗑️</button>
+              </div>
+            </div>
+            <div class="item-card">
+              <span><span class="badge badge-gold">M1</span> إدارة أعمال</span>
+              <div class="item-actions">
+                <button class="ic-btn ic-delete" onclick="deleteItem(this)">🗑️</button>
+              </div>
+            </div>
+            <div class="item-card">
+              <span><span class="badge badge-gold">M2</span> محاسبة وجباية</span>
+              <div class="item-actions">
+                <button class="ic-btn ic-delete" onclick="deleteItem(this)">🗑️</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ⑤  الأساتذة -->
+    <div class="accordion-item">
+      <button class="accordion-btn" onclick="toggleAcc(this)">
+        <div class="acc-label">
+          <div class="acc-icon">👨‍🏫</div>
+          <span>قائمة الأساتذة</span>
+        </div>
+        <span class="acc-arrow">▼</span>
+      </button>
+      <div class="accordion-body">
+        <div class="acc-content">
+          <div class="form-group">
+            <label class="form-label">إضافة أستاذ</label>
+            <div class="inline-form">
+              <input class="form-input" id="teacherInput" placeholder="اسم الأستاذ..." type="text">
+              <button class="btn btn-primary" onclick="addTeacher()">إضافة</button>
+            </div>
+          </div>
+          <div class="item-list" id="teacherList">
+            <div class="item-card"><span>👨‍🏫 أ. محمد بن عمر</span><div class="item-actions"><button class="ic-btn ic-edit" onclick="editItem(this,'أستاذ')">✏️</button><button class="ic-btn ic-delete" onclick="deleteItem(this)">🗑️</button></div></div>
+            <div class="item-card"><span>👩‍🏫 د. فاطمة زهراء</span><div class="item-actions"><button class="ic-btn ic-edit" onclick="editItem(this,'أستاذ')">✏️</button><button class="ic-btn ic-delete" onclick="deleteItem(this)">🗑️</button></div></div>
+            <div class="item-card"><span>👨‍🏫 أ. علي حسين</span><div class="item-actions"><button class="ic-btn ic-edit" onclick="editItem(this,'أستاذ')">✏️</button><button class="ic-btn ic-delete" onclick="deleteItem(this)">🗑️</button></div></div>
+            <div class="item-card"><span>👨‍🏫 د. يوسف قاسمي</span><div class="item-actions"><button class="ic-btn ic-edit" onclick="editItem(this,'أستاذ')">✏️</button><button class="ic-btn ic-delete" onclick="deleteItem(this)">🗑️</button></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ⑥  القاعات -->
+    <div class="accordion-item">
+      <button class="accordion-btn" onclick="toggleAcc(this)">
+        <div class="acc-label">
+          <div class="acc-icon">🏫</div>
+          <span>القاعات</span>
+        </div>
+        <span class="acc-arrow">▼</span>
+      </button>
+      <div class="accordion-body">
+        <div class="acc-content">
+          <div class="form-group">
+            <label class="form-label">إضافة قاعة</label>
+            <div class="inline-form">
+              <input class="form-input" id="roomInput" placeholder="اسم القاعة..." type="text">
+              <button class="btn btn-primary" onclick="addRoom()">إضافة</button>
+            </div>
+          </div>
+          <div style="font-size:11px;color:var(--gray);margin:6px 0;">
+            ✅ تم إضافة 48 قاعة افتراضية + 3 مدرجات
+          </div>
+          <div class="item-list" id="roomList" style="max-height:200px;overflow-y:auto;">
+            <div class="item-card"><span>🏫 مدرج أ</span><div class="item-actions"><button class="ic-btn ic-delete" onclick="deleteItem(this)">🗑️</button></div></div>
+            <div class="item-card"><span>🏫 مدرج ب</span><div class="item-actions"><button class="ic-btn ic-delete" onclick="deleteItem(this)">🗑️</button></div></div>
+            <div class="item-card"><span>🏫 مدرج ج</span><div class="item-actions"><button class="ic-btn ic-delete" onclick="deleteItem(this)">🗑️</button></div></div>
+          </div>
+          <button class="btn btn-navy" style="width:100%;margin-top:8px;font-size:11px;" onclick="showAllRooms()">
+            عرض كل القاعات الـ 51
+          </button>
+        </div>
+      </div>
+    </div>
+
+  </aside><!-- /sidebar -->
+
+  <!-- ═══ MAIN CONTENT ══════════════════════════ -->
+  <main id="main">
+
+    <!-- Stats -->
+    <div class="stats-row">
+      <div class="stat-card s1">
+        <div class="stat-value">51</div>
+        <div class="stat-label">إجمالي القاعات والمدرجات</div>
+      </div>
+      <div class="stat-card s2">
+        <div class="stat-value">24</div>
+        <div class="stat-label">عدد الأساتذة</div>
+      </div>
+      <div class="stat-card s3">
+        <div class="stat-value">5</div>
+        <div class="stat-label">الأقسام والتخصصات</div>
+      </div>
+      <div class="stat-card s4">
+        <div class="stat-value">8</div>
+        <div class="stat-label">حصص غير مجدولة</div>
+      </div>
+    </div>
+
+    <!-- ① TIMETABLE PAGE -->
+    <div class="page-section active" id="page-timetable">
+      <div class="main-card">
+        <div class="card-header">
+          <div class="card-title">
+            <div class="ct-icon">📅</div>
+            جدول التوقيت الأسبوعي
+          </div>
+          <div style="display:flex;gap:8px;align-items:center;">
+            <select class="form-select" style="width:160px;font-size:12px;">
+              <option>سنة أولى ليسانس</option>
+              <option>سنة ثانية ليسانس</option>
+              <option>سنة ثالثة ليسانس</option>
+              <option>سنة أولى ماستر</option>
+              <option>سنة ثانية ماستر</option>
+            </select>
+            <select class="form-select" style="width:180px;font-size:12px;">
+              <option>قسم السنة أولى جذع مشترك</option>
+              <option>قسم العلوم الاقتصادية</option>
+              <option>قسم علوم التسيير</option>
+            </select>
+            <button class="btn btn-gold">➕ إضافة حصة</button>
+            <button class="btn btn-navy" onclick="exportData('جدول التوقيت')">📤 تصدير</button>
+          </div>
+        </div>
+
+        <div class="timetable-wrapper">
+          <table class="timetable">
+            <thead>
+              <tr>
+                <th>الوقت</th>
+                <th>السبت</th>
+                <th>الأحد</th>
+                <th>الاثنين</th>
+                <th>الثلاثاء</th>
+                <th>الأربعاء</th>
+                <th>الخميس</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="time-col">08:00<br>09:30</td>
+                <td>
+                  <div class="slot-card slot-blue">
+                    <strong>محاسبة عامة</strong><br>
+                    <span>أ. محمد بن عمر</span><br>
+                    <span>🏫 القاعة 12</span>
+                  </div>
+                </td>
+                <td>
+                  <div class="slot-card slot-green">
+                    <strong>رياضيات مالية</strong><br>
+                    <span>د. يوسف قاسمي</span><br>
+                    <span>🏫 مدرج أ</span>
+                  </div>
+                </td>
+                <td></td>
+                <td>
+                  <div class="slot-card slot-purple">
+                    <strong>إحصاء تطبيقي</strong><br>
+                    <span>د. فاطمة زهراء</span><br>
+                    <span>🏫 القاعة 05</span>
+                  </div>
+                </td>
+                <td></td>
+                <td>
+                  <div class="slot-card slot-orange">
+                    <strong>اقتصاد كلي</strong><br>
+                    <span>أ. علي حسين</span><br>
+                    <span>🏫 مدرج ب</span>
+                  </div>
+                </td>
+              </tr>
+              <tr>
+                <td class="time-col">09:30<br>11:00</td>
+                <td></td>
+                <td>
+                  <div class="slot-card slot-teal">
+                    <strong>قانون تجاري</strong><br>
+                    <span>أ. محمد بن عمر</span><br>
+                    <span>🏫 القاعة 08</span>
+                  </div>
+                </td>
+                <td>
+                  <div class="slot-card slot-blue">
+                    <strong>محاسبة عامة</strong><br>
+                    <span>أ. محمد بن عمر</span><br>
+                    <span>🏫 القاعة 12</span>
+                  </div>
+                </td>
+                <td></td>
+                <td>
+                  <div class="slot-card slot-green">
+                    <strong>رياضيات مالية</strong><br>
+                    <span>د. يوسف قاسمي</span><br>
+                    <span>🏫 القاعة 15</span>
+                  </div>
+                </td>
+                <td></td>
+              </tr>
+              <tr>
+                <td class="time-col">11:15<br>12:45</td>
+                <td>
+                  <div class="slot-card slot-orange">
+                    <strong>اقتصاد جزئي</strong><br>
+                    <span>د. فاطمة زهراء</span><br>
+                    <span>🏫 مدرج ج</span>
+                  </div>
+                </td>
+                <td></td>
+                <td>
+                  <div class="slot-card slot-purple">
+                    <strong>تسيير المؤسسة</strong><br>
+                    <span>أ. علي حسين</span><br>
+                    <span>🏫 القاعة 20</span>
+                  </div>
+                </td>
+                <td>
+                  <div class="slot-card slot-teal">
+                    <strong>مالية عامة</strong><br>
+                    <span>د. يوسف قاسمي</span><br>
+                    <span>🏫 مدرج أ</span>
+                  </div>
+                </td>
+                <td></td>
+                <td>
+                  <div class="slot-card slot-blue">
+                    <strong>لغة أجنبية</strong><br>
+                    <span>أ. سارة بلقاسم</span><br>
+                    <span>🏫 القاعة 03</span>
+                  </div>
+                </td>
+              </tr>
+              <tr>
+                <td class="time-col">13:30<br>15:00</td>
+                <td>
+                  <div class="slot-card slot-green">
+                    <strong>تقنيات البنوك</strong><br>
+                    <span>د. يوسف قاسمي</span><br>
+                    <span>🏫 القاعة 07</span>
+                  </div>
+                </td>
+                <td>
+                  <div class="slot-card slot-orange">
+                    <strong>جباية المؤسسة</strong><br>
+                    <span>أ. محمد بن عمر</span><br>
+                    <span>🏫 القاعة 11</span>
+                  </div>
+                </td>
+                <td></td>
+                <td>
+                  <div class="slot-card slot-blue">
+                    <strong>إعلام آلي</strong><br>
+                    <span>أ. علي حسين</span><br>
+                    <span>🏫 القاعة 30</span>
+                  </div>
+                </td>
+                <td>
+                  <div class="slot-card slot-purple">
+                    <strong>تسويق</strong><br>
+                    <span>د. فاطمة زهراء</span><br>
+                    <span>🏫 مدرج ب</span>
+                  </div>
+                </td>
+                <td></td>
+              </tr>
+              <tr>
+                <td class="time-col">15:00<br>16:30</td>
+                <td></td>
+                <td></td>
+                <td>
+                  <div class="slot-card slot-teal">
+                    <strong>إحصاء وصفي</strong><br>
+                    <span>د. فاطمة زهراء</span><br>
+                    <span>🏫 القاعة 04</span>
+                  </div>
+                </td>
+                <td>
+                  <div class="slot-card slot-green">
+                    <strong>اقتصاد كلي</strong><br>
+                    <span>أ. علي حسين</span><br>
+                    <span>🏫 مدرج ج</span>
+                  </div>
+                </td>
+                <td>
+                  <div class="slot-card slot-orange">
+                    <strong>تقنيات الاتصال</strong><br>
+                    <span>أ. سارة بلقاسم</span><br>
+                    <span>🏫 القاعة 02</span>
+                  </div>
+                </td>
+                <td></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ② EXAMS PAGE -->
+    <div class="page-section" id="page-exams">
+      <div class="main-card">
+        <div class="card-header">
+          <div class="card-title">
+            <div class="ct-icon">📝</div>
+            جدول الامتحانات
+          </div>
+          <div style="display:flex;gap:8px;">
+            <div class="view-tabs" style="margin:0;">
+              <button class="view-tab active" onclick="switchExamView('دور أول', this)">الدور الأول</button>
+              <button class="view-tab" onclick="switchExamView('دور ثاني', this)">الدور الثاني</button>
+            </div>
+            <button class="btn btn-gold">➕ إضافة امتحان</button>
+            <button class="btn btn-navy" onclick="exportData('جدول الامتحانات')">📤 تصدير</button>
+          </div>
+        </div>
+
+        <table class="exam-table">
+          <thead>
+            <tr>
+              <th>المادة</th>
+              <th>المستوى / القسم</th>
+              <th>التاريخ</th>
+              <th>الوقت</th>
+              <th>القاعة</th>
+              <th>الأستاذ</th>
+              <th>الإجراءات</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>محاسبة عامة</strong></td>
+              <td><span class="badge badge-teal">L1</span> جذع مشترك</td>
+              <td>2025/01/12</td>
+              <td>08:00 - 10:00</td>
+              <td>مدرج أ + ب</td>
+              <td>أ. محمد بن عمر</td>
+              <td><button class="btn btn-primary btn-sm">✏️ تعديل</button></td>
+            </tr>
+            <tr>
+              <td><strong>رياضيات مالية</strong></td>
+              <td><span class="badge badge-teal">L2</span> اقتصادية</td>
+              <td>2025/01/13</td>
+              <td>09:00 - 11:00</td>
+              <td>مدرج ج</td>
+              <td>د. يوسف قاسمي</td>
+              <td><button class="btn btn-primary btn-sm">✏️ تعديل</button></td>
+            </tr>
+            <tr>
+              <td><strong>إحصاء تطبيقي</strong></td>
+              <td><span class="badge badge-navy">M1</span> إدارة أعمال</td>
+              <td>2025/01/14</td>
+              <td>14:00 - 16:00</td>
+              <td>القاعة 12 + 13</td>
+              <td>د. فاطمة زهراء</td>
+              <td><button class="btn btn-primary btn-sm">✏️ تعديل</button></td>
+            </tr>
+            <tr>
+              <td><strong>قانون تجاري</strong></td>
+              <td><span class="badge badge-teal">L3</span> تجارية</td>
+              <td>2025/01/15</td>
+              <td>08:00 - 10:00</td>
+              <td>مدرج أ</td>
+              <td>أ. محمد بن عمر</td>
+              <td><button class="btn btn-primary btn-sm">✏️ تعديل</button></td>
+            </tr>
+            <tr>
+              <td><strong>تسيير المؤسسة</strong></td>
+              <td><span class="badge badge-navy">M2</span> محاسبة</td>
+              <td>2025/01/16</td>
+              <td>10:00 - 12:00</td>
+              <td>القاعة 01 - 05</td>
+              <td>أ. علي حسين</td>
+              <td><button class="btn btn-primary btn-sm">✏️ تعديل</button></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ③ ROOMS PAGE -->
+    <div class="page-section" id="page-rooms">
+      <div class="main-card">
+        <div class="card-header">
+          <div class="card-title">
+            <div class="ct-icon">🏫</div>
+            أشغال القاعات
+          </div>
+          <div style="display:flex;gap:8px;align-items:center;">
+            <select class="form-select" style="width:130px;font-size:12px;">
+              <option>السبت</option><option>الأحد</option><option>الاثنين</option>
+              <option>الثلاثاء</option><option>الأربعاء</option><option>الخميس</option>
+            </select>
+            <select class="form-select" style="width:130px;font-size:12px;">
+              <option>08:00 - 09:30</option><option>09:30 - 11:00</option>
+              <option>11:15 - 12:45</option><option>13:30 - 15:00</option>
+              <option>15:00 - 16:30</option>
+            </select>
+          </div>
+        </div>
+
+        <div style="display:flex;gap:12px;margin-bottom:14px;font-size:12px;font-weight:600;">
+          <span>🟢 متاحة : <strong id="freeCount">36</strong></span>
+          <span>🔴 مشغولة : <strong id="occCount">15</strong></span>
+          <span>📊 نسبة الإشغال : <strong>29%</strong></span>
+        </div>
+
+        <div style="margin-bottom:10px;font-size:12px;font-weight:700;color:var(--text-mid);">🏫 المدرجات</div>
+        <div style="display:flex;gap:8px;margin-bottom:16px;">
+          <div class="room-card occupied" style="width:120px;">مدرج أ<div class="room-status">محاسبة عامة</div></div>
+          <div class="room-card free" style="width:120px;">مدرج ب<div class="room-status">متاح</div></div>
+          <div class="room-card occupied" style="width:120px;">مدرج ج<div class="room-status">رياضيات</div></div>
+        </div>
+
+        <div style="margin-bottom:10px;font-size:12px;font-weight:700;color:var(--text-mid);">🚪 القاعات</div>
+        <div class="rooms-grid" id="roomsGrid"></div>
+      </div>
+    </div>
+
+    <!-- ④ COMPENSATION PAGE -->
+    <div class="page-section" id="page-compensation">
+      <div class="main-card">
+        <div class="card-header">
+          <div class="card-title">
+            <div class="ct-icon">🔄</div>
+            تعويض الحصص
+          </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
+          <div>
+            <h4 style="font-size:13px;font-weight:700;color:var(--navy);margin-bottom:14px;">🔍 البحث عن وقت فراغ</h4>
+            <div class="form-group">
+              <label class="form-label">اليوم</label>
+              <select class="form-select">
+                <option>السبت</option><option>الأحد</option><option>الاثنين</option>
+                <option>الثلاثاء</option><option>الأربعاء</option><option>الخميس</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">القاعة</label>
+              <select class="form-select" id="compRoomSelect">
+                <option>مدرج أ</option><option>مدرج ب</option><option>مدرج ج</option>
+                <option>القاعة 01</option><option>القاعة 02</option><option>القاعة 03</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">الأستاذ (اختياري)</label>
+              <select class="form-select">
+                <option>-- جميع الأساتذة --</option>
+                <option>أ. محمد بن عمر</option>
+                <option>د. فاطمة زهراء</option>
+                <option>أ. علي حسين</option>
+              </select>
+            </div>
+            <button class="btn btn-primary" style="width:100%;" onclick="findFreeSlots()">🔍 بحث عن أوقات الفراغ</button>
+          </div>
+
+          <div>
+            <h4 style="font-size:13px;font-weight:700;color:var(--navy);margin-bottom:14px;">📋 نتائج البحث</h4>
+            <div class="comp-result" id="compResult" style="display:none;">
+              <h4>✅ الأوقات المتاحة لـ: <span id="compRoomName"></span></h4>
+              <div id="compSlots"></div>
+            </div>
+            <div id="compEmpty" style="color:var(--gray);font-size:13px;padding:20px;text-align:center;">
+              ⬅️ اختر يوم وقاعة ثم اضغط بحث
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ⑤ ARCHIVE PAGE -->
+    <div class="page-section" id="page-archive">
+      <div class="main-card">
+        <div class="card-header">
+          <div class="card-title">
+            <div class="ct-icon">📦</div>
+            أرشيف السنوات الدراسية
+          </div>
+          <button class="btn btn-gold" onclick="archiveCurrentYear()">📦 أرشفة السنة الحالية</button>
+        </div>
+
+        <div id="archiveList">
+          <div class="archive-card">
+            <div class="archive-info">
+              <h4>📅 السنة الدراسية 2024/2025</h4>
+              <p>تمت الأرشفة في: 15/07/2025 · 320 حصة · 5 أقسام · 24 أستاذ</p>
+            </div>
+            <div class="archive-actions">
+              <button class="btn btn-primary btn-sm" onclick="exportData('JSON 2024-2025')">📄 JSON</button>
+              <button class="btn btn-navy btn-sm" onclick="exportData('Excel 2024-2025')">📊 Excel</button>
+              <button class="btn btn-gold btn-sm" onclick="showToast('جارٍ استعادة البيانات...')">🔄 استعادة</button>
+            </div>
+          </div>
+          <div class="archive-card">
+            <div class="archive-info">
+              <h4>📅 السنة الدراسية 2023/2024</h4>
+              <p>تمت الأرشفة في: 10/07/2024 · 298 حصة · 5 أقسام · 22 أستاذ</p>
+            </div>
+            <div class="archive-actions">
+              <button class="btn btn-primary btn-sm" onclick="exportData('JSON 2023-2024')">📄 JSON</button>
+              <button class="btn btn-navy btn-sm" onclick="exportData('Excel 2023-2024')">📊 Excel</button>
+              <button class="btn btn-gold btn-sm" onclick="showToast('جارٍ استعادة البيانات...')">🔄 استعادة</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- ═══ MODALS ════════════════════════════════ -->
+
+<!-- Modal: Add Speciality -->
+<div class="modal-overlay" id="specModal">
+  <div class="modal-box">
+    <div class="modal-title">➕ إضافة تخصص جديد</div>
+    <div class="form-group">
+      <label class="form-label">اسم التخصص</label>
+      <input class="form-input" id="specModalName" placeholder="أدخل اسم التخصص...">
+    </div>
+    <div class="form-group">
+      <label class="form-label">المستوى</label>
+      <select class="form-select" id="specModalLevel">
+        <option>سنة أولى ليسانس</option>
+        <option>سنة ثانية ليسانس</option>
+        <option>سنة ثالثة ليسانس</option>
+        <option>سنة أولى ماستر</option>
+        <option>سنة ثانية ماستر</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">القسم</label>
+      <select class="form-select" id="specModalDept">
+        <option>قسم السنة أولى جذع مشترك</option>
+        <option>قسم العلوم الاقتصادية</option>
+        <option>قسم علوم التسيير</option>
+        <option>قسم علوم المالية والمحاسبة</option>
+        <option>قسم العلوم التجارية</option>
+      </select>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-primary" onclick="confirmAddSpec()">✅ إضافة</button>
+      <button class="btn" style="background:var(--gray-light);color:var(--text-mid);" onclick="closeModal('specModal')">إلغاء</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Edit -->
+<div class="modal-overlay" id="editModal">
+  <div class="modal-box">
+    <div class="modal-title" id="editModalTitle">✏️ تعديل</div>
+    <div class="form-group">
+      <label class="form-label" id="editModalLabel">الاسم الجديد</label>
+      <input class="form-input" id="editModalInput" placeholder="أدخل الاسم...">
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-primary" onclick="confirmEdit()">✅ حفظ</button>
+      <button class="btn" style="background:var(--gray-light);color:var(--text-mid);" onclick="closeModal('editModal')">إلغاء</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Add Year -->
+<div class="modal-overlay" id="yearModal">
+  <div class="modal-box">
+    <div class="modal-title">📅 إضافة سنة دراسية</div>
+    <p style="font-size:13px;color:var(--gray);margin-bottom:14px;">سيتم إضافة السنة التالية تلقائياً بعد آخر سنة مسجلة.</p>
+    <div style="background:var(--gray-light);border-radius:10px;padding:14px;text-align:center;">
+      <div style="font-size:22px;font-weight:800;color:var(--navy);" id="nextYearPreview">2030/2031</div>
+      <div style="font-size:12px;color:var(--gray);margin-top:4px;">السنة التي سيتم إضافتها</div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-primary" onclick="confirmAddYear()">✅ إضافة</button>
+      <button class="btn" style="background:var(--gray-light);color:var(--text-mid);" onclick="closeModal('yearModal')">إلغاء</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Add Level -->
+<div class="modal-overlay" id="levelModal">
+  <div class="modal-box">
+    <div class="modal-title">🎓 إضافة مستوى جديد</div>
+    <div class="form-group">
+      <label class="form-label">اسم المستوى</label>
+      <input class="form-input" id="levelModalInput" placeholder="مثال: سنة ثالثة ماستر...">
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-primary" onclick="confirmAddLevel()">✅ إضافة</button>
+      <button class="btn" style="background:var(--gray-light);color:var(--text-mid);" onclick="closeModal('levelModal')">إلغاء</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div id="toast"></div>
+
+<script>
+// ─── STATE ──────────────────────────────────
+let sidebarVisible = true;
+let editTarget = null;
+let yearList = ['2025/2026','2026/2027','2027/2028','2028/2029','2029/2030'];
+let nextYearIdx = 5; // next after 2029/2030
+
+// ─── SIDEBAR TOGGLE ─────────────────────────
+function toggleSidebar() {
+  sidebarVisible = !sidebarVisible;
+  document.getElementById('sidebar').classList.toggle('hidden', !sidebarVisible);
+  document.getElementById('main').classList.toggle('expanded', !sidebarVisible);
+  document.getElementById('sidebarToggle').textContent = sidebarVisible ? '☰' : '◁';
+}
+
+// ─── ACCORDION ─────────────────────────────
+function toggleAcc(btn) {
+  const body = btn.nextElementSibling;
+  const isOpen = btn.classList.contains('open');
+  document.querySelectorAll('.accordion-btn.open').forEach(b => {
+    b.classList.remove('open');
+    b.nextElementSibling.classList.remove('open');
+  });
+  if (!isOpen) {
+    btn.classList.add('open');
+    body.classList.add('open');
+  }
+}
+
+// ─── PAGE NAVIGATION ────────────────────────
+function showPage(page, btn) {
+  document.querySelectorAll('.page-section').forEach(p => p.classList.remove('active'));
+  document.getElementById('page-' + page).classList.add('active');
+  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+}
+
+// ─── YEAR HANDLING ─────────────────────────
+function handleYearChange() {
+  const sel = document.getElementById('yearSelect');
+  if (sel.value === '__add__') {
+    const years = [2025,2026,2027,2028,2029,...Array.from({length:nextYearIdx},(_,i)=>2030+i)];
+    const lastYear = years[years.length-1];
+    document.getElementById('nextYearPreview').textContent = `${lastYear}/${lastYear+1}`;
+    openModal('yearModal');
+    sel.value = yearList[yearList.length-1];
+  }
+}
+
+function confirmAddYear() {
+  const preview = document.getElementById('nextYearPreview').textContent;
+  yearList.push(preview);
+  nextYearIdx++;
+  const sel = document.getElementById('yearSelect');
+  const opt = document.createElement('option');
+  opt.textContent = preview;
+  sel.insertBefore(opt, sel.lastElementChild);
+  const li = document.createElement('div');
+  li.className = 'item-card';
+  li.innerHTML = `<span>📅 ${preview}</span><div class="item-actions">
+    <button class="ic-btn ic-edit" onclick="editItem(this,'سنة دراسية')">✏️</button>
+    <button class="ic-btn ic-delete" onclick="deleteItem(this)">🗑️</button>
+  </div>`;
+  document.getElementById('yearList').appendChild(li);
+  closeModal('yearModal');
+  showToast(`✅ تمت إضافة السنة الدراسية ${preview}`);
+}
+
+// ─── LEVEL HANDLING ─────────────────────────
+function handleLevelChange() {
+  const sel = document.getElementById('levelSelect');
+  if (sel.value === '__add__') {
+    openModal('levelModal');
+    sel.value = 'سنة أولى ليسانس';
+  }
+}
+
+function confirmAddLevel() {
+  const name = document.getElementById('levelModalInput').value.trim();
+  if (!name) return;
+  const sel = document.getElementById('levelSelect');
+  const opt = document.createElement('option');
+  opt.textContent = name;
+  sel.insertBefore(opt, sel.lastElementChild);
+  const li = document.createElement('div');
+  li.className = 'item-card';
+  li.innerHTML = `<span><span class="badge badge-navy">+</span> ${name}</span>
+    <div class="item-actions"><button class="ic-btn ic-delete" onclick="deleteItem(this)">🗑️</button></div>`;
+  document.getElementById('levelList').appendChild(li);
+  closeModal('levelModal');
+  document.getElementById('levelModalInput').value = '';
+  showToast(`✅ تمت إضافة المستوى: ${name}`);
+}
+
+// ─── TEACHER ────────────────────────────────
+function addTeacher() {
+  const input = document.getElementById('teacherInput');
+  const name = input.value.trim();
+  if (!name) { showToast('⚠️ أدخل اسم الأستاذ'); return; }
+  const li = document.createElement('div');
+  li.className = 'item-card';
+  li.innerHTML = `<span>👨‍🏫 ${name}</span>
+    <div class="item-actions">
+      <button class="ic-btn ic-edit" onclick="editItem(this,'أستاذ')">✏️</button>
+      <button class="ic-btn ic-delete" onclick="deleteItem(this)">🗑️</button>
+    </div>`;
+  document.getElementById('teacherList').appendChild(li);
+  input.value = '';
+  showToast(`✅ تمت إضافة الأستاذ: ${name}`);
+}
+
+// ─── ROOM ────────────────────────────────────
+function addRoom() {
+  const input = document.getElementById('roomInput');
+  const name = input.value.trim();
+  if (!name) { showToast('⚠️ أدخل اسم القاعة'); return; }
+  const li = document.createElement('div');
+  li.className = 'item-card';
+  li.innerHTML = `<span>🏫 ${name}</span>
+    <div class="item-actions"><button class="ic-btn ic-delete" onclick="deleteItem(this)">🗑️</button></div>`;
+  document.getElementById('roomList').appendChild(li);
+  input.value = '';
+  showToast(`✅ تمت إضافة القاعة: ${name}`);
+}
+
+function showAllRooms() {
+  showToast('🏫 عرض قائمة القاعات الكاملة...');
+}
+
+// ─── SPECIALITY ──────────────────────────────
+function addSpeciality() {
+  const name = document.getElementById('specInput').value.trim();
+  if (!name) { showToast('⚠️ أدخل اسم التخصص'); return; }
+  document.getElementById('specModalName').value = name;
+  openModal('specModal');
+}
+
+function confirmAddSpec() {
+  const name = document.getElementById('specModalName').value.trim();
+  const level = document.getElementById('specModalLevel').value;
+  const dept = document.getElementById('specModalDept').value;
+  const badge = level.includes('ماستر') ? 'M' : 'L';
+  const num = level.includes('أولى') ? '1' : level.includes('ثانية') ? '2' : '3';
+  const li = document.createElement('div');
+  li.className = 'item-card';
+  li.innerHTML = `<span><span class="badge badge-gold">${badge}${num}</span> ${name}</span>
+    <div class="item-actions"><button class="ic-btn ic-delete" onclick="deleteItem(this)">🗑️</button></div>`;
+  document.getElementById('specList').appendChild(li);
+  document.getElementById('specInput').value = '';
+  document.getElementById('specModalName').value = '';
+  closeModal('specModal');
+  showToast(`✅ تمت إضافة التخصص: ${name}`);
+}
+
+// ─── GENERIC EDIT / DELETE ──────────────────
+function editItem(btn, type) {
+  editTarget = btn.closest('.item-card');
+  document.getElementById('editModalTitle').textContent = `✏️ تعديل ${type}`;
+  document.getElementById('editModalLabel').textContent = `الاسم الجديد للـ${type}`;
+  document.getElementById('editModalInput').value = editTarget.querySelector('span').textContent.trim().replace(/^[^\s]+\s/,'');
+  openModal('editModal');
+}
+
+function confirmEdit() {
+  const val = document.getElementById('editModalInput').value.trim();
+  if (!val || !editTarget) return;
+  const span = editTarget.querySelector('span');
+  const badge = span.querySelector('.badge');
+  if (badge) span.innerHTML = badge.outerHTML + ' ' + val;
+  else span.textContent = span.textContent.charAt(0) + ' ' + val;
+  closeModal('editModal');
+  showToast('✅ تم التعديل بنجاح');
+}
+
+function deleteItem(btn) {
+  const card = btn.closest('.item-card');
+  card.style.opacity = '0';
+  card.style.transform = 'translateX(20px)';
+  card.style.transition = 'all 0.3s';
+  setTimeout(() => card.remove(), 300);
+  showToast('🗑️ تم الحذف');
+}
+
+// ─── MODAL ──────────────────────────────────
+function openModal(id) {
+  document.getElementById(id).classList.add('show');
+}
+function closeModal(id) {
+  document.getElementById(id).classList.remove('show');
+}
+document.querySelectorAll('.modal-overlay').forEach(m => {
+  m.addEventListener('click', e => { if (e.target === m) m.classList.remove('show'); });
+});
+
+// ─── EXAM TABS ──────────────────────────────
+function switchExamView(label, btn) {
+  document.querySelectorAll('.view-tab').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+  showToast(`📋 عرض ${label}`);
+}
+
+// ─── COMPENSATION ───────────────────────────
+const allSlots = ['08:00 - 09:30','09:30 - 11:00','11:15 - 12:45','13:30 - 15:00','15:00 - 16:30'];
+const occupiedSlots = {
+  'مدرج أ': ['08:00 - 09:30','13:30 - 15:00'],
+  'مدرج ب': ['11:15 - 12:45'],
+  'مدرج ج': ['09:30 - 11:00','13:30 - 15:00'],
+  'القاعة 01': ['08:00 - 09:30','09:30 - 11:00'],
+};
+
+function findFreeSlots() {
+  const room = document.getElementById('compRoomSelect').value;
+  const occ = occupiedSlots[room] || [];
+  const free = allSlots.filter(s => !occ.includes(s));
+  document.getElementById('compRoomName').textContent = room;
+  const slotsDiv = document.getElementById('compSlots');
+  slotsDiv.innerHTML = free.length
+    ? free.map(s => `<span class="time-slot-tag">⏰ ${s}</span>`).join('')
+    : '<p style="color:var(--danger);font-size:12px;">⛔ لا توجد أوقات فراغ</p>';
+  document.getElementById('compResult').style.display = 'block';
+  document.getElementById('compEmpty').style.display = 'none';
+}
+
+// ─── ARCHIVE ────────────────────────────────
+function archiveCurrentYear() {
+  const year = document.getElementById('globalYear').value;
+  const card = document.createElement('div');
+  card.className = 'archive-card';
+  const now = new Date().toLocaleDateString('ar-DZ');
+  card.innerHTML = `<div class="archive-info">
+    <h4>📅 السنة الدراسية ${year}</h4>
+    <p>تمت الأرشفة في: ${now} · 0 حصة · 5 أقسام · 24 أستاذ</p>
+  </div>
+  <div class="archive-actions">
+    <button class="btn btn-primary btn-sm" onclick="exportData('JSON')">📄 JSON</button>
+    <button class="btn btn-navy btn-sm" onclick="exportData('Excel')">📊 Excel</button>
+    <button class="btn btn-gold btn-sm">🔄 استعادة</button>
+  </div>`;
+  document.getElementById('archiveList').prepend(card);
+  showToast(`📦 تمت أرشفة السنة الدراسية ${year}`);
+}
+
+function exportData(label) {
+  showToast(`📤 جارٍ تصدير ${label}...`);
+}
+
+// ─── TOAST ──────────────────────────────────
+let toastTimer;
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 2800);
+}
+
+// ─── ROOMS GRID ─────────────────────────────
+function buildRoomsGrid() {
+  const grid = document.getElementById('roomsGrid');
+  const occupied = [3,7,12,15,20,22,30,35,40,43,48,2,9,18,28];
+  for (let i = 1; i <= 48; i++) {
+    const div = document.createElement('div');
+    const isOcc = occupied.includes(i);
+    div.className = `room-card ${isOcc ? 'occupied' : 'free'}`;
+    div.innerHTML = `قاعة ${i}<div class="room-status">${isOcc ? '🔴 مشغولة' : '🟢 متاحة'}</div>`;
+    grid.appendChild(div);
+  }
+}
+
+// ─── INIT ────────────────────────────────────
+buildRoomsGrid();
+</script>
+</body>
+</html>
