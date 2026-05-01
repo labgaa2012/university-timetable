@@ -900,7 +900,7 @@ table.occ-matrix td.cell-occ:hover{background:#fee2e2;filter:brightness(.97);}
         </div>
       </div>
 
-      <!-- ── ADD BAR ── -->
+      <!-- -- ADD BAR -- -->
       <div class="mgmt-add-bar" style="flex-wrap:wrap;">
         <div class="fg" style="flex:2;min-width:180px;">
           <label class="fl">الاسم واللقب</label>
@@ -933,7 +933,7 @@ table.occ-matrix td.cell-occ:hover{background:#fee2e2;filter:brightness(.97);}
         <button class="btn bg" onclick="addTeacher()" style="white-space:nowrap;align-self:flex-end;">➕ إضافة</button>
       </div>
 
-      <!-- ── FILTER BAR ── -->
+      <!-- -- FILTER BAR -- -->
       <div class="filter-bar">
         <div class="fg" style="flex:2;min-width:160px;">
           <label class="fl">🔍 بحث بالاسم</label>
@@ -1219,7 +1219,7 @@ table.occ-matrix td.cell-occ:hover{background:#fee2e2;filter:brightness(.97);}
 <div id="toast"></div>
 
 <script>
-// ── CONSTANTS ──────────────────────────────────────
+// -- CONSTANTS --------------------------------------
 const DAYS=['السبت','الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس'];
 const SLOTS=['08:00-09:30','09:30-11:00','11:15-12:45','13:30-15:00','15:00-16:30'];
 const SL={'08:00-09:30':'08:00 - 09:30','09:30-11:00':'09:30 - 11:00',
@@ -1229,7 +1229,8 @@ const TC={'tlc':'#dbeafe','ttd':'#dcfce7','ttp':'#fed7aa','tot':'#ede9fe'};
 const AMPHI=['مدرج أ','مدرج ب','مدرج ج'];
 const SK='univ_tt_v4';
 
-/* ── DEFAULT SUBJECTS ── */
+/* -- DEFAULT SUBJECTS -- */
+function uid2(){return Math.random().toString(36).slice(2,10);}
 function DEFAULT_SUBJECTS(){
   const sem1=[
     'مدخل الاقتصاد','محاسبة مالية 1','رياضيات 1','إحصاء وصفي',
@@ -1261,7 +1262,7 @@ const RANKS={
 };
 const KIND_LABELS={permanent:'أستاذ دائم',temporary:'أستاذ مؤقت',associate:'أستاذ مشارك'};
 
-// ── DEFAULT STATE ─────────────────────────────────
+// -- DEFAULT STATE ---------------------------------
 function defState(){
   const rooms=[];
   for(let i=1;i<=48;i++) rooms.push('القاعة '+i);
@@ -1270,7 +1271,7 @@ function defState(){
     years:['2025/2026','2026/2027','2027/2028','2028/2029','2029/2030'],
     levels:['سنة أولى ليسانس','سنة ثانية ليسانس','سنة ثالثة ليسانس','سنة أولى ماستر','سنة ثانية ماستر'],
     depts:['قسم السنة أولى جذع مشترك','قسم العلوم الاقتصادية','قسم علوم التسيير','قسم علوم المالية والمحاسبة','قسم العلوم التجارية'],
-    specs:[],subjects:DEFAULT_SUBJECTS(),
+    specs:[],subjects:[],
     teachers:[
       {name:'أ. محمد بن عمر',kind:'permanent'},
       {name:'د. فاطمة زهراء',kind:'permanent'},
@@ -1284,25 +1285,19 @@ function defState(){
 let S={};
 function load(){
   try{const d=localStorage.getItem(SK);S=d?JSON.parse(d):defState();}catch(e){S=defState();}
-  // Migrate missing subjects array
-  if(!S.subjects) S.subjects=DEFAULT_SUBJECTS();
-  // Migrate old string-teachers to objects
+  if(!S.subjects||!S.subjects.length) S.subjects=DEFAULT_SUBJECTS();
   if(S.teachers.length && typeof S.teachers[0]==='string'){
     S.teachers=S.teachers.map(n=>({name:n,kind:'permanent',rank:'mca',dept:''}));
     save();
   }
-  // Migrate old objects missing rank/dept
   S.teachers=S.teachers.map(t=>({
-    name:t.name||'',
-    kind:t.kind||'permanent',
-    rank:t.rank||'mca',
-    dept:t.dept||''
+    name:t.name||'',kind:t.kind||'permanent',rank:t.rank||'mca',dept:t.dept||''
   }));
 }
 function save(){try{localStorage.setItem(SK,JSON.stringify(S));}catch(e){}}
 function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,6);}
 
-// ── SIDEBAR ───────────────────────────────────────
+// -- SIDEBAR ---------------------------------------
 let sbOpen=true;
 function toggleSB(){
   sbOpen=!sbOpen;
@@ -1314,14 +1309,14 @@ function toggleSB(){
   handle.textContent=sbOpen?'☰':'☰';
 }
 
-// ── ACCORDION ─────────────────────────────────────
+// -- ACCORDION -------------------------------------
 function toggleAcc(btn){
   const b=btn.nextElementSibling,was=btn.classList.contains('open');
   document.querySelectorAll('.acb.open').forEach(x=>{x.classList.remove('open');x.nextElementSibling.classList.remove('open');});
   if(!was){btn.classList.add('open');b.classList.add('open');}
 }
 
-// ── PAGES ─────────────────────────────────────────
+// -- PAGES -----------------------------------------
 function showPg(id,btn){
   document.querySelectorAll('.pg').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('.nav-tab').forEach(t=>t.classList.remove('active'));
@@ -1351,8 +1346,8 @@ function showMgmtPg(id){
   if(id==='depts')renderDptGrid();
 }
 
-// ── RENDER SIDEBAR ────────────────────────────────
-// ── YEAR GRID ─────────────────────────────────────
+// -- RENDER SIDEBAR --------------------------------
+// -- YEAR GRID -------------------------------------
 function renderYrList(){renderYrGrid();}
 function renderYrGrid(){
   const grid=document.getElementById('yrGrid');
@@ -1410,7 +1405,7 @@ function expYearsExcel(){
   XLSX.utils.book_append_sheet(wb,ws,'السنوات');XLSX.writeFile(wb,'years.xlsx');toast('📊 تم التصدير');
 }
 
-// ── LEVEL GRID ────────────────────────────────────
+// -- LEVEL GRID ------------------------------------
 function renderLvList(){renderLvGrid();}
 function renderLvGrid(){
   const grid=document.getElementById('lvGrid');
@@ -1453,7 +1448,7 @@ function expLevelsExcel(){
   XLSX.utils.book_append_sheet(wb,ws,'المستويات');XLSX.writeFile(wb,'levels.xlsx');toast('📊 تم التصدير');
 }
 
-// ── DEPT GRID ─────────────────────────────────────
+// -- DEPT GRID -------------------------------------
 function renderDptList(){renderDptGrid();}
 function renderDptGrid(){
   const grid=document.getElementById('dptGrid');
@@ -1501,7 +1496,7 @@ function expDeptsExcel(){
   const ws=XLSX.utils.aoa_to_sheet(data);ws['!cols']=[{wch:30},{wch:12},{wch:16},{wch:8}];
   XLSX.utils.book_append_sheet(wb,ws,'الأقسام');XLSX.writeFile(wb,'depts.xlsx');toast('📊 تم التصدير');
 }
-// ── SUBJECTS (المقاييس) ───────────────────────────
+// -- SUBJECTS (المقاييس) ---------------------------
 let subjSemTab=0;
 
 function syncSubjSelects(){
@@ -1868,11 +1863,11 @@ function syncSel(id,arr,selected){
 }
 function renderAll(){
   renderYrGrid();renderLvGrid();renderDptGrid();renderSpGrid();
-  renderTchGrid();renderRmGrid();renderTT();renderExams();renderArchive();
-  syncSubjModalSel();
+  renderSubjGrid();renderTchGrid();renderRmGrid();
+  renderTT();renderExams();renderArchive();
 }
 
-// ── YEAR / LEVEL / DEPT CRUD ─────────────────────
+// -- YEAR / LEVEL / DEPT CRUD ---------------------
 function onYearCh(){/* no-op — managed in pg-years */}
 function onLvCh(){/* no-op — managed in pg-levels */}
 function onDptCh(){/* no-op — managed in pg-depts */}
@@ -1891,7 +1886,7 @@ function addSpecInline(){
 }
 function rmSp(i){if(!confirm('حذف '+S.specs[i]?.name+'؟'))return;S.specs.splice(i,1);save();renderSpGrid();toast('🗑️ تم الحذف');}
 
-// ── EDIT MODAL ────────────────────────────────────
+// -- EDIT MODAL ------------------------------------
 function openEdit(type,idx,cur){
   document.getElementById('enType').value=type;
   document.getElementById('enIdx').value=idx;
@@ -1917,7 +1912,7 @@ function confEdit(){
   save();renderAll();closeM('mEdit');toast('✅ تم التعديل');
 }
 
-// ── TIMETABLE ─────────────────────────────────────
+// -- TIMETABLE -------------------------------------
 let dragId=null;
 
 function curSessions(){
@@ -1985,7 +1980,7 @@ function onDrop(e,day,slot){
   dragId=null;save();renderTT();toast('✅ تم نقل الحصة');
 }
 
-// ── SESSION MODAL HELPERS ─────────────────────────
+// -- SESSION MODAL HELPERS -------------------------
 function onSessTypeChange(){
   const t=document.getElementById('ms-type').value;
   const row=document.getElementById('ms-firstlec-row');
@@ -1997,7 +1992,7 @@ function setFirstLec(val, el){
   el.classList.add('sel');
 }
 
-// ── SESSION MODAL ─────────────────────────────────
+// -- SESSION MODAL ---------------------------------
 function openAddSess(day,slot){
   document.getElementById('esSessId').value='';
   document.getElementById('mSessTitle').textContent='➕ إضافة حصة';
@@ -2070,7 +2065,7 @@ function delSess(id){
   save();renderTT();toast('🗑️ تم الحذف');
 }
 
-// ── EXAMS ─────────────────────────────────────────
+// -- EXAMS -----------------------------------------
 function setRound(r,btn){
   S.round=r;save();
   document.querySelectorAll('#pg-exams .vt').forEach(b=>b.classList.remove('active'));
@@ -2136,7 +2131,7 @@ function saveExam(){
 }
 function delExam(id){if(!confirm('حذف؟'))return;S.exams=S.exams.filter(e=>e.id!==id);save();renderExams();toast('🗑️ تم الحذف');}
 
-// ── ROOMS OCCUPANCY MATRIX ────────────────────────
+// -- ROOMS OCCUPANCY MATRIX ------------------------
 let rmView='week'; // 'week' | 'day'
 
 function setRmView(v,btn){
@@ -2300,7 +2295,7 @@ function printRooms(){
   w.document.close();
 }
 
-// ── COMPENSATION ──────────────────────────────────
+// -- COMPENSATION ----------------------------------
 function findFree(){
   const day=document.getElementById('cp-day').value;
   const room=document.getElementById('cp-room').value;
@@ -2316,7 +2311,7 @@ function findFree(){
     :'<div class="cr" style="border-color:var(--danger)"><p style="color:var(--danger);font-size:12px;font-weight:600;">⛔ لا توجد أوقات فراغ</p></div>';
 }
 
-// ── OVERTIME ENGINE ───────────────────────────────
+// -- OVERTIME ENGINE -------------------------------
 const QUORUM=9; // ساعات معادلة / أسبوع
 
 function calcTeacherOvertime(tchName){
@@ -2524,7 +2519,7 @@ function printOvertime(){
   w.document.close();
 }
 
-// ── ARCHIVE ───────────────────────────────────────
+// -- ARCHIVE ---------------------------------------
 function renderArchive(){
   const el=document.getElementById('arcList');
   if(!S.archive.length){el.innerHTML='<div style="color:var(--gray);text-align:center;padding:20px;font-size:12px;">لا يوجد أرشيف — أرشف السنة الحالية لحفظها</div>';return;}
@@ -2561,7 +2556,7 @@ function expArcExcel(i){
   buildExcel(a.sessions,a.exams,'archive-'+a.yr.replace('/','_'));
 }
 
-// ── EXCEL ─────────────────────────────────────────
+// -- EXCEL -----------------------------------------
 function expExcel(){
   const ss=S.sessions.filter(s=>s.y===S.ay);
   buildExcel(ss,[],'timetable-'+S.ay.replace('/','_'));
@@ -2614,7 +2609,7 @@ function buildExcel(sessions,exams,fname){
   toast('📊 تم تصدير Excel بنجاح');
 }
 
-// ── PRINT ─────────────────────────────────────────
+// -- PRINT -----------------------------------------
 function printTT(){
   const lv=document.getElementById('tt-lv')?.value||S.al;
   const dp=document.getElementById('tt-dp')?.value||S.ad;
@@ -2649,19 +2644,19 @@ function printTT(){
   w.document.close();
 }
 
-// ── MODAL HELPERS ─────────────────────────────────
+// -- MODAL HELPERS ---------------------------------
 function openM(id){document.getElementById(id).classList.add('show');}
 function closeM(id){document.getElementById(id).classList.remove('show');}
 document.querySelectorAll('.mo').forEach(m=>{m.addEventListener('click',e=>{if(e.target===m)m.classList.remove('show');});});
 
-// ── DOWNLOAD HELPER ───────────────────────────────
+// -- DOWNLOAD HELPER -------------------------------
 function dl(blob,name){const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;a.click();}
 
-// ── TOAST ─────────────────────────────────────────
+// -- TOAST -----------------------------------------
 let toastT;
 function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove('show'),2800);}
 
-// ── IMPORT / EXPORT UTILITIES ─────────────────────
+// -- IMPORT / EXPORT UTILITIES ---------------------
 
 /* Trigger file picker */
 function trigImp(inputId){
@@ -2690,22 +2685,22 @@ function headerMap(hdr){
   return m;
 }
 
-/* ── RANK REVERSE MAP ── */
+/* -- RANK REVERSE MAP -- */
 const RANK_REV={};
 Object.entries(RANKS).forEach(([k,v])=>{RANK_REV[v.label]=k;RANK_REV[v.short]=k;});
 RANK_REV['محاضر أ']='mca';RANK_REV['محاضر ب']='mcb';
 RANK_REV['مساعد أ']='maa';RANK_REV['مساعد ب']='mab';
 RANK_REV['مؤقت']='tmp';RANK_REV['مشارك']='sha';RANK_REV['تعليم عالي']='prof';
 
-/* ── KIND REVERSE MAP ── */
+/* -- KIND REVERSE MAP -- */
 const KIND_REV={'أستاذ دائم':'permanent','دائم':'permanent',
   'أستاذ مؤقت':'temporary','مؤقت':'temporary',
   'أستاذ مشارك':'associate','مشارك':'associate'};
 
-/* ── TYPE REVERSE MAP ── */
+/* -- TYPE REVERSE MAP -- */
 const TYPE_REV={'محاضرة':'tlc','أعمال موجهة':'ttd','td':'ttd','أعمال تطبيقية':'ttp','tp':'ttp','أخرى':'tot'};
 
-/* ─── TEACHERS IMPORT ─── */
+/* --- TEACHERS IMPORT --- */
 function impTeachers(input){
   const file=input.files[0];if(!file)return;
   readExcel(file,rows=>{
@@ -2737,7 +2732,7 @@ function impTeachers(input){
   });
 }
 
-/* ─── ROOMS IMPORT ─── */
+/* --- ROOMS IMPORT --- */
 function impRooms(input){
   const file=input.files[0];if(!file)return;
   readExcel(file,rows=>{
@@ -2765,7 +2760,7 @@ function expRoomsManageExcel(){
   toast('📊 تم تصدير القاعات');
 }
 
-/* ─── SPECS IMPORT ─── */
+/* --- SPECS IMPORT --- */
 function impSpecs(input){
   const file=input.files[0];if(!file)return;
   readExcel(file,rows=>{
@@ -2802,7 +2797,7 @@ function expSpecsExcel(){
   toast('📊 تم تصدير التخصصات');
 }
 
-/* ─── SESSIONS IMPORT ─── */
+/* --- SESSIONS IMPORT --- */
 function impSessions(input){
   const file=input.files[0];if(!file)return;
   readExcel(file,rows=>{
@@ -2834,7 +2829,7 @@ function impSessions(input){
   });
 }
 
-/* ─── EXAMS IMPORT ─── */
+/* --- EXAMS IMPORT --- */
 function impExams(input){
   const file=input.files[0];if(!file)return;
   readExcel(file,rows=>{
@@ -2863,7 +2858,7 @@ function impExams(input){
   });
 }
 
-/* ─── TEMPLATES DOWNLOAD ─── */
+/* --- TEMPLATES DOWNLOAD --- */
 function dlTemplate(type){
   const wb=XLSX.utils.book_new();
   const templates={
@@ -2876,6 +2871,7 @@ function dlTemplate(type){
       ],
       note:'السداسي: السداسي الأول أو السداسي الثاني'
     },
+    teachers:{
       headers:['الاسم واللقب','الرتبة','القسم','الحالة'],
       example:[['أ. محمد بن عمر','أستاذ محاضر أ','قسم العلوم الاقتصادية','أستاذ دائم'],
                ['د. فاطمة زهراء','أستاذ التعليم العالي','قسم علوم التسيير','أستاذ دائم'],
@@ -2918,7 +2914,7 @@ function dlTemplate(type){
   toast('📋 تم تحميل القالب — افتحه وأضف بياناتك ثم استورده');
 }
 
-// ── INIT ──────────────────────────────────────────
+// -- INIT ------------------------------------------
 load();
 renderAll();
 </script>
