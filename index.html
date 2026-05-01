@@ -340,6 +340,25 @@ table#ttbl td.ec:hover::after{color:var(--teal);}
 .room-mgmt-card:hover{border-color:var(--teal);}
 .room-mgmt-card span{flex:1;text-align:center;}
 
+/* TEACHER RANK BADGES */
+.rank-badge{padding:2px 8px;border-radius:20px;font-size:9.5px;font-weight:700;white-space:nowrap;}
+.rank-prof{background:#e8f4fd;color:#1a6fa8;}
+.rank-mca{background:#d5f5e3;color:#1a7a4a;}
+.rank-mcb{background:#d0f0c0;color:#276221;}
+.rank-maa{background:#fef3cd;color:#8a6914;}
+.rank-mab{background:#fde8d0;color:#a0521a;}
+.rank-tmp{background:#fdecea;color:var(--danger);}
+.rank-sha{background:#ede9fe;color:#5b21b6;}
+/* FILTER BAR */
+.filter-bar{display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;
+  background:#f8fafc;border:1.5px solid #e0e8f5;border-radius:10px;
+  padding:12px 14px;margin-bottom:14px;}
+.filter-bar .fg{margin:0;flex:1;min-width:130px;}
+.filter-bar .fl{font-size:10px;}
+.filter-count{font-size:11px;color:var(--gray);font-weight:600;align-self:center;white-space:nowrap;}
+/* TEACHER KIND QUICK BADGE */
+.kb-a{background:rgba(91,33,182,.12);color:#5b21b6;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700;}
+
 /* ROOMS OCCUPANCY MATRIX */
 .occ-wrap{overflow-x:auto;margin-top:4px;}
 table.occ-matrix{border-collapse:collapse;font-size:10.5px;white-space:nowrap;min-width:900px;width:100%;}
@@ -654,29 +673,83 @@ table.occ-matrix td.cell-occ:hover{background:#fee2e2;filter:brightness(.97);}
       <div class="mgmt-header">
         <div class="mct"><div class="mcti">👨‍🏫</div>إدارة الأساتذة</div>
         <div class="frow">
+          <span class="filter-count" id="tch-count-lbl"></span>
           <button class="btn bn" onclick="expTeachersExcel()">📊 تصدير Excel</button>
-          <button class="btn bp bsm" onclick="showPg('timetable', document.querySelector('.nav-tab'))">← العودة للجدول</button>
+          <button class="btn bp bsm" onclick="showPg('timetable',document.querySelector('.nav-tab'))">← العودة</button>
         </div>
       </div>
-      <!-- Add bar -->
-      <div class="mgmt-add-bar">
-        <div class="fg">
-          <label class="fl">اسم الأستاذ</label>
-          <input class="fi" id="tchIn" placeholder="أدخل اسم الأستاذ...">
+
+      <!-- ── ADD BAR ── -->
+      <div class="mgmt-add-bar" style="flex-wrap:wrap;">
+        <div class="fg" style="flex:2;min-width:180px;">
+          <label class="fl">الاسم واللقب</label>
+          <input class="fi" id="tchIn" placeholder="مثال: أ. محمد بن عمر...">
         </div>
         <div class="fg">
-          <label class="fl">نوع الأستاذ</label>
-          <select class="fs" id="tchKind">
-            <option value="permanent">دائم (نصاب: 9 ساعات)</option>
-            <option value="temporary">مؤقت / مشارك (كل ساعاته إضافية)</option>
+          <label class="fl">الرتبة</label>
+          <select class="fs" id="tchRank">
+            <option value="prof">أستاذ التعليم العالي</option>
+            <option value="mca">أستاذ محاضر أ</option>
+            <option value="mcb">أستاذ محاضر ب</option>
+            <option value="maa">أستاذ مساعد أ</option>
+            <option value="mab">أستاذ مساعد ب</option>
+            <option value="tmp">أستاذ مؤقت</option>
+            <option value="sha">أستاذ مشارك</option>
           </select>
         </div>
-        <button class="btn bg" onclick="addTeacher()" style="white-space:nowrap;">➕ إضافة أستاذ</button>
+        <div class="fg">
+          <label class="fl">القسم</label>
+          <select class="fs" id="tchDept"></select>
+        </div>
+        <div class="fg">
+          <label class="fl">الحالة</label>
+          <select class="fs" id="tchKind">
+            <option value="permanent">أستاذ دائم</option>
+            <option value="temporary">أستاذ مؤقت</option>
+            <option value="associate">أستاذ مشارك</option>
+          </select>
+        </div>
+        <button class="btn bg" onclick="addTeacher()" style="white-space:nowrap;align-self:flex-end;">➕ إضافة</button>
       </div>
-      <!-- Search -->
-      <div style="margin-bottom:12px;">
-        <input class="fi" id="tch-search" placeholder="🔍 بحث عن أستاذ..." oninput="filterTeachers()" style="max-width:300px;">
+
+      <!-- ── FILTER BAR ── -->
+      <div class="filter-bar">
+        <div class="fg" style="flex:2;min-width:160px;">
+          <label class="fl">🔍 بحث بالاسم</label>
+          <input class="fi" id="tch-search" placeholder="ابحث عن أستاذ..." oninput="filterTeachers()">
+        </div>
+        <div class="fg">
+          <label class="fl">الرتبة</label>
+          <select class="fs" id="tch-f-rank" onchange="filterTeachers()">
+            <option value="">كل الرتب</option>
+            <option value="prof">أستاذ التعليم العالي</option>
+            <option value="mca">محاضر أ</option>
+            <option value="mcb">محاضر ب</option>
+            <option value="maa">مساعد أ</option>
+            <option value="mab">مساعد ب</option>
+            <option value="tmp">مؤقت</option>
+            <option value="sha">مشارك</option>
+          </select>
+        </div>
+        <div class="fg">
+          <label class="fl">القسم</label>
+          <select class="fs" id="tch-f-dept" onchange="filterTeachers()">
+            <option value="">كل الأقسام</option>
+          </select>
+        </div>
+        <div class="fg">
+          <label class="fl">الحالة</label>
+          <select class="fs" id="tch-f-kind" onchange="filterTeachers()">
+            <option value="">الكل</option>
+            <option value="permanent">دائم</option>
+            <option value="temporary">مؤقت</option>
+            <option value="associate">مشارك</option>
+          </select>
+        </div>
+        <button class="btn" style="background:var(--gray-light);color:var(--text-mid);align-self:flex-end;"
+          onclick="clearTchFilters()">↺ إعادة</button>
       </div>
+
       <!-- Grid -->
       <div class="mgmt-grid" id="tchGrid"></div>
     </div>
@@ -912,6 +985,18 @@ const TC={'tlc':'#dbeafe','ttd':'#dcfce7','ttp':'#fed7aa','tot':'#ede9fe'};
 const AMPHI=['مدرج أ','مدرج ب','مدرج ج'];
 const SK='univ_tt_v4';
 
+// Ranks lookup
+const RANKS={
+  prof:{label:'أستاذ التعليم العالي',cls:'rank-prof',short:'أ.ت.ع'},
+  mca:{label:'أستاذ محاضر أ',cls:'rank-mca',short:'م.أ'},
+  mcb:{label:'أستاذ محاضر ب',cls:'rank-mcb',short:'م.ب'},
+  maa:{label:'أستاذ مساعد أ',cls:'rank-maa',short:'مس.أ'},
+  mab:{label:'أستاذ مساعد ب',cls:'rank-mab',short:'مس.ب'},
+  tmp:{label:'أستاذ مؤقت',cls:'rank-tmp',short:'مؤقت'},
+  sha:{label:'أستاذ مشارك',cls:'rank-sha',short:'مشارك'}
+};
+const KIND_LABELS={permanent:'أستاذ دائم',temporary:'أستاذ مؤقت',associate:'أستاذ مشارك'};
+
 // ── DEFAULT STATE ─────────────────────────────────
 function defState(){
   const rooms=[];
@@ -937,9 +1022,16 @@ function load(){
   try{const d=localStorage.getItem(SK);S=d?JSON.parse(d):defState();}catch(e){S=defState();}
   // Migrate old string-teachers to objects
   if(S.teachers.length && typeof S.teachers[0]==='string'){
-    S.teachers=S.teachers.map(n=>({name:n,kind:'permanent'}));
+    S.teachers=S.teachers.map(n=>({name:n,kind:'permanent',rank:'mca',dept:''}));
     save();
   }
+  // Migrate old objects missing rank/dept
+  S.teachers=S.teachers.map(t=>({
+    name:t.name||'',
+    kind:t.kind||'permanent',
+    rank:t.rank||'mca',
+    dept:t.dept||''
+  }));
 }
 function save(){try{localStorage.setItem(SK,JSON.stringify(S));}catch(e){}}
 function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,6);}
@@ -1058,20 +1150,50 @@ function renderSpGrid(){
 }
 function renderTchList(){renderTchGrid();}
 function renderTchGrid(){
+  // Sync dept selects in add form and filter bar
+  const dOpts='<option value="">-- اختر --</option>'+S.depts.map(d=>`<option value="${d}">${d}</option>`).join('');
+  const tDept=document.getElementById('tchDept');if(tDept)tDept.innerHTML=dOpts;
+  const fDept=document.getElementById('tch-f-dept');
+  if(fDept)fDept.innerHTML='<option value="">كل الأقسام</option>'+S.depts.map(d=>`<option value="${d}">${d}</option>`).join('');
+
+  // Apply filters
+  const q=(document.getElementById('tch-search')?.value||'').trim().toLowerCase();
+  const fRank=document.getElementById('tch-f-rank')?.value||'';
+  const fDeptV=document.getElementById('tch-f-dept')?.value||'';
+  const fKind=document.getElementById('tch-f-kind')?.value||'';
+
+  let list=S.teachers;
+  if(q) list=list.filter(t=>t.name.toLowerCase().includes(q));
+  if(fRank) list=list.filter(t=>t.rank===fRank);
+  if(fDeptV) list=list.filter(t=>t.dept===fDeptV);
+  if(fKind) list=list.filter(t=>t.kind===fKind);
+
+  // Count label
+  const lbl=document.getElementById('tch-count-lbl');
+  if(lbl) lbl.textContent=`عرض ${list.length} من ${S.teachers.length} أستاذ`;
+
   const grid=document.getElementById('tchGrid');
   if(grid){
-    const q=(document.getElementById('tch-search')?.value||'').trim().toLowerCase();
-    const list=q?S.teachers.filter(t=>t.name.toLowerCase().includes(q)):S.teachers;
-    grid.innerHTML=list.length?list.map((t)=>{
+    grid.innerHTML=list.length?list.map(t=>{
       const realIdx=S.teachers.indexOf(t);
-      const kb=t.kind==='permanent'?'<span class="kb-p">دائم</span>':'<span class="kb-t">مؤقت</span>';
+      const rk=RANKS[t.rank]||RANKS.mca;
+      const kindLabel=KIND_LABELS[t.kind]||'دائم';
+      const kb=t.kind==='permanent'?'<span class="kb-p">دائم</span>'
+        :t.kind==='associate'?'<span class="kb-a">مشارك</span>'
+        :'<span class="kb-t">مؤقت</span>';
       const sc=S.sessions.filter(s=>s.tch===t.name&&s.y===S.ay).length;
       return `<div class="mgmt-card">
-        <div class="mc-left">
-          <div class="mc-avatar">👨‍🏫</div>
-          <div>
+        <div class="mc-left" style="flex:1;min-width:0;">
+          <div class="mc-avatar" style="font-size:14px;">👨‍🏫</div>
+          <div style="min-width:0;">
             <div class="mc-name">${t.name}</div>
-            <div class="mc-sub">${kb} · ${sc} حصة هذا الفصل</div>
+            <div class="mc-sub" style="display:flex;gap:5px;flex-wrap:wrap;margin-top:4px;">
+              <span class="rank-badge ${rk.cls}">${rk.label}</span>
+              ${kb}
+            </div>
+            <div style="font-size:10px;color:var(--gray);margin-top:3px;">
+              ${t.dept?'🏛 '+t.dept+' · ':''}${sc} حصة هذا الفصل
+            </div>
           </div>
         </div>
         <div class="iac">
@@ -1079,8 +1201,11 @@ function renderTchGrid(){
           <button class="icb idl" onclick="rmTch(${realIdx})">🗑️</button>
         </div>
       </div>`;
-    }).join(''):'<div style="color:var(--gray);font-size:12px;padding:20px;grid-column:1/-1;text-align:center;">لا يوجد أساتذة — أضف من الأعلى</div>';
+    }).join('')
+    :'<div style="color:var(--gray);font-size:12px;padding:30px;grid-column:1/-1;text-align:center;">لا يوجد أساتذة مطابقون للفلتر</div>';
   }
+
+  // Sync modal selects
   const opts=S.teachers.map(t=>`<option>${t.name}</option>`).join('');
   ['ms-tch','me-tch'].forEach(id=>{const el=document.getElementById(id);if(el)el.innerHTML=opts;});
   const cpT=document.getElementById('cp-teach');
@@ -1092,11 +1217,19 @@ function renderTchGrid(){
   updStats();
 }
 function filterTeachers(){renderTchGrid();}
+function clearTchFilters(){
+  ['tch-search','tch-f-rank','tch-f-dept','tch-f-kind'].forEach(id=>{
+    const el=document.getElementById(id);if(el)el.value='';
+  });
+  renderTchGrid();
+}
 function addTeacher(){
   const n=document.getElementById('tchIn').value.trim();
-  const k=document.getElementById('tchKind')?.value||'permanent';
   if(!n){toast('⚠️ أدخل اسم الأستاذ');return;}
-  S.teachers.push({name:n,kind:k});
+  const rank=document.getElementById('tchRank')?.value||'mca';
+  const dept=document.getElementById('tchDept')?.value||'';
+  const kind=document.getElementById('tchKind')?.value||'permanent';
+  S.teachers.push({name:n,rank,dept,kind});
   document.getElementById('tchIn').value='';
   save();renderTchGrid();toast('✅ أضيف: '+n);
 }
@@ -1106,13 +1239,18 @@ function rmTch(i){
 }
 function expTeachersExcel(){
   const wb=XLSX.utils.book_new();
-  const data=[['الاسم','النوع','عدد الحصص ('+S.ay+')']];
+  const data=[['الاسم واللقب','الرتبة','القسم','الحالة','عدد الحصص ('+S.ay+')']];
   S.teachers.forEach(t=>{
-    data.push([t.name,t.kind==='permanent'?'دائم':'مؤقت',
-      S.sessions.filter(s=>s.tch===t.name&&s.y===S.ay).length]);
+    data.push([
+      t.name,
+      RANKS[t.rank]?.label||'-',
+      t.dept||'-',
+      KIND_LABELS[t.kind]||'-',
+      S.sessions.filter(s=>s.tch===t.name&&s.y===S.ay).length
+    ]);
   });
   const ws=XLSX.utils.aoa_to_sheet(data);
-  ws['!cols']=[{wch:28},{wch:12},{wch:16}];
+  ws['!cols']=[{wch:28},{wch:22},{wch:26},{wch:14},{wch:14}];
   XLSX.utils.book_append_sheet(wb,ws,'الأساتذة');
   XLSX.writeFile(wb,'teachers-'+S.ay.replace('/','_')+'.xlsx');
   toast('📊 تم تصدير قائمة الأساتذة');
@@ -1667,7 +1805,7 @@ function calcTeacherOvertime(tchName){
   const eqOther    = otherCount   * 1.5;
   const totalEq    = eqFirstLec + eqRepLec + eqTdTp + eqOther;
 
-  const quorum     = tchObj.kind==='permanent' ? QUORUM : 0;
+  const quorum=(tchObj.kind==='permanent')?QUORUM:0; // temporary & associate = no quorum
   const overtime   = Math.max(0, totalEq - quorum);
 
   return{
@@ -1712,7 +1850,9 @@ function renderOvertime(){
     const otClass=r.overtime>0?'ot-pos':r.quorum>0&&r.totalEq>=r.quorum?'ot-zero':'ot-neg';
     const barPct=r.quorum>0?Math.min(100,r.totalEq/r.quorum*100):100;
     const isOver=r.totalEq>r.quorum;
-    const kb=r.kind==='permanent'?'<span class="kb-p">دائم</span>':'<span class="kb-t">مؤقت</span>';
+    const kb=r.kind==='permanent'?'<span class="kb-p">دائم</span>'
+      :r.kind==='associate'?'<span class="kb-a">مشارك</span>'
+      :'<span class="kb-t">مؤقت</span>';
     html+=`<tr>
       <td><strong>${r.name}</strong></td>
       <td>${kb}</td>
