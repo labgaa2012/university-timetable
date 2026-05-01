@@ -1503,19 +1503,7 @@ table.occ-matrix td.cell-occ:hover{background:#fee2e2;filter:brightness(.97);}
   <div class="mb" style="width:440px;">
     <div class="mt" id="mSessTitle">➕ إضافة حصة</div>
     <input type="hidden" id="esSessId">
-    <!-- السداسي -->
-    <div class="fg">
-      <label class="fl">السداسي</label>
-      <div style="display:flex;gap:8px;">
-        <button class="fl-opt sel" id="sem-btn-1" onclick="setSem(1)" style="flex:1;padding:9px;border-radius:8px;border:1.5px solid #d0dae8;background:#fff;cursor:pointer;font-family:'Cairo',sans-serif;font-size:12.5px;font-weight:700;">
-          📘 السداسي الأول
-        </button>
-        <button class="fl-opt" id="sem-btn-2" onclick="setSem(2)" style="flex:1;padding:9px;border-radius:8px;border:1.5px solid #d0dae8;background:#fff;cursor:pointer;font-family:'Cairo',sans-serif;font-size:12.5px;font-weight:700;">
-          📗 السداسي الثاني
-        </button>
-      </div>
-      <input type="hidden" id="ms-sem" value="1">
-    </div>
+    <input type="hidden" id="ms-sem" value="1">
     <!-- المقياس -->
     <div class="fg">
       <label class="fl">المقياس</label>
@@ -2847,8 +2835,10 @@ function openAddSess(day,slot){
   const grp=S._pendingGroup!==undefined ? S._pendingGroup : (S.activeTT.group||'');
   document.getElementById('mSess').dataset.group=grp;
   S._pendingGroup=undefined;
-  // reset
-  setSem(1);syncSubjBySem();
+  // السداسي من الفترة النشطة تلقائياً
+  const autoSem=parseInt(S.activeTT?.period||1);
+  document.getElementById('ms-sem').value=autoSem;
+  syncSubjBySem();
   syncSessTypeButtons();
   document.getElementById('ms-type').value='tlc';
   document.getElementById('ms-firstlec-row').style.display='block';
@@ -2863,8 +2853,9 @@ function openEditSess(id){
   document.getElementById('mSess').dataset.day=s.day;
   document.getElementById('mSess').dataset.slot=s.slot;
   // sem
-  const semNum=s.sem||1;
-  setSem(semNum);syncSubjBySem();
+  const semNum=s.sem||parseInt(S.activeTT?.period||1);
+  document.getElementById('ms-sem').value=semNum;
+  syncSubjBySem();syncMsSpecSel();
   // subject
   const sSel=document.getElementById('ms-subj-sel');
   const sInp=document.getElementById('ms-subj');
