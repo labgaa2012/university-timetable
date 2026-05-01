@@ -707,6 +707,18 @@ table.occ-matrix td.cell-occ:hover{background:#fee2e2;filter:brightness(.97);}
     إدارة البيانات — انقر للفتح في الصفحة الرئيسية
   </div>
 
+  <!-- NAV BUTTON: الفترة -->
+  <button class="sb-nav-btn" id="snb-periods" onclick="showMgmtPg('periods')">
+    <div class="snb-left">
+      <div class="ai">📅</div>
+      <span>الفترة</span>
+    </div>
+    <div style="display:flex;align-items:center;gap:6px;">
+      <span class="snb-count" id="snb-count-periods">0</span>
+      <span class="snb-arrow">←</span>
+    </div>
+  </button>
+
   <!-- NAV BUTTON: نوع التدريس -->
   <button class="sb-nav-btn" id="snb-stypes" onclick="showMgmtPg('stypes')">
     <div class="snb-left">
@@ -1062,6 +1074,27 @@ table.occ-matrix td.cell-occ:hover{background:#fee2e2;filter:brightness(.97);}
 
       <!-- GRID -->
       <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:9px;" id="subjGrid"></div>
+    </div>
+  </div>
+
+  <!-- PERIODS PAGE -->
+  <div class="pg" id="pg-periods">
+    <div class="mc">
+      <div class="mgmt-header">
+        <div class="mct"><div class="mcti">📅</div>الفترات الدراسية</div>
+        <button class="btn bp bsm" onclick="showPg('timetable',document.querySelector('.nav-tab'))">← العودة</button>
+      </div>
+      <div class="mgmt-add-bar">
+        <div class="fg" style="flex:1;">
+          <label class="fl">اسم الفترة</label>
+          <input class="fi" id="periodIn" placeholder="مثال: الفصل الثالث..." onkeydown="if(event.key==='Enter')addPeriod()">
+        </div>
+        <button class="btn bg" onclick="addPeriod()" style="align-self:flex-end;white-space:nowrap;">➕ إضافة</button>
+      </div>
+      <div id="period-empty" style="display:none;color:var(--gray);text-align:center;padding:40px;font-size:13px;">
+        لا توجد فترات بعد
+      </div>
+      <div class="sg-grid" id="periodGrid"></div>
     </div>
   </div>
 
@@ -1672,6 +1705,7 @@ function defState(){
     specs:DEFAULT_SPECS(),subjects:[],
     sections:['الفصيلة1','الفصيلة2','الفصيلة3'],
     groups:['الفوج1','الفوج2','الفوج3','الفوج4','الفوج5','الفوج6','الفوج7','الفوج8'],
+    periods:['السداسي الأول','السداسي الثاني'],
     sessionTypes:[
       {id:'tlc',      label:'محاضرة',                    code:'CM',  icon:'📖'},
       {id:'tlc-remote',label:'محاضرة عن بعد',            code:'CM-E',icon:'🖥️'},
@@ -1694,7 +1728,7 @@ let S={};
 function load(){
   try{const d=localStorage.getItem(SK);S=d?JSON.parse(d):defState();}catch(e){S=defState();}
   if(!S.subjects||!S.subjects.length) S.subjects=DEFAULT_SUBJECTS();
-  if(!S.sections||!S.sections.length) S.sections=['الفصيلة1','الفصيلة2','الفصيلة3'];
+  if(!S.periods||!S.periods.length) S.periods=['السداسي الأول','السداسي الثاني'];
   if(!S.groups||!S.groups.length)     S.groups=['الفوج1','الفوج2','الفوج3','الفوج4','الفوج5','الفوج6','الفوج7','الفوج8'];
   if(!S.sessionTypes||!S.sessionTypes.length) S.sessionTypes=[
     {id:'tlc',       label:'محاضرة',              code:'CM',  icon:'📖'},
@@ -1770,6 +1804,7 @@ function showMgmtPg(id){
   if(id==='sections')renderSecGrid();
   if(id==='groups')renderGrpGrid();
   if(id==='stypes')renderSTypesGrid();
+  if(id==='periods')renderPeriodGrid();
 }
 
 // -- RENDER SIDEBAR --------------------------------
@@ -2362,7 +2397,7 @@ function syncSel(id,arr,selected){
 function renderAll(){
   renderYrGrid();renderLvGrid();renderDptGrid();renderSpGrid();
   renderSubjGrid();renderTchGrid();renderRmGrid();
-  renderSecGrid();renderGrpGrid();renderSTypesGrid();
+  renderSecGrid();renderGrpGrid();renderSTypesGrid();renderPeriodGrid();
   renderTT();renderExams();renderArchive();
 }
 
@@ -3674,6 +3709,59 @@ function rmSType(i){
   if(S.sessionTypes.length<=1){toast('⚠️ يجب الإبقاء على نوع واحد على الأقل');return;}
   S.sessionTypes.splice(i,1);
   save();renderSTypesGrid();toast('🗑️ تم الحذف');
+}
+
+// -- PERIODS -------------------------------------------
+const PERIOD_COLORS=['sec-c0','sec-c2','sec-c4','sec-c1','sec-c3','sec-c5','sec-c6','sec-c7'];
+
+function renderPeriodGrid(){
+  const grid=document.getElementById('periodGrid');
+  const empty=document.getElementById('period-empty');
+  const cnt=document.getElementById('snb-count-periods');
+  if(cnt)cnt.textContent=S.periods.length;
+  if(!grid)return;
+  if(!S.periods.length){
+    grid.innerHTML='';if(empty)empty.style.display='block';return;
+  }
+  if(empty)empty.style.display='none';
+  grid.innerHTML=S.periods.map((p,i)=>{
+    const cls=PERIOD_COLORS[i%PERIOD_COLORS.length];
+    return `<div class="sg-chip ${cls}">
+      <span class="sg-num">${i+1}</span>
+      <span>${p}</span>
+      <div class="sg-actions">
+        <button class="sg-btn" onclick="editPeriod(${i})" title="تعديل">✏️</button>
+        <button class="sg-btn" onclick="rmPeriod(${i})" title="حذف">✕</button>
+      </div>
+    </div>`;
+  }).join('');
+  // Sync السداسي buttons in session modal
+  syncPeriodBtns();
+}
+function addPeriod(){
+  const v=document.getElementById('periodIn').value.trim();
+  if(!v){toast('⚠️ أدخل اسم الفترة');return;}
+  if(S.periods.includes(v)){toast('⚠️ الفترة موجودة بالفعل');return;}
+  S.periods.push(v);
+  document.getElementById('periodIn').value='';
+  save();renderPeriodGrid();toast('✅ أضيفت: '+v);
+}
+function rmPeriod(i){
+  if(!confirm('حذف الفترة "'+S.periods[i]+'"؟'))return;
+  S.periods.splice(i,1);save();renderPeriodGrid();toast('🗑️ تم الحذف');
+}
+function editPeriod(i){
+  const n=prompt('الاسم الجديد للفترة:',S.periods[i]);
+  if(!n||n===S.periods[i])return;
+  if(S.periods.includes(n)){toast('⚠️ الاسم موجود بالفعل');return;}
+  S.periods[i]=n;save();renderPeriodGrid();toast('✅ تم التعديل');
+}
+function syncPeriodBtns(){
+  // sync the السداسي toggle buttons in session modal dynamically
+  const c1=document.getElementById('sem-btn-1');
+  const c2=document.getElementById('sem-btn-2');
+  if(c1)c1.textContent='📘 '+(S.periods[0]||'السداسي الأول');
+  if(c2)c2.textContent='📗 '+(S.periods[1]||'السداسي الثاني');
 }
 
 // -- SECTIONS ------------------------------------
