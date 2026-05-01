@@ -567,7 +567,34 @@ table.tt td.ec:hover::after{color:var(--teal);}
 .sess-type-btn:hover{border-color:var(--teal);color:var(--teal);}
 .sess-type-btn.active{background:var(--navy);color:var(--gold-light);border-color:var(--navy);}
 
-/* ACTIVE TIMETABLE BANNER */
+/* ACTIVE TIMETABLE FILTER BAR */
+.tt-filter-bar{
+  background:linear-gradient(135deg,var(--navy),var(--navy-light));
+  border-radius:12px;padding:12px 16px;margin-bottom:14px;
+  display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+  border:2px solid var(--gold);
+}
+.tt-filter-bar label{
+  font-size:10px;font-weight:700;color:var(--gold-light);
+  white-space:nowrap;letter-spacing:.4px;
+}
+.tt-filter-bar select{
+  background:rgba(255,255,255,.12);color:#fff;
+  border:1.5px solid rgba(255,255,255,.25);border-radius:8px;
+  font-family:'Cairo',sans-serif;font-size:12px;font-weight:700;
+  padding:6px 10px;outline:none;cursor:pointer;
+  transition:all .2s;min-width:120px;direction:rtl;
+}
+.tt-filter-bar select:hover{border-color:var(--gold);background:rgba(255,255,255,.18);}
+.tt-filter-bar select:focus{border-color:var(--gold);box-shadow:0 0 0 3px rgba(201,168,76,.25);}
+.tt-filter-bar select option{background:var(--navy);color:#fff;}
+.tt-filter-sep{width:1px;height:30px;background:rgba(255,255,255,.2);flex-shrink:0;}
+.tt-filter-title{
+  color:var(--gold-light);font-weight:800;font-size:12.5px;
+  white-space:nowrap;display:flex;align-items:center;gap:6px;
+}
+
+/* ACTIVE TIMETABLE BANNER (legacy - kept for print) */
 .tt-active-banner{
   display:flex;align-items:center;justify-content:space-between;
   background:linear-gradient(135deg,var(--navy),var(--navy-light));
@@ -2498,6 +2525,25 @@ function curSessions(){
   );
 }
 
+// -- TT FILTER CHANGE -----------------------------
+function onTTFilterChange(field, value){
+  if(!S.activeTT){
+    // أنشئ activeTT جديد بالحد الأدنى
+    S.activeTT={lv:S.levels[0]||'',dp:S.depts[0]||'',spec:'',section:'',group:''};
+  }
+  S.activeTT[field]=value;
+  // إذا تغيّر المستوى أو القسم → امسح التخصص لأنه قد لا يكون متوافقاً
+  if(field==='lv'||field==='dp'){
+    const specs=S.specs.filter(sp=>
+      sp.lv===S.activeTT.lv && sp.dp===S.activeTT.dp
+    );
+    if(!specs.find(sp=>sp.name===S.activeTT.spec))
+      S.activeTT.spec='';
+  }
+  save();
+  renderTT();
+}
+
 // -- ADD TIMETABLE MODAL ---------------------------
 function openAddTimetable(){
   // populate selects
@@ -2570,30 +2616,59 @@ function renderTT(){
   const container=document.getElementById('ttbl-container');
   if(!banner||!container)return;
 
+  // -- بناء شريط الفلاتر دائماً --
+  const lvOpts=S.levels.map(l=>`<option value="${l}"${S.activeTT?.lv===l?' selected':''}>${l}</option>`).join('');
+  const dpOpts=S.depts.map(d=>`<option value="${d}"${S.activeTT?.dp===d?' selected':''}>${d}</option>`).join('');
+  // التخصصات تعتمد على المستوى والقسم الحاليين
+  const curLv=S.activeTT?.lv||S.levels[0]||'';
+  const curDp=S.activeTT?.dp||S.depts[0]||'';
+  const filteredSpecs=S.specs.filter(sp=>
+    (!curLv||sp.lv===curLv)&&(!curDp||sp.dp===curDp)
+  );
+  const spOpts='<option value="">-- كل التخصصات --</option>'
+    +filteredSpecs.map(sp=>`<option value="${sp.name}"${S.activeTT?.spec===sp.name?' selected':''}>${sp.name}</option>`).join('');
+  const secOpts='<option value="">-- كل الفصائل --</option>'
+    +S.sections.map(s=>`<option value="${s}"${S.activeTT?.section===s?' selected':''}>${s}</option>`).join('');
+  const grpOpts='<option value="">-- كل الأفواج --</option>'
+    +S.groups.map(g=>`<option value="${g}"${S.activeTT?.group===g?' selected':''}>${g}</option>`).join('');
+
+  banner.innerHTML=`<div class="tt-filter-bar">
+    <span class="tt-filter-title">📅 الجدول النشط</span>
+    <div class="tt-filter-sep"></div>
+    <div style="display:flex;flex-direction:column;gap:2px;">
+      <label>المستوى</label>
+      <select onchange="onTTFilterChange('lv',this.value)">${lvOpts}</select>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:2px;">
+      <label>القسم</label>
+      <select onchange="onTTFilterChange('dp',this.value)">${dpOpts}</select>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:2px;">
+      <label>التخصص</label>
+      <select id="tt-spec-sel" onchange="onTTFilterChange('spec',this.value)">${spOpts}</select>
+    </div>
+    <div class="tt-filter-sep"></div>
+    <div style="display:flex;flex-direction:column;gap:2px;">
+      <label>الفصيلة</label>
+      <select onchange="onTTFilterChange('section',this.value)">${secOpts}</select>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:2px;">
+      <label>الفوج</label>
+      <select onchange="onTTFilterChange('group',this.value)">${grpOpts}</select>
+    </div>
+  </div>`;
+
   if(!S.activeTT){
-    banner.innerHTML=`<div class="tt-empty-state">
+    container.innerHTML=`<div class="tt-empty-state">
       <div class="es-icon">📋</div>
-      <h3>لا يوجد جدول نشط</h3>
-      <p>اضغط "📋 إضافة جدول" لاختيار المجموعة التي تريد برمجة جدولها</p>
+      <h3>اختر المجموعة من القوائم أعلاه</h3>
+      <p>اختر المستوى والقسم والتخصص لعرض الجدول</p>
     </div>`;
-    container.innerHTML='';
     return;
   }
 
+  // استخراج متغيرات الجدول النشط
   const{lv,dp,spec,section,group}=S.activeTT;
-  banner.innerHTML=`<div class="tt-active-banner">
-    <div class="tab-info">
-      <span style="color:var(--gold-light);font-weight:800;font-size:13px;">📅 الجدول النشط:</span>
-      <span class="tab-chip req">${lv}</span>
-      <span class="tab-chip req">${dp}</span>
-      <span class="tab-chip req">${spec}</span>
-      ${section?`<span class="tab-chip opt">🗂️ ${section}</span>`:''}
-      ${group?`<span class="tab-chip opt">👥 ${group}</span>`:''}
-    </div>
-    <button class="btn bg" onclick="openAddTimetable()" style="font-size:11px;padding:6px 12px;">
-      🔄 تغيير الجدول
-    </button>
-  </div>`;
 
   // -- تحديد الأفواج المطلوب عرضها --
   // إذا اختار فوج محدد → فوج واحد فقط
