@@ -5,1586 +5,1163 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>نظام جداول التوقيت والامتحانات</title>
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800;900&family=Tajawal:wght@300;400;500;700;800&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
-:root {
-  --navy: #0f1f3d;
-  --navy-mid: #162847;
-  --navy-light: #1e3a5f;
-  --teal: #0d8a7d;
-  --teal-light: #11b3a3;
-  --gold: #c9a84c;
-  --gold-light: #e0be7a;
-  --cream: #f5f0e8;
-  --white: #ffffff;
-  --gray-light: #f0f4f8;
-  --gray: #8a9ab5;
-  --text-dark: #1a2a4a;
-  --text-mid: #3d5278;
-  --danger: #c0392b;
-  --success: #27ae60;
-  --warning: #e67e22;
-  --sidebar-w: 380px;
-  --header-h: 64px;
+:root{
+  --navy:#0f1f3d;--navy-mid:#162847;--navy-light:#1e3a5f;
+  --teal:#0d8a7d;--teal-light:#11b3a3;
+  --gold:#c9a84c;--gold-light:#e0be7a;
+  --cream:#f5f0e8;--white:#ffffff;
+  --gray-light:#f0f4f8;--gray:#8a9ab5;
+  --text-dark:#1a2a4a;--text-mid:#3d5278;
+  --danger:#c0392b;--success:#27ae60;--warning:#e67e22;
+  --sidebar-w:370px;--header-h:62px;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'Cairo',sans-serif;background:var(--cream);color:var(--text-dark);min-height:100vh;direction:rtl;}
+
+/* HEADER */
+header{position:fixed;top:0;right:0;left:0;z-index:1000;height:var(--header-h);
+  background:linear-gradient(135deg,var(--navy),var(--navy-light));
+  display:flex;align-items:center;justify-content:space-between;padding:0 16px;
+  box-shadow:0 4px 20px rgba(0,0,0,.3);border-bottom:2px solid var(--gold);}
+.logo{display:flex;align-items:center;gap:10px;}
+.logo-icon{width:40px;height:40px;background:linear-gradient(135deg,var(--gold),var(--gold-light));
+  border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px;}
+.logo h1{font-size:14px;font-weight:800;color:#fff;font-family:'Tajawal',sans-serif;}
+.logo span{font-size:10px;color:var(--gold-light);display:block;}
+.header-nav{display:flex;gap:4px;}
+.nav-tab{padding:6px 11px;border-radius:7px;border:none;background:rgba(255,255,255,.08);
+  color:rgba(255,255,255,.75);font-family:'Cairo',sans-serif;font-size:11.5px;font-weight:700;
+  cursor:pointer;transition:all .2s;}
+.nav-tab:hover,.nav-tab.active{background:var(--teal);color:#fff;}
+.header-right{display:flex;align-items:center;gap:8px;}
+.year-badge{background:rgba(201,168,76,.2);color:var(--gold-light);border:1px solid var(--gold);
+  padding:4px 10px;border-radius:20px;font-size:11px;font-weight:700;}
+#sb-toggle{width:38px;height:38px;border-radius:9px;border:1.5px solid var(--gold);
+  background:rgba(201,168,76,.15);color:var(--gold);cursor:pointer;font-size:18px;
+  display:flex;align-items:center;justify-content:center;transition:all .2s;}
+#sb-toggle:hover{background:var(--gold);color:var(--navy);}
+
+/* LAYOUT */
+#layout{display:flex;padding-top:var(--header-h);min-height:100vh;}
+
+/* SIDEBAR */
+#sidebar{position:fixed;top:var(--header-h);right:0;width:var(--sidebar-w);
+  height:calc(100vh - var(--header-h));background:#fff;
+  border-left:3px solid var(--navy-light);overflow-y:auto;overflow-x:hidden;
+  z-index:900;transform:translateX(0);transition:transform .35s cubic-bezier(.4,0,.2,1);
+  box-shadow:-6px 0 30px rgba(15,31,61,.12);}
+#sidebar.hidden{transform:translateX(100%);}
+#sidebar::-webkit-scrollbar{width:4px;}
+#sidebar::-webkit-scrollbar-thumb{background:var(--navy-light);border-radius:2px;}
+.sb-hdr{background:linear-gradient(135deg,var(--navy),var(--navy-light));padding:13px 16px;
+  color:#fff;position:sticky;top:0;z-index:10;border-bottom:2px solid var(--gold);}
+.sb-hdr h2{font-size:13px;font-weight:700;font-family:'Tajawal',sans-serif;}
+
+/* MAIN */
+#main{flex:1;margin-right:var(--sidebar-w);padding:18px;
+  transition:margin-right .35s cubic-bezier(.4,0,.2,1);}
+#main.exp{margin-right:0;}
+
+/* ACCORDION */
+.aci{border-bottom:1px solid #e8edf5;}
+.acb{width:100%;padding:11px 14px;background:#fff;border:none;cursor:pointer;
+  display:flex;align-items:center;justify-content:space-between;
+  font-family:'Cairo',sans-serif;font-size:12.5px;font-weight:700;
+  color:var(--navy);transition:all .2s;text-align:right;}
+.acb:hover{background:var(--gray-light);}
+.acb.open{background:#f0f6ff;color:var(--teal);}
+.acb .ai{width:27px;height:27px;border-radius:7px;display:flex;align-items:center;
+  justify-content:center;font-size:13px;flex-shrink:0;
+  background:linear-gradient(135deg,var(--navy),var(--navy-light));color:var(--gold);}
+.al{display:flex;align-items:center;gap:9px;}
+.aa{font-size:10px;transition:transform .3s;color:var(--gray);}
+.acb.open .aa{transform:rotate(180deg);color:var(--teal);}
+.abb{max-height:0;overflow:hidden;transition:max-height .35s cubic-bezier(.4,0,.2,1);background:#fafbfd;}
+.abb.open{max-height:800px;}
+.abt{padding:12px 14px;}
+
+/* FORMS */
+.fg{margin-bottom:9px;}
+.fl{font-size:10.5px;font-weight:700;color:var(--text-mid);display:block;margin-bottom:3px;}
+select.fs,input.fi{width:100%;padding:8px 10px;border-radius:7px;border:1.5px solid #d0dae8;
+  background:#fff;color:var(--text-dark);font-family:'Cairo',sans-serif;
+  font-size:12.5px;outline:none;direction:rtl;transition:border-color .2s;}
+select.fs:focus,input.fi:focus{border-color:var(--teal);box-shadow:0 0 0 3px rgba(13,138,125,.1);}
+.btn{padding:8px 13px;border-radius:7px;border:none;font-family:'Cairo',sans-serif;
+  font-size:11.5px;font-weight:700;cursor:pointer;transition:all .2s;
+  display:inline-flex;align-items:center;gap:5px;}
+.bp{background:var(--teal);color:#fff;}.bp:hover{background:var(--teal-light);transform:translateY(-1px);}
+.bn{background:var(--navy);color:#fff;}.bn:hover{background:var(--navy-light);}
+.bg{background:var(--gold);color:var(--navy);font-weight:800;}.bg:hover{background:var(--gold-light);}
+.bd{background:var(--danger);color:#fff;}
+.bsm{padding:4px 8px;font-size:10.5px;border-radius:5px;}
+.inlf{display:flex;gap:5px;align-items:center;}.inlf .fi{flex:1;}
+
+/* ITEM LIST */
+.ilist{display:flex;flex-direction:column;gap:5px;margin-top:8px;}
+.icard{display:flex;align-items:center;justify-content:space-between;
+  padding:7px 10px;border-radius:7px;background:#fff;
+  border:1.5px solid #e0e8f5;font-size:11.5px;font-weight:600;
+  color:var(--text-dark);transition:all .2s;}
+.icard:hover{border-color:var(--teal);background:#f0faf9;}
+.iac{display:flex;gap:3px;}
+.icb{width:24px;height:24px;border-radius:5px;border:none;cursor:pointer;
+  font-size:11px;transition:all .2s;display:flex;align-items:center;justify-content:center;}
+.ied{background:#e8f4fd;color:#2980b9;}.ied:hover{background:#2980b9;color:#fff;}
+.idl{background:#fdecea;color:var(--danger);}.idl:hover{background:var(--danger);color:#fff;}
+
+/* BADGES */
+.bdg{padding:2px 7px;border-radius:20px;font-size:10px;font-weight:700;}
+.btl{background:rgba(13,138,125,.12);color:var(--teal);}
+.bnv{background:rgba(15,31,61,.1);color:var(--navy);}
+.bgl{background:rgba(201,168,76,.15);color:#8a6a1e;}
+
+/* STATS */
+.stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:18px;}
+.stat{background:#fff;border-radius:11px;padding:14px 16px;
+  box-shadow:0 2px 10px rgba(15,31,61,.06);border:1px solid #e0e8f5;
+  border-top:3px solid transparent;}
+.stat.s1{border-top-color:var(--teal);}.stat.s2{border-top-color:var(--gold);}
+.stat.s3{border-top-color:#8b5cf6;}.stat.s4{border-top-color:var(--danger);}
+.sval{font-size:26px;font-weight:800;color:var(--navy);font-family:'Tajawal',sans-serif;line-height:1;}
+.slbl{font-size:10.5px;color:var(--gray);margin-top:3px;font-weight:600;}
+
+/* MAIN CARD */
+.mc{background:#fff;border-radius:14px;padding:20px;margin-bottom:18px;
+  box-shadow:0 2px 14px rgba(15,31,61,.07);border:1px solid #e0e8f5;}
+.mch{display:flex;align-items:center;justify-content:space-between;
+  margin-bottom:16px;padding-bottom:12px;border-bottom:2px solid var(--gray-light);
+  flex-wrap:wrap;gap:10px;}
+.mct{font-size:15px;font-weight:800;color:var(--navy);
+  font-family:'Tajawal',sans-serif;display:flex;align-items:center;gap:9px;}
+.mcti{width:34px;height:34px;border-radius:9px;
+  background:linear-gradient(135deg,var(--teal),var(--teal-light));
+  display:flex;align-items:center;justify-content:center;font-size:15px;color:#fff;}
+.frow{display:flex;gap:7px;align-items:center;flex-wrap:wrap;}
+.frow .fs{width:auto;padding:6px 10px;font-size:11.5px;}
+
+/* TIMETABLE */
+.ttw{overflow-x:auto;}
+table#ttbl{width:100%;border-collapse:collapse;font-size:11px;min-width:640px;}
+table#ttbl th{background:var(--navy);color:var(--gold-light);padding:9px 6px;
+  text-align:center;font-weight:700;font-size:11.5px;border:1px solid rgba(255,255,255,.1);}
+table#ttbl td{padding:3px;border:1px solid #e0e8f5;vertical-align:top;min-height:60px;}
+table#ttbl .tc{background:var(--gray-light);font-weight:700;font-size:10px;
+  color:var(--text-mid);text-align:center;width:72px;vertical-align:middle;padding:6px 3px;}
+table#ttbl td.drop-over{background:rgba(13,138,125,.1)!important;border:2px dashed var(--teal)!important;}
+table#ttbl td.ec{cursor:pointer;}
+table#ttbl td.ec:hover{background:rgba(13,138,125,.04);}
+table#ttbl td.ec::after{content:'＋';display:block;text-align:center;color:rgba(13,138,125,.4);
+  font-size:20px;line-height:2;pointer-events:none;}
+table#ttbl td.ec:hover::after{color:var(--teal);}
+
+/* SESSION CARD */
+.sc{border-radius:7px;padding:5px 7px;font-size:10.5px;font-weight:600;line-height:1.4;
+  margin:2px 0;cursor:grab;position:relative;border-right:3px solid transparent;
+  user-select:none;transition:opacity .15s;}
+.sc:active{cursor:grabbing;}
+.sc.dragging{opacity:.35;}
+.sc .ss{font-weight:800;font-size:11px;}
+.sc .si{font-size:9.5px;opacity:.85;margin-top:1px;}
+.sceb,.scdb{position:absolute;width:18px;height:18px;border-radius:4px;border:none;
+  cursor:pointer;display:none;align-items:center;justify-content:center;font-size:10px;}
+.sc:hover .sceb,.sc:hover .scdb{display:flex;}
+.sceb{top:3px;left:3px;background:rgba(255,255,255,.8);}
+.scdb{bottom:3px;left:3px;background:rgba(255,0,0,.15);color:var(--danger);}
+.sc.tlc{background:#dbeafe;color:#1d4ed8;border-right-color:#1d4ed8;}
+.sc.ttd{background:#dcfce7;color:#15803d;border-right-color:#15803d;}
+.sc.ttp{background:#fed7aa;color:#c2410c;border-right-color:#c2410c;}
+.sc.tot{background:#ede9fe;color:#6d28d9;border-right-color:#6d28d9;}
+
+/* EXAM TABLE */
+.et{width:100%;border-collapse:collapse;font-size:12px;}
+.et th{background:var(--navy);color:var(--gold-light);padding:9px 11px;
+  text-align:right;font-weight:700;border:1px solid rgba(255,255,255,.1);}
+.et td{padding:9px 11px;border:1px solid #e0e8f5;font-weight:500;}
+.et tr:nth-child(even) td{background:#fafbfd;}
+.et tr:hover td{background:#f0f6ff;}
+
+/* ROOMS */
+.rg{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:7px;margin-top:10px;}
+.rcard{padding:9px 10px;border-radius:9px;border:1.5px solid #e0e8f5;background:#fff;
+  text-align:center;font-size:11.5px;font-weight:600;transition:all .2s;}
+.rcard.occ{background:#fdecea;border-color:var(--danger);color:var(--danger);}
+.rcard.free{background:#edfdf8;border-color:var(--success);color:var(--success);}
+.rs{font-size:9.5px;font-weight:400;margin-top:2px;opacity:.8;}
+
+/* COMP */
+.cr{background:#f0faf9;border:1.5px solid var(--teal);border-radius:9px;padding:12px;margin-top:12px;}
+.tt-tag{display:inline-block;padding:3px 10px;margin:3px;background:#fff;
+  border:1.5px solid var(--teal);border-radius:20px;font-size:10.5px;font-weight:600;color:var(--teal);}
+
+/* ARCHIVE */
+.arc{padding:13px 16px;border-radius:11px;border:1.5px solid #e0e8f5;background:#fff;
+  display:flex;align-items:center;justify-content:space-between;margin-bottom:9px;transition:all .2s;}
+.arc:hover{border-color:var(--navy);box-shadow:0 4px 14px rgba(15,31,61,.1);}
+
+/* VIEW TABS */
+.vtabs{display:flex;gap:5px;margin-bottom:14px;}
+.vt{padding:7px 13px;border-radius:8px;border:1.5px solid #d0dae8;background:#fff;
+  color:var(--text-mid);font-family:'Cairo',sans-serif;font-size:11.5px;font-weight:700;cursor:pointer;transition:all .2s;}
+.vt.active{background:var(--navy);color:#fff;border-color:var(--navy);}
+.vt:hover:not(.active){border-color:var(--teal);color:var(--teal);}
+
+/* PAGES */
+.pg{display:none;}.pg.active{display:block;}
+
+/* MODAL */
+.mo{position:fixed;inset:0;background:rgba(10,20,40,.65);z-index:2000;
+  display:none;align-items:center;justify-content:center;backdrop-filter:blur(4px);}
+.mo.show{display:flex;}
+.mb{background:#fff;border-radius:14px;padding:24px;width:460px;max-width:95vw;
+  max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.3);
+  animation:mIn .3s ease;direction:rtl;}
+@keyframes mIn{from{opacity:0;transform:scale(.92) translateY(18px)}to{opacity:1;transform:scale(1) translateY(0)}}
+.mt{font-size:15px;font-weight:800;color:var(--navy);margin-bottom:16px;
+  padding-bottom:10px;border-bottom:2px solid var(--gray-light);
+  font-family:'Tajawal',sans-serif;}
+.ma{display:flex;gap:8px;margin-top:16px;justify-content:flex-end;}
+.frow2{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+
+/* PRINT */
+@media print{
+  header,#sidebar,.frow button,.stats-row,.sceb,.scdb,
+  #sb-toggle,.vtabs{display:none!important;}
+  #main{margin-right:0!important;padding:0!important;}
+  .mc{box-shadow:none;border:none;padding:0;}
+  body{background:#fff;}
+  table#ttbl th{background:#0f1f3d!important;color:#e0be7a!important;
+    -webkit-print-color-adjust:exact;print-color-adjust:exact;}
+  .sc{-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+}
+
+/* TOAST */
+#toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);
+  background:var(--navy);color:#fff;padding:10px 20px;border-radius:10px;
+  font-size:12.5px;font-weight:600;box-shadow:0 8px 30px rgba(0,0,0,.25);
+  opacity:0;pointer-events:none;transition:opacity .3s;z-index:3000;
+  font-family:'Cairo',sans-serif;border-right:4px solid var(--gold);}
+#toast.show{opacity:1;}
+::-webkit-scrollbar{width:5px;height:5px;}
+::-webkit-scrollbar-thumb{background:#c0cce0;border-radius:3px;}
+@media(max-width:900px){
+  .stats-row{grid-template-columns:repeat(2,1fr);}
+  #main{margin-right:0!important;padding:12px;}
+  .header-nav{display:none;}
+  :root{--sidebar-w:300px;}
 }
-
-* { margin: 0; padding: 0; box-sizing: border-box; }
-
-body {
-  font-family: 'Cairo', sans-serif;
-  background: var(--cream);
-  color: var(--text-dark);
-  min-height: 100vh;
-  direction: rtl;
-}
-
-/* ─── HEADER ─────────────────────────────────── */
-header {
-  position: fixed; top: 0; right: 0; left: 0; z-index: 1000;
-  height: var(--header-h);
-  background: linear-gradient(135deg, var(--navy) 0%, var(--navy-light) 100%);
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 0 20px;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.3);
-  border-bottom: 2px solid var(--gold);
-}
-
-.header-logo {
-  display: flex; align-items: center; gap: 12px;
-}
-
-.logo-icon {
-  width: 42px; height: 42px;
-  background: linear-gradient(135deg, var(--gold), var(--gold-light));
-  border-radius: 10px;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 20px; box-shadow: 0 2px 12px rgba(201,168,76,0.4);
-}
-
-.header-title {
-  display: flex; flex-direction: column;
-}
-
-.header-title h1 {
-  font-size: 16px; font-weight: 800; color: var(--white); line-height: 1.2;
-  font-family: 'Tajawal', sans-serif;
-}
-
-.header-title span {
-  font-size: 11px; color: var(--gold-light); font-weight: 400;
-}
-
-.header-center {
-  display: flex; gap: 6px;
-}
-
-.nav-tab {
-  padding: 7px 14px; border-radius: 8px; border: none;
-  background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.75);
-  font-family: 'Cairo', sans-serif; font-size: 12px; font-weight: 600;
-  cursor: pointer; transition: all 0.2s;
-}
-.nav-tab:hover, .nav-tab.active {
-  background: var(--teal); color: var(--white);
-}
-
-.header-actions { display: flex; align-items: center; gap: 10px; }
-
-#sidebarToggle {
-  width: 40px; height: 40px; border-radius: 10px; border: 1.5px solid var(--gold);
-  background: rgba(201,168,76,0.15); color: var(--gold);
-  cursor: pointer; font-size: 18px; transition: all 0.2s;
-  display: flex; align-items: center; justify-content: center;
-}
-#sidebarToggle:hover { background: var(--gold); color: var(--navy); }
-
-/* ─── LAYOUT ─────────────────────────────────── */
-#layout {
-  display: flex; padding-top: var(--header-h);
-  min-height: 100vh; transition: all 0.35s cubic-bezier(.4,0,.2,1);
-  position: relative;
-}
-
-/* ─── SIDEBAR ─────────────────────────────────── */
-#sidebar {
-  position: fixed; top: var(--header-h); right: 0;
-  width: var(--sidebar-w); height: calc(100vh - var(--header-h));
-  background: var(--white);
-  border-left: 3px solid var(--navy-light);
-  overflow-y: auto; overflow-x: hidden;
-  z-index: 900;
-  transform: translateX(0);
-  transition: transform 0.35s cubic-bezier(.4,0,.2,1);
-  box-shadow: -8px 0 40px rgba(15,31,61,0.15);
-}
-
-#sidebar.hidden { transform: translateX(100%); }
-
-#sidebar::-webkit-scrollbar { width: 4px; }
-#sidebar::-webkit-scrollbar-track { background: var(--gray-light); }
-#sidebar::-webkit-scrollbar-thumb { background: var(--navy-light); border-radius: 2px; }
-
-/* ─── MAIN ─────────────────────────────────── */
-#main {
-  flex: 1;
-  margin-right: var(--sidebar-w);
-  padding: 24px;
-  transition: margin-right 0.35s cubic-bezier(.4,0,.2,1);
-  min-width: 0;
-}
-
-#main.expanded { margin-right: 0; }
-
-/* ─── SIDEBAR HEADER ─────────────────────────── */
-.sidebar-header {
-  background: linear-gradient(135deg, var(--navy), var(--navy-light));
-  padding: 16px 18px;
-  color: var(--white);
-  position: sticky; top: 0; z-index: 10;
-  border-bottom: 2px solid var(--gold);
-}
-
-.sidebar-header h2 {
-  font-size: 14px; font-weight: 700;
-  font-family: 'Tajawal', sans-serif;
-  display: flex; align-items: center; gap: 8px;
-}
-
-/* ─── ACCORDION ─────────────────────────────── */
-.accordion-item {
-  border-bottom: 1px solid #e8edf5;
-}
-
-.accordion-btn {
-  width: 100%; padding: 13px 18px;
-  background: var(--white); border: none; cursor: pointer;
-  display: flex; align-items: center; justify-content: space-between;
-  font-family: 'Cairo', sans-serif; font-size: 13px; font-weight: 700;
-  color: var(--navy); transition: all 0.2s; text-align: right;
-}
-
-.accordion-btn:hover { background: var(--gray-light); }
-.accordion-btn.open { background: #f0f6ff; color: var(--teal); }
-
-.accordion-btn .acc-icon {
-  width: 30px; height: 30px; border-radius: 8px;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 14px; flex-shrink: 0;
-  background: linear-gradient(135deg, var(--navy), var(--navy-light));
-  color: var(--gold);
-}
-
-.acc-label { display: flex; align-items: center; gap: 10px; }
-
-.acc-arrow {
-  font-size: 11px; transition: transform 0.3s;
-  color: var(--gray);
-}
-.accordion-btn.open .acc-arrow { transform: rotate(180deg); color: var(--teal); }
-
-.accordion-body {
-  max-height: 0; overflow: hidden;
-  transition: max-height 0.35s cubic-bezier(.4,0,.2,1);
-  background: #fafbfd;
-}
-.accordion-body.open { max-height: 900px; }
-
-.acc-content { padding: 14px 16px; }
-
-/* ─── FORM ELEMENTS ─────────────────────────── */
-.form-group { margin-bottom: 12px; }
-
-.form-label {
-  font-size: 11px; font-weight: 700; color: var(--text-mid);
-  display: block; margin-bottom: 5px; text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.form-select, .form-input {
-  width: 100%; padding: 9px 12px; border-radius: 8px;
-  border: 1.5px solid #d0dae8;
-  background: var(--white); color: var(--text-dark);
-  font-family: 'Cairo', sans-serif; font-size: 13px;
-  transition: border-color 0.2s; outline: none;
-  direction: rtl;
-}
-
-.form-select:focus, .form-input:focus {
-  border-color: var(--teal);
-  box-shadow: 0 0 0 3px rgba(13,138,125,0.1);
-}
-
-.btn {
-  padding: 9px 16px; border-radius: 8px; border: none;
-  font-family: 'Cairo', sans-serif; font-size: 12px; font-weight: 700;
-  cursor: pointer; transition: all 0.2s; display: inline-flex;
-  align-items: center; gap: 6px;
-}
-
-.btn-primary { background: var(--teal); color: var(--white); }
-.btn-primary:hover { background: var(--teal-light); transform: translateY(-1px); }
-
-.btn-navy { background: var(--navy); color: var(--white); }
-.btn-navy:hover { background: var(--navy-light); }
-
-.btn-gold { background: var(--gold); color: var(--navy); font-weight: 800; }
-.btn-gold:hover { background: var(--gold-light); }
-
-.btn-danger { background: var(--danger); color: var(--white); }
-.btn-sm { padding: 5px 10px; font-size: 11px; border-radius: 6px; }
-
-.btn-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
-
-/* ─── LIST ITEMS ─────────────────────────────── */
-.item-list { display: flex; flex-direction: column; gap: 6px; margin-top: 10px; }
-
-.item-card {
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 8px 12px; border-radius: 8px;
-  background: var(--white); border: 1.5px solid #e0e8f5;
-  font-size: 12px; font-weight: 600; color: var(--text-dark);
-  transition: all 0.2s;
-}
-
-.item-card:hover { border-color: var(--teal); background: #f0faf9; }
-
-.item-actions { display: flex; gap: 4px; }
-
-.ic-btn {
-  width: 26px; height: 26px; border-radius: 6px; border: none;
-  cursor: pointer; font-size: 12px; transition: all 0.2s;
-  display: flex; align-items: center; justify-content: center;
-}
-
-.ic-edit { background: #e8f4fd; color: #2980b9; }
-.ic-edit:hover { background: #2980b9; color: var(--white); }
-.ic-delete { background: #fdecea; color: var(--danger); }
-.ic-delete:hover { background: var(--danger); color: var(--white); }
-
-/* ─── BADGE ─────────────────────────────────── */
-.badge {
-  padding: 2px 8px; border-radius: 20px; font-size: 10px; font-weight: 700;
-}
-.badge-teal { background: rgba(13,138,125,0.12); color: var(--teal); }
-.badge-navy { background: rgba(15,31,61,0.1); color: var(--navy); }
-.badge-gold { background: rgba(201,168,76,0.15); color: #8a6a1e; }
-
-/* ─── MAIN CONTENT CARDS ─────────────────────── */
-.main-card {
-  background: var(--white); border-radius: 16px;
-  padding: 24px; margin-bottom: 20px;
-  box-shadow: 0 2px 16px rgba(15,31,61,0.07);
-  border: 1px solid #e0e8f5;
-}
-
-.card-header {
-  display: flex; align-items: center; justify-content: space-between;
-  margin-bottom: 20px; padding-bottom: 14px;
-  border-bottom: 2px solid var(--gray-light);
-}
-
-.card-title {
-  font-size: 17px; font-weight: 800; color: var(--navy);
-  font-family: 'Tajawal', sans-serif;
-  display: flex; align-items: center; gap: 10px;
-}
-
-.card-title .ct-icon {
-  width: 36px; height: 36px; border-radius: 10px;
-  background: linear-gradient(135deg, var(--teal), var(--teal-light));
-  display: flex; align-items: center; justify-content: center;
-  font-size: 16px; color: var(--white);
-}
-
-/* ─── TIMETABLE ─────────────────────────────── */
-.timetable-wrapper { overflow-x: auto; }
-
-.timetable {
-  width: 100%; border-collapse: collapse;
-  font-size: 12px; min-width: 700px;
-}
-
-.timetable th {
-  background: var(--navy);
-  color: var(--gold-light);
-  padding: 10px 8px; text-align: center;
-  font-weight: 700; font-size: 12px;
-  border: 1px solid rgba(255,255,255,0.1);
-}
-
-.timetable td {
-  padding: 6px; border: 1px solid #e0e8f5;
-  vertical-align: top; min-height: 60px;
-  min-width: 110px;
-}
-
-.timetable .time-col {
-  background: var(--gray-light);
-  font-weight: 700; font-size: 11px;
-  color: var(--text-mid); text-align: center;
-  width: 80px;
-}
-
-.slot-card {
-  border-radius: 8px; padding: 6px 8px;
-  font-size: 11px; font-weight: 600; line-height: 1.4;
-  margin: 2px 0;
-}
-
-.slot-blue { background: #dbeafe; color: #1d4ed8; border-right: 3px solid #1d4ed8; }
-.slot-green { background: #dcfce7; color: #15803d; border-right: 3px solid #15803d; }
-.slot-orange { background: #fed7aa; color: #c2410c; border-right: 3px solid #c2410c; }
-.slot-purple { background: #ede9fe; color: #6d28d9; border-right: 3px solid #6d28d9; }
-.slot-teal { background: #ccfbf1; color: #0d7b6e; border-right: 3px solid #0d7b6e; }
-
-/* ─── ROOMS GRID ─────────────────────────────── */
-.rooms-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-  gap: 8px; margin-top: 12px;
-}
-
-.room-card {
-  padding: 10px 12px; border-radius: 10px; border: 1.5px solid #e0e8f5;
-  background: var(--white); text-align: center; font-size: 12px; font-weight: 600;
-  cursor: pointer; transition: all 0.2s;
-}
-
-.room-card.occupied {
-  background: #fdecea; border-color: var(--danger); color: var(--danger);
-}
-.room-card.free {
-  background: #edfdf8; border-color: var(--success); color: var(--success);
-}
-.room-card:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
-
-.room-status { font-size: 10px; font-weight: 400; margin-top: 3px; opacity: 0.8; }
-
-/* ─── STATS BAR ─────────────────────────────── */
-.stats-row {
-  display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px;
-  margin-bottom: 20px;
-}
-
-.stat-card {
-  background: var(--white); border-radius: 12px;
-  padding: 16px 18px;
-  box-shadow: 0 2px 10px rgba(15,31,61,0.06);
-  border: 1px solid #e0e8f5;
-  border-top: 3px solid transparent;
-  position: relative; overflow: hidden;
-}
-
-.stat-card.s1 { border-top-color: var(--teal); }
-.stat-card.s2 { border-top-color: var(--gold); }
-.stat-card.s3 { border-top-color: #8b5cf6; }
-.stat-card.s4 { border-top-color: var(--danger); }
-
-.stat-value {
-  font-size: 28px; font-weight: 800;
-  color: var(--navy); font-family: 'Tajawal', sans-serif;
-  line-height: 1;
-}
-
-.stat-label {
-  font-size: 11px; color: var(--gray); margin-top: 4px; font-weight: 600;
-}
-
-/* ─── MODAL ─────────────────────────────────── */
-.modal-overlay {
-  position: fixed; inset: 0; background: rgba(10,20,40,0.6);
-  z-index: 2000; display: none;
-  align-items: center; justify-content: center;
-  backdrop-filter: blur(4px);
-}
-
-.modal-overlay.show { display: flex; }
-
-.modal-box {
-  background: var(--white); border-radius: 16px;
-  padding: 28px; width: 420px; max-width: 95vw;
-  box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-  animation: modalIn 0.3s ease;
-  direction: rtl;
-}
-
-@keyframes modalIn {
-  from { opacity: 0; transform: scale(0.9) translateY(20px); }
-  to { opacity: 1; transform: scale(1) translateY(0); }
-}
-
-.modal-title {
-  font-size: 16px; font-weight: 800; color: var(--navy);
-  margin-bottom: 18px; padding-bottom: 12px;
-  border-bottom: 2px solid var(--gray-light);
-  font-family: 'Tajawal', sans-serif;
-  display: flex; align-items: center; gap: 8px;
-}
-
-.modal-actions {
-  display: flex; gap: 8px; margin-top: 18px; justify-content: flex-end;
-}
-
-/* ─── TABS ─────────────────────────────────── */
-.view-tabs {
-  display: flex; gap: 6px; margin-bottom: 18px; flex-wrap: wrap;
-}
-
-.view-tab {
-  padding: 8px 16px; border-radius: 10px; border: 1.5px solid #d0dae8;
-  background: var(--white); color: var(--text-mid);
-  font-family: 'Cairo', sans-serif; font-size: 12px; font-weight: 700;
-  cursor: pointer; transition: all 0.2s;
-}
-.view-tab.active {
-  background: var(--navy); color: var(--white); border-color: var(--navy);
-}
-.view-tab:hover:not(.active) { border-color: var(--teal); color: var(--teal); }
-
-/* ─── PAGE SECTIONS ─────────────────────────── */
-.page-section { display: none; }
-.page-section.active { display: block; }
-
-/* ─── EXAM TABLE ─────────────────────────────── */
-.exam-table { width: 100%; border-collapse: collapse; font-size: 12px; }
-.exam-table th {
-  background: var(--navy); color: var(--gold-light);
-  padding: 10px 14px; text-align: right; font-weight: 700;
-  border: 1px solid rgba(255,255,255,0.1);
-}
-.exam-table td {
-  padding: 10px 14px; border: 1px solid #e0e8f5;
-  color: var(--text-dark); font-weight: 500;
-}
-.exam-table tr:nth-child(even) td { background: #fafbfd; }
-.exam-table tr:hover td { background: #f0f6ff; }
-
-/* ─── COMP FORM ─────────────────────────────── */
-.comp-result {
-  background: #f0faf9; border: 1.5px solid var(--teal);
-  border-radius: 10px; padding: 14px; margin-top: 14px;
-}
-
-.comp-result h4 {
-  font-size: 13px; font-weight: 700; color: var(--teal);
-  margin-bottom: 10px;
-}
-
-.time-slot-tag {
-  display: inline-block;
-  padding: 4px 12px; margin: 3px;
-  background: var(--white); border: 1.5px solid var(--teal);
-  border-radius: 20px; font-size: 11px; font-weight: 600;
-  color: var(--teal);
-}
-
-/* ─── ARCHIVE ─────────────────────────────── */
-.archive-card {
-  padding: 14px 18px; border-radius: 12px;
-  border: 1.5px solid #e0e8f5; background: var(--white);
-  display: flex; align-items: center; justify-content: space-between;
-  margin-bottom: 10px; transition: all 0.2s;
-}
-
-.archive-card:hover { border-color: var(--navy); box-shadow: 0 4px 14px rgba(15,31,61,0.1); }
-
-.archive-info h4 { font-size: 14px; font-weight: 700; color: var(--navy); }
-.archive-info p { font-size: 11px; color: var(--gray); margin-top: 3px; }
-
-.archive-actions { display: flex; gap: 6px; }
-
-/* ─── DIVIDER ─────────────────────────────── */
-.divider {
-  border: none; border-top: 1px dashed #d0dae8; margin: 12px 0;
-}
-
-/* ─── TOAST ─────────────────────────────────── */
-#toast {
-  position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
-  background: var(--navy); color: var(--white);
-  padding: 12px 24px; border-radius: 12px; font-size: 13px; font-weight: 600;
-  box-shadow: 0 8px 30px rgba(0,0,0,0.25);
-  opacity: 0; pointer-events: none;
-  transition: opacity 0.3s; z-index: 3000;
-  font-family: 'Cairo', sans-serif;
-  border-right: 4px solid var(--gold);
-}
-#toast.show { opacity: 1; }
-
-/* ─── RESPONSIVE ─────────────────────────────── */
-@media (max-width: 900px) {
-  .stats-row { grid-template-columns: repeat(2, 1fr); }
-  #main { margin-right: 0 !important; padding: 16px; }
-  #sidebar { width: 320px; }
-}
-
-@media (max-width: 600px) {
-  .stats-row { grid-template-columns: 1fr 1fr; }
-  .header-center { display: none; }
-  :root { --sidebar-w: 300px; }
-}
-
-/* ─── SCROLLBAR ─────────────────────────────── */
-::-webkit-scrollbar { width: 6px; height: 6px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: #c0cce0; border-radius: 3px; }
-
-.separator-line {
-  height: 2px; background: linear-gradient(to left, var(--gold), transparent);
-  margin: 8px 0;
-}
-
-.inline-form {
-  display: flex; gap: 6px; align-items: center;
-}
-.inline-form .form-input { flex: 1; }
 </style>
 </head>
 <body>
 
-<!-- ═══ HEADER ════════════════════════════════ -->
 <header>
-  <div class="header-logo">
+  <div class="logo">
     <div class="logo-icon">🎓</div>
-    <div class="header-title">
+    <div>
       <h1>نظام جداول التوقيت والامتحانات</h1>
       <span>كلية العلوم الاقتصادية والتجارية وعلوم التسيير</span>
     </div>
   </div>
-
-  <div class="header-center">
-    <button class="nav-tab active" onclick="showPage('timetable', this)">📅 جدول التوقيت</button>
-    <button class="nav-tab" onclick="showPage('exams', this)">📝 جدول الامتحانات</button>
-    <button class="nav-tab" onclick="showPage('rooms', this)">🏫 أشغال القاعات</button>
-    <button class="nav-tab" onclick="showPage('compensation', this)">🔄 تعويض الحصص</button>
-    <button class="nav-tab" onclick="showPage('archive', this)">📦 الأرشيف</button>
+  <div class="header-nav">
+    <button class="nav-tab active" onclick="showPg('timetable',this)">📅 التوقيت الأسبوعي</button>
+    <button class="nav-tab" onclick="showPg('exams',this)">📝 الامتحانات</button>
+    <button class="nav-tab" onclick="showPg('rooms',this)">🏫 أشغال القاعات</button>
+    <button class="nav-tab" onclick="showPg('comp',this)">🔄 تعويض الحصص</button>
+    <button class="nav-tab" onclick="showPg('archive',this)">📦 الأرشيف</button>
   </div>
-
-  <div class="header-actions">
-    <select class="form-select" style="width:140px;padding:6px 10px;font-size:12px;" id="globalYear">
-      <option>2025/2026</option>
-      <option>2026/2027</option>
-      <option>2027/2028</option>
-      <option>2028/2029</option>
-      <option>2029/2030</option>
-    </select>
-    <button id="sidebarToggle" onclick="toggleSidebar()" title="إظهار/إخفاء اللوحة">☰</button>
+  <div class="header-right">
+    <span class="year-badge" id="ybadge">2025/2026</span>
+    <button id="sb-toggle" onclick="toggleSB()">☰</button>
   </div>
 </header>
 
-<!-- ═══ LAYOUT ════════════════════════════════ -->
 <div id="layout">
 
-  <!-- ═══ SIDEBAR ════════════════════════════ -->
-  <aside id="sidebar">
-    <div class="sidebar-header">
-      <h2>⚙️ لوحة الإدارة</h2>
+<!-- SIDEBAR -->
+<aside id="sidebar">
+  <div class="sb-hdr"><h2>⚙️ لوحة الإدارة</h2></div>
+
+  <div class="aci">
+    <button class="acb" onclick="toggleAcc(this)">
+      <div class="al"><div class="ai">📆</div><span>السنة الدراسية</span></div>
+      <span class="aa">▼</span>
+    </button>
+    <div class="abb"><div class="abt">
+      <div class="fg"><label class="fl">اختر / أنشئ سنة</label>
+        <select class="fs" id="yrSel" onchange="onYearCh()"></select>
+      </div>
+      <div class="ilist" id="yrList"></div>
+    </div></div>
+  </div>
+
+  <div class="aci">
+    <button class="acb" onclick="toggleAcc(this)">
+      <div class="al"><div class="ai">🎓</div><span>المستوى</span></div>
+      <span class="aa">▼</span>
+    </button>
+    <div class="abb"><div class="abt">
+      <div class="fg"><label class="fl">اختر المستوى</label>
+        <select class="fs" id="lvSel" onchange="onLvCh()"></select>
+      </div>
+      <div class="ilist" id="lvList"></div>
+    </div></div>
+  </div>
+
+  <div class="aci">
+    <button class="acb" onclick="toggleAcc(this)">
+      <div class="al"><div class="ai">🏛️</div><span>الأقسام</span></div>
+      <span class="aa">▼</span>
+    </button>
+    <div class="abb"><div class="abt">
+      <div class="fg"><label class="fl">اختر القسم</label>
+        <select class="fs" id="dptSel" onchange="onDptCh()"></select>
+      </div>
+      <div class="ilist" id="dptList"></div>
+    </div></div>
+  </div>
+
+  <div class="aci">
+    <button class="acb" onclick="toggleAcc(this)">
+      <div class="al"><div class="ai">📚</div><span>التخصصات</span></div>
+      <span class="aa">▼</span>
+    </button>
+    <div class="abb"><div class="abt">
+      <div class="fg"><div class="inlf">
+        <input class="fi" id="spIn" placeholder="اسم التخصص...">
+        <button class="btn bp" onclick="addSpec()">إضافة</button>
+      </div></div>
+      <div class="ilist" id="spList"></div>
+    </div></div>
+  </div>
+
+  <div class="aci">
+    <button class="acb" onclick="toggleAcc(this)">
+      <div class="al"><div class="ai">👨‍🏫</div><span>الأساتذة</span></div>
+      <span class="aa">▼</span>
+    </button>
+    <div class="abb"><div class="abt">
+      <div class="fg"><div class="inlf">
+        <input class="fi" id="tchIn" placeholder="اسم الأستاذ...">
+        <button class="btn bp" onclick="addTeacher()">إضافة</button>
+      </div></div>
+      <div class="ilist" id="tchList"></div>
+    </div></div>
+  </div>
+
+  <div class="aci">
+    <button class="acb" onclick="toggleAcc(this)">
+      <div class="al"><div class="ai">🏫</div><span>القاعات</span></div>
+      <span class="aa">▼</span>
+    </button>
+    <div class="abb"><div class="abt">
+      <div class="fg"><div class="inlf">
+        <input class="fi" id="rmIn" placeholder="اسم القاعة...">
+        <button class="btn bp" onclick="addRoom()">إضافة</button>
+      </div></div>
+      <div style="font-size:10px;color:var(--gray);margin:4px 0;">✅ 51 قاعة افتراضية محملة</div>
+      <div class="ilist" id="rmList" style="max-height:160px;overflow-y:auto;"></div>
+    </div></div>
+  </div>
+</aside>
+
+<!-- MAIN -->
+<main id="main">
+  <div class="stats-row">
+    <div class="stat s1"><div class="sval" id="st1">51</div><div class="slbl">القاعات والمدرجات</div></div>
+    <div class="stat s2"><div class="sval" id="st2">0</div><div class="slbl">الأساتذة</div></div>
+    <div class="stat s3"><div class="sval" id="st3">0</div><div class="slbl">الحصص المجدولة</div></div>
+    <div class="stat s4"><div class="sval" id="st4">0</div><div class="slbl">الامتحانات</div></div>
+  </div>
+
+  <!-- TIMETABLE -->
+  <div class="pg active" id="pg-timetable">
+    <div class="mc">
+      <div class="mch">
+        <div class="mct"><div class="mcti">📅</div>جدول التوقيت الأسبوعي</div>
+        <div class="frow">
+          <select class="fs" id="tt-lv" onchange="renderTT()"></select>
+          <select class="fs" id="tt-dp" onchange="renderTT()"></select>
+          <button class="btn bg" onclick="openAddSess()">➕ إضافة حصة</button>
+          <button class="btn bn" onclick="expExcel()">📊 Excel</button>
+          <button class="btn bp" onclick="printTT()">🖨️ طباعة</button>
+        </div>
+      </div>
+      <div class="ttw"><table id="ttbl"></table></div>
     </div>
+  </div>
 
-    <!-- ①  السنة الدراسية -->
-    <div class="accordion-item">
-      <button class="accordion-btn" onclick="toggleAcc(this)">
-        <div class="acc-label">
-          <div class="acc-icon">📆</div>
-          <span>السنة الدراسية</span>
-        </div>
-        <span class="acc-arrow">▼</span>
-      </button>
-      <div class="accordion-body">
-        <div class="acc-content">
-          <div class="form-group">
-            <label class="form-label">إنشاء / اختيار سنة</label>
-            <select class="form-select" id="yearSelect" onchange="handleYearChange()">
-              <option>2025/2026</option>
-              <option>2026/2027</option>
-              <option>2027/2028</option>
-              <option>2028/2029</option>
-              <option>2029/2030</option>
-              <option value="__add__">➕ إضافة سنة دراسية</option>
-            </select>
+  <!-- EXAMS -->
+  <div class="pg" id="pg-exams">
+    <div class="mc">
+      <div class="mch">
+        <div class="mct"><div class="mcti">📝</div>جدول الامتحانات</div>
+        <div class="frow">
+          <div class="vtabs" style="margin:0;">
+            <button class="vt active" onclick="setRound(1,this)">الدور الأول</button>
+            <button class="vt" onclick="setRound(2,this)">الدور الثاني</button>
           </div>
-          <div class="item-list" id="yearList">
-            <div class="item-card">
-              <span>📅 2025/2026</span>
-              <div class="item-actions">
-                <button class="ic-btn ic-edit" onclick="editItem(this, 'سنة دراسية')">✏️</button>
-                <button class="ic-btn ic-delete" onclick="deleteItem(this)">🗑️</button>
-              </div>
-            </div>
-            <div class="item-card">
-              <span>📅 2026/2027</span>
-              <div class="item-actions">
-                <button class="ic-btn ic-edit" onclick="editItem(this, 'سنة دراسية')">✏️</button>
-                <button class="ic-btn ic-delete" onclick="deleteItem(this)">🗑️</button>
-              </div>
-            </div>
-          </div>
+          <button class="btn bg" onclick="openAddExam()">➕ إضافة</button>
+          <button class="btn bn" onclick="expExamsExcel()">📊 Excel</button>
+          <button class="btn bp" onclick="window.print()">🖨️ طباعة</button>
         </div>
       </div>
+      <table class="et">
+        <thead><tr>
+          <th>المادة</th><th>المستوى</th><th>القسم</th>
+          <th>التاريخ</th><th>الوقت</th><th>القاعة</th><th>الأستاذ</th><th></th>
+        </tr></thead>
+        <tbody id="exTbody"></tbody>
+      </table>
     </div>
+  </div>
 
-    <!-- ②  المستوى -->
-    <div class="accordion-item">
-      <button class="accordion-btn" onclick="toggleAcc(this)">
-        <div class="acc-label">
-          <div class="acc-icon">🎓</div>
-          <span>المستوى</span>
-        </div>
-        <span class="acc-arrow">▼</span>
-      </button>
-      <div class="accordion-body">
-        <div class="acc-content">
-          <div class="form-group">
-            <label class="form-label">اختر المستوى</label>
-            <select class="form-select" id="levelSelect" onchange="handleLevelChange()">
-              <option>سنة أولى ليسانس</option>
-              <option>سنة ثانية ليسانس</option>
-              <option>سنة ثالثة ليسانس</option>
-              <option>سنة أولى ماستر</option>
-              <option>سنة ثانية ماستر</option>
-              <option value="__add__">➕ إضافة مستوى آخر</option>
-            </select>
-          </div>
-          <div class="item-list" id="levelList">
-            <div class="item-card"><span><span class="badge badge-teal">L1</span> سنة أولى ليسانس</span><div class="item-actions"><button class="ic-btn ic-delete" onclick="deleteItem(this)">🗑️</button></div></div>
-            <div class="item-card"><span><span class="badge badge-teal">L2</span> سنة ثانية ليسانس</span><div class="item-actions"><button class="ic-btn ic-delete" onclick="deleteItem(this)">🗑️</button></div></div>
-            <div class="item-card"><span><span class="badge badge-teal">L3</span> سنة ثالثة ليسانس</span><div class="item-actions"><button class="ic-btn ic-delete" onclick="deleteItem(this)">🗑️</button></div></div>
-            <div class="item-card"><span><span class="badge badge-navy">M1</span> سنة أولى ماستر</span><div class="item-actions"><button class="ic-btn ic-delete" onclick="deleteItem(this)">🗑️</button></div></div>
-            <div class="item-card"><span><span class="badge badge-navy">M2</span> سنة ثانية ماستر</span><div class="item-actions"><button class="ic-btn ic-delete" onclick="deleteItem(this)">🗑️</button></div></div>
-          </div>
+  <!-- ROOMS -->
+  <div class="pg" id="pg-rooms">
+    <div class="mc">
+      <div class="mch">
+        <div class="mct"><div class="mcti">🏫</div>أشغال القاعات</div>
+        <div class="frow">
+          <select class="fs" id="rm-day" onchange="renderRooms()">
+            <option>السبت</option><option>الأحد</option><option>الاثنين</option>
+            <option>الثلاثاء</option><option>الأربعاء</option><option>الخميس</option>
+          </select>
+          <select class="fs" id="rm-slot" onchange="renderRooms()">
+            <option value="08:00-09:30">08:00 - 09:30</option>
+            <option value="09:30-11:00">09:30 - 11:00</option>
+            <option value="11:15-12:45">11:15 - 12:45</option>
+            <option value="13:30-15:00">13:30 - 15:00</option>
+            <option value="15:00-16:30">15:00 - 16:30</option>
+          </select>
         </div>
       </div>
+      <div id="rm-stats" style="font-size:12px;font-weight:600;display:flex;gap:14px;margin-bottom:10px;"></div>
+      <div id="rm-amphi" style="margin-bottom:12px;"></div>
+      <div class="rg" id="rm-grid"></div>
     </div>
+  </div>
 
-    <!-- ③  الأقسام -->
-    <div class="accordion-item">
-      <button class="accordion-btn" onclick="toggleAcc(this)">
-        <div class="acc-label">
-          <div class="acc-icon">🏛️</div>
-          <span>الأقسام</span>
-        </div>
-        <span class="acc-arrow">▼</span>
-      </button>
-      <div class="accordion-body">
-        <div class="acc-content">
-          <div class="form-group">
-            <label class="form-label">اختر القسم</label>
-            <select class="form-select" id="deptSelect">
-              <option>قسم السنة أولى جذع مشترك</option>
-              <option>قسم العلوم الاقتصادية</option>
-              <option>قسم علوم التسيير</option>
-              <option>قسم علوم المالية والمحاسبة</option>
-              <option>قسم العلوم التجارية</option>
-            </select>
-          </div>
-          <div class="item-list">
-            <div class="item-card"><span>🏛 جذع مشترك</span></div>
-            <div class="item-card"><span>📊 علوم اقتصادية</span></div>
-            <div class="item-card"><span>📈 علوم التسيير</span></div>
-            <div class="item-card"><span>💰 مالية ومحاسبة</span></div>
-            <div class="item-card"><span>🛒 علوم تجارية</span></div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- ④  التخصصات -->
-    <div class="accordion-item">
-      <button class="accordion-btn" onclick="toggleAcc(this)">
-        <div class="acc-label">
-          <div class="acc-icon">📚</div>
-          <span>التخصصات</span>
-        </div>
-        <span class="acc-arrow">▼</span>
-      </button>
-      <div class="accordion-body">
-        <div class="acc-content">
-          <div class="form-group">
-            <label class="form-label">إضافة تخصص جديد</label>
-            <div class="inline-form">
-              <input class="form-input" id="specInput" placeholder="اسم التخصص..." type="text">
-              <button class="btn btn-primary" onclick="addSpeciality()">إضافة</button>
-            </div>
-          </div>
-          <div class="item-list" id="specList">
-            <div class="item-card">
-              <span><span class="badge badge-gold">L3</span> اقتصاد نقدي وبنكي</span>
-              <div class="item-actions">
-                <button class="ic-btn ic-delete" onclick="deleteItem(this)">🗑️</button>
-              </div>
-            </div>
-            <div class="item-card">
-              <span><span class="badge badge-gold">M1</span> إدارة أعمال</span>
-              <div class="item-actions">
-                <button class="ic-btn ic-delete" onclick="deleteItem(this)">🗑️</button>
-              </div>
-            </div>
-            <div class="item-card">
-              <span><span class="badge badge-gold">M2</span> محاسبة وجباية</span>
-              <div class="item-actions">
-                <button class="ic-btn ic-delete" onclick="deleteItem(this)">🗑️</button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- ⑤  الأساتذة -->
-    <div class="accordion-item">
-      <button class="accordion-btn" onclick="toggleAcc(this)">
-        <div class="acc-label">
-          <div class="acc-icon">👨‍🏫</div>
-          <span>قائمة الأساتذة</span>
-        </div>
-        <span class="acc-arrow">▼</span>
-      </button>
-      <div class="accordion-body">
-        <div class="acc-content">
-          <div class="form-group">
-            <label class="form-label">إضافة أستاذ</label>
-            <div class="inline-form">
-              <input class="form-input" id="teacherInput" placeholder="اسم الأستاذ..." type="text">
-              <button class="btn btn-primary" onclick="addTeacher()">إضافة</button>
-            </div>
-          </div>
-          <div class="item-list" id="teacherList">
-            <div class="item-card"><span>👨‍🏫 أ. محمد بن عمر</span><div class="item-actions"><button class="ic-btn ic-edit" onclick="editItem(this,'أستاذ')">✏️</button><button class="ic-btn ic-delete" onclick="deleteItem(this)">🗑️</button></div></div>
-            <div class="item-card"><span>👩‍🏫 د. فاطمة زهراء</span><div class="item-actions"><button class="ic-btn ic-edit" onclick="editItem(this,'أستاذ')">✏️</button><button class="ic-btn ic-delete" onclick="deleteItem(this)">🗑️</button></div></div>
-            <div class="item-card"><span>👨‍🏫 أ. علي حسين</span><div class="item-actions"><button class="ic-btn ic-edit" onclick="editItem(this,'أستاذ')">✏️</button><button class="ic-btn ic-delete" onclick="deleteItem(this)">🗑️</button></div></div>
-            <div class="item-card"><span>👨‍🏫 د. يوسف قاسمي</span><div class="item-actions"><button class="ic-btn ic-edit" onclick="editItem(this,'أستاذ')">✏️</button><button class="ic-btn ic-delete" onclick="deleteItem(this)">🗑️</button></div></div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- ⑥  القاعات -->
-    <div class="accordion-item">
-      <button class="accordion-btn" onclick="toggleAcc(this)">
-        <div class="acc-label">
-          <div class="acc-icon">🏫</div>
-          <span>القاعات</span>
-        </div>
-        <span class="acc-arrow">▼</span>
-      </button>
-      <div class="accordion-body">
-        <div class="acc-content">
-          <div class="form-group">
-            <label class="form-label">إضافة قاعة</label>
-            <div class="inline-form">
-              <input class="form-input" id="roomInput" placeholder="اسم القاعة..." type="text">
-              <button class="btn btn-primary" onclick="addRoom()">إضافة</button>
-            </div>
-          </div>
-          <div style="font-size:11px;color:var(--gray);margin:6px 0;">
-            ✅ تم إضافة 48 قاعة افتراضية + 3 مدرجات
-          </div>
-          <div class="item-list" id="roomList" style="max-height:200px;overflow-y:auto;">
-            <div class="item-card"><span>🏫 مدرج أ</span><div class="item-actions"><button class="ic-btn ic-delete" onclick="deleteItem(this)">🗑️</button></div></div>
-            <div class="item-card"><span>🏫 مدرج ب</span><div class="item-actions"><button class="ic-btn ic-delete" onclick="deleteItem(this)">🗑️</button></div></div>
-            <div class="item-card"><span>🏫 مدرج ج</span><div class="item-actions"><button class="ic-btn ic-delete" onclick="deleteItem(this)">🗑️</button></div></div>
-          </div>
-          <button class="btn btn-navy" style="width:100%;margin-top:8px;font-size:11px;" onclick="showAllRooms()">
-            عرض كل القاعات الـ 51
-          </button>
-        </div>
-      </div>
-    </div>
-
-  </aside><!-- /sidebar -->
-
-  <!-- ═══ MAIN CONTENT ══════════════════════════ -->
-  <main id="main">
-
-    <!-- Stats -->
-    <div class="stats-row">
-      <div class="stat-card s1">
-        <div class="stat-value">51</div>
-        <div class="stat-label">إجمالي القاعات والمدرجات</div>
-      </div>
-      <div class="stat-card s2">
-        <div class="stat-value">24</div>
-        <div class="stat-label">عدد الأساتذة</div>
-      </div>
-      <div class="stat-card s3">
-        <div class="stat-value">5</div>
-        <div class="stat-label">الأقسام والتخصصات</div>
-      </div>
-      <div class="stat-card s4">
-        <div class="stat-value">8</div>
-        <div class="stat-label">حصص غير مجدولة</div>
-      </div>
-    </div>
-
-    <!-- ① TIMETABLE PAGE -->
-    <div class="page-section active" id="page-timetable">
-      <div class="main-card">
-        <div class="card-header">
-          <div class="card-title">
-            <div class="ct-icon">📅</div>
-            جدول التوقيت الأسبوعي
-          </div>
-          <div style="display:flex;gap:8px;align-items:center;">
-            <select class="form-select" style="width:160px;font-size:12px;">
-              <option>سنة أولى ليسانس</option>
-              <option>سنة ثانية ليسانس</option>
-              <option>سنة ثالثة ليسانس</option>
-              <option>سنة أولى ماستر</option>
-              <option>سنة ثانية ماستر</option>
-            </select>
-            <select class="form-select" style="width:180px;font-size:12px;">
-              <option>قسم السنة أولى جذع مشترك</option>
-              <option>قسم العلوم الاقتصادية</option>
-              <option>قسم علوم التسيير</option>
-            </select>
-            <button class="btn btn-gold">➕ إضافة حصة</button>
-            <button class="btn btn-navy" onclick="exportData('جدول التوقيت')">📤 تصدير</button>
-          </div>
-        </div>
-
-        <div class="timetable-wrapper">
-          <table class="timetable">
-            <thead>
-              <tr>
-                <th>الوقت</th>
-                <th>السبت</th>
-                <th>الأحد</th>
-                <th>الاثنين</th>
-                <th>الثلاثاء</th>
-                <th>الأربعاء</th>
-                <th>الخميس</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td class="time-col">08:00<br>09:30</td>
-                <td>
-                  <div class="slot-card slot-blue">
-                    <strong>محاسبة عامة</strong><br>
-                    <span>أ. محمد بن عمر</span><br>
-                    <span>🏫 القاعة 12</span>
-                  </div>
-                </td>
-                <td>
-                  <div class="slot-card slot-green">
-                    <strong>رياضيات مالية</strong><br>
-                    <span>د. يوسف قاسمي</span><br>
-                    <span>🏫 مدرج أ</span>
-                  </div>
-                </td>
-                <td></td>
-                <td>
-                  <div class="slot-card slot-purple">
-                    <strong>إحصاء تطبيقي</strong><br>
-                    <span>د. فاطمة زهراء</span><br>
-                    <span>🏫 القاعة 05</span>
-                  </div>
-                </td>
-                <td></td>
-                <td>
-                  <div class="slot-card slot-orange">
-                    <strong>اقتصاد كلي</strong><br>
-                    <span>أ. علي حسين</span><br>
-                    <span>🏫 مدرج ب</span>
-                  </div>
-                </td>
-              </tr>
-              <tr>
-                <td class="time-col">09:30<br>11:00</td>
-                <td></td>
-                <td>
-                  <div class="slot-card slot-teal">
-                    <strong>قانون تجاري</strong><br>
-                    <span>أ. محمد بن عمر</span><br>
-                    <span>🏫 القاعة 08</span>
-                  </div>
-                </td>
-                <td>
-                  <div class="slot-card slot-blue">
-                    <strong>محاسبة عامة</strong><br>
-                    <span>أ. محمد بن عمر</span><br>
-                    <span>🏫 القاعة 12</span>
-                  </div>
-                </td>
-                <td></td>
-                <td>
-                  <div class="slot-card slot-green">
-                    <strong>رياضيات مالية</strong><br>
-                    <span>د. يوسف قاسمي</span><br>
-                    <span>🏫 القاعة 15</span>
-                  </div>
-                </td>
-                <td></td>
-              </tr>
-              <tr>
-                <td class="time-col">11:15<br>12:45</td>
-                <td>
-                  <div class="slot-card slot-orange">
-                    <strong>اقتصاد جزئي</strong><br>
-                    <span>د. فاطمة زهراء</span><br>
-                    <span>🏫 مدرج ج</span>
-                  </div>
-                </td>
-                <td></td>
-                <td>
-                  <div class="slot-card slot-purple">
-                    <strong>تسيير المؤسسة</strong><br>
-                    <span>أ. علي حسين</span><br>
-                    <span>🏫 القاعة 20</span>
-                  </div>
-                </td>
-                <td>
-                  <div class="slot-card slot-teal">
-                    <strong>مالية عامة</strong><br>
-                    <span>د. يوسف قاسمي</span><br>
-                    <span>🏫 مدرج أ</span>
-                  </div>
-                </td>
-                <td></td>
-                <td>
-                  <div class="slot-card slot-blue">
-                    <strong>لغة أجنبية</strong><br>
-                    <span>أ. سارة بلقاسم</span><br>
-                    <span>🏫 القاعة 03</span>
-                  </div>
-                </td>
-              </tr>
-              <tr>
-                <td class="time-col">13:30<br>15:00</td>
-                <td>
-                  <div class="slot-card slot-green">
-                    <strong>تقنيات البنوك</strong><br>
-                    <span>د. يوسف قاسمي</span><br>
-                    <span>🏫 القاعة 07</span>
-                  </div>
-                </td>
-                <td>
-                  <div class="slot-card slot-orange">
-                    <strong>جباية المؤسسة</strong><br>
-                    <span>أ. محمد بن عمر</span><br>
-                    <span>🏫 القاعة 11</span>
-                  </div>
-                </td>
-                <td></td>
-                <td>
-                  <div class="slot-card slot-blue">
-                    <strong>إعلام آلي</strong><br>
-                    <span>أ. علي حسين</span><br>
-                    <span>🏫 القاعة 30</span>
-                  </div>
-                </td>
-                <td>
-                  <div class="slot-card slot-purple">
-                    <strong>تسويق</strong><br>
-                    <span>د. فاطمة زهراء</span><br>
-                    <span>🏫 مدرج ب</span>
-                  </div>
-                </td>
-                <td></td>
-              </tr>
-              <tr>
-                <td class="time-col">15:00<br>16:30</td>
-                <td></td>
-                <td></td>
-                <td>
-                  <div class="slot-card slot-teal">
-                    <strong>إحصاء وصفي</strong><br>
-                    <span>د. فاطمة زهراء</span><br>
-                    <span>🏫 القاعة 04</span>
-                  </div>
-                </td>
-                <td>
-                  <div class="slot-card slot-green">
-                    <strong>اقتصاد كلي</strong><br>
-                    <span>أ. علي حسين</span><br>
-                    <span>🏫 مدرج ج</span>
-                  </div>
-                </td>
-                <td>
-                  <div class="slot-card slot-orange">
-                    <strong>تقنيات الاتصال</strong><br>
-                    <span>أ. سارة بلقاسم</span><br>
-                    <span>🏫 القاعة 02</span>
-                  </div>
-                </td>
-                <td></td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-
-    <!-- ② EXAMS PAGE -->
-    <div class="page-section" id="page-exams">
-      <div class="main-card">
-        <div class="card-header">
-          <div class="card-title">
-            <div class="ct-icon">📝</div>
-            جدول الامتحانات
-          </div>
-          <div style="display:flex;gap:8px;">
-            <div class="view-tabs" style="margin:0;">
-              <button class="view-tab active" onclick="switchExamView('دور أول', this)">الدور الأول</button>
-              <button class="view-tab" onclick="switchExamView('دور ثاني', this)">الدور الثاني</button>
-            </div>
-            <button class="btn btn-gold">➕ إضافة امتحان</button>
-            <button class="btn btn-navy" onclick="exportData('جدول الامتحانات')">📤 تصدير</button>
-          </div>
-        </div>
-
-        <table class="exam-table">
-          <thead>
-            <tr>
-              <th>المادة</th>
-              <th>المستوى / القسم</th>
-              <th>التاريخ</th>
-              <th>الوقت</th>
-              <th>القاعة</th>
-              <th>الأستاذ</th>
-              <th>الإجراءات</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td><strong>محاسبة عامة</strong></td>
-              <td><span class="badge badge-teal">L1</span> جذع مشترك</td>
-              <td>2025/01/12</td>
-              <td>08:00 - 10:00</td>
-              <td>مدرج أ + ب</td>
-              <td>أ. محمد بن عمر</td>
-              <td><button class="btn btn-primary btn-sm">✏️ تعديل</button></td>
-            </tr>
-            <tr>
-              <td><strong>رياضيات مالية</strong></td>
-              <td><span class="badge badge-teal">L2</span> اقتصادية</td>
-              <td>2025/01/13</td>
-              <td>09:00 - 11:00</td>
-              <td>مدرج ج</td>
-              <td>د. يوسف قاسمي</td>
-              <td><button class="btn btn-primary btn-sm">✏️ تعديل</button></td>
-            </tr>
-            <tr>
-              <td><strong>إحصاء تطبيقي</strong></td>
-              <td><span class="badge badge-navy">M1</span> إدارة أعمال</td>
-              <td>2025/01/14</td>
-              <td>14:00 - 16:00</td>
-              <td>القاعة 12 + 13</td>
-              <td>د. فاطمة زهراء</td>
-              <td><button class="btn btn-primary btn-sm">✏️ تعديل</button></td>
-            </tr>
-            <tr>
-              <td><strong>قانون تجاري</strong></td>
-              <td><span class="badge badge-teal">L3</span> تجارية</td>
-              <td>2025/01/15</td>
-              <td>08:00 - 10:00</td>
-              <td>مدرج أ</td>
-              <td>أ. محمد بن عمر</td>
-              <td><button class="btn btn-primary btn-sm">✏️ تعديل</button></td>
-            </tr>
-            <tr>
-              <td><strong>تسيير المؤسسة</strong></td>
-              <td><span class="badge badge-navy">M2</span> محاسبة</td>
-              <td>2025/01/16</td>
-              <td>10:00 - 12:00</td>
-              <td>القاعة 01 - 05</td>
-              <td>أ. علي حسين</td>
-              <td><button class="btn btn-primary btn-sm">✏️ تعديل</button></td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-
-    <!-- ③ ROOMS PAGE -->
-    <div class="page-section" id="page-rooms">
-      <div class="main-card">
-        <div class="card-header">
-          <div class="card-title">
-            <div class="ct-icon">🏫</div>
-            أشغال القاعات
-          </div>
-          <div style="display:flex;gap:8px;align-items:center;">
-            <select class="form-select" style="width:130px;font-size:12px;">
+  <!-- COMP -->
+  <div class="pg" id="pg-comp">
+    <div class="mc">
+      <div class="mch"><div class="mct"><div class="mcti">🔄</div>تعويض الحصص</div></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
+        <div>
+          <div class="fg"><label class="fl">اليوم</label>
+            <select class="fs" id="cp-day">
               <option>السبت</option><option>الأحد</option><option>الاثنين</option>
               <option>الثلاثاء</option><option>الأربعاء</option><option>الخميس</option>
-            </select>
-            <select class="form-select" style="width:130px;font-size:12px;">
-              <option>08:00 - 09:30</option><option>09:30 - 11:00</option>
-              <option>11:15 - 12:45</option><option>13:30 - 15:00</option>
-              <option>15:00 - 16:30</option>
-            </select>
-          </div>
+            </select></div>
+          <div class="fg"><label class="fl">القاعة</label>
+            <select class="fs" id="cp-room"></select></div>
+          <div class="fg"><label class="fl">الأستاذ (اختياري)</label>
+            <select class="fs" id="cp-teach"><option value="">-- الكل --</option></select></div>
+          <button class="btn bp" style="width:100%;" onclick="findFree()">🔍 بحث عن أوقات الفراغ</button>
         </div>
-
-        <div style="display:flex;gap:12px;margin-bottom:14px;font-size:12px;font-weight:600;">
-          <span>🟢 متاحة : <strong id="freeCount">36</strong></span>
-          <span>🔴 مشغولة : <strong id="occCount">15</strong></span>
-          <span>📊 نسبة الإشغال : <strong>29%</strong></span>
-        </div>
-
-        <div style="margin-bottom:10px;font-size:12px;font-weight:700;color:var(--text-mid);">🏫 المدرجات</div>
-        <div style="display:flex;gap:8px;margin-bottom:16px;">
-          <div class="room-card occupied" style="width:120px;">مدرج أ<div class="room-status">محاسبة عامة</div></div>
-          <div class="room-card free" style="width:120px;">مدرج ب<div class="room-status">متاح</div></div>
-          <div class="room-card occupied" style="width:120px;">مدرج ج<div class="room-status">رياضيات</div></div>
-        </div>
-
-        <div style="margin-bottom:10px;font-size:12px;font-weight:700;color:var(--text-mid);">🚪 القاعات</div>
-        <div class="rooms-grid" id="roomsGrid"></div>
+        <div id="cp-res"><div style="color:var(--gray);font-size:12px;padding:20px;text-align:center;">⬅️ اختر يوم وقاعة ثم ابحث</div></div>
       </div>
     </div>
+  </div>
 
-    <!-- ④ COMPENSATION PAGE -->
-    <div class="page-section" id="page-compensation">
-      <div class="main-card">
-        <div class="card-header">
-          <div class="card-title">
-            <div class="ct-icon">🔄</div>
-            تعويض الحصص
-          </div>
-        </div>
-
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
-          <div>
-            <h4 style="font-size:13px;font-weight:700;color:var(--navy);margin-bottom:14px;">🔍 البحث عن وقت فراغ</h4>
-            <div class="form-group">
-              <label class="form-label">اليوم</label>
-              <select class="form-select">
-                <option>السبت</option><option>الأحد</option><option>الاثنين</option>
-                <option>الثلاثاء</option><option>الأربعاء</option><option>الخميس</option>
-              </select>
-            </div>
-            <div class="form-group">
-              <label class="form-label">القاعة</label>
-              <select class="form-select" id="compRoomSelect">
-                <option>مدرج أ</option><option>مدرج ب</option><option>مدرج ج</option>
-                <option>القاعة 01</option><option>القاعة 02</option><option>القاعة 03</option>
-              </select>
-            </div>
-            <div class="form-group">
-              <label class="form-label">الأستاذ (اختياري)</label>
-              <select class="form-select">
-                <option>-- جميع الأساتذة --</option>
-                <option>أ. محمد بن عمر</option>
-                <option>د. فاطمة زهراء</option>
-                <option>أ. علي حسين</option>
-              </select>
-            </div>
-            <button class="btn btn-primary" style="width:100%;" onclick="findFreeSlots()">🔍 بحث عن أوقات الفراغ</button>
-          </div>
-
-          <div>
-            <h4 style="font-size:13px;font-weight:700;color:var(--navy);margin-bottom:14px;">📋 نتائج البحث</h4>
-            <div class="comp-result" id="compResult" style="display:none;">
-              <h4>✅ الأوقات المتاحة لـ: <span id="compRoomName"></span></h4>
-              <div id="compSlots"></div>
-            </div>
-            <div id="compEmpty" style="color:var(--gray);font-size:13px;padding:20px;text-align:center;">
-              ⬅️ اختر يوم وقاعة ثم اضغط بحث
-            </div>
-          </div>
-        </div>
+  <!-- ARCHIVE -->
+  <div class="pg" id="pg-archive">
+    <div class="mc">
+      <div class="mch">
+        <div class="mct"><div class="mcti">📦</div>الأرشيف</div>
+        <button class="btn bg" onclick="doArchive()">📦 أرشفة السنة الحالية</button>
       </div>
+      <div id="arcList"></div>
     </div>
-
-    <!-- ⑤ ARCHIVE PAGE -->
-    <div class="page-section" id="page-archive">
-      <div class="main-card">
-        <div class="card-header">
-          <div class="card-title">
-            <div class="ct-icon">📦</div>
-            أرشيف السنوات الدراسية
-          </div>
-          <button class="btn btn-gold" onclick="archiveCurrentYear()">📦 أرشفة السنة الحالية</button>
-        </div>
-
-        <div id="archiveList">
-          <div class="archive-card">
-            <div class="archive-info">
-              <h4>📅 السنة الدراسية 2024/2025</h4>
-              <p>تمت الأرشفة في: 15/07/2025 · 320 حصة · 5 أقسام · 24 أستاذ</p>
-            </div>
-            <div class="archive-actions">
-              <button class="btn btn-primary btn-sm" onclick="exportData('JSON 2024-2025')">📄 JSON</button>
-              <button class="btn btn-navy btn-sm" onclick="exportData('Excel 2024-2025')">📊 Excel</button>
-              <button class="btn btn-gold btn-sm" onclick="showToast('جارٍ استعادة البيانات...')">🔄 استعادة</button>
-            </div>
-          </div>
-          <div class="archive-card">
-            <div class="archive-info">
-              <h4>📅 السنة الدراسية 2023/2024</h4>
-              <p>تمت الأرشفة في: 10/07/2024 · 298 حصة · 5 أقسام · 22 أستاذ</p>
-            </div>
-            <div class="archive-actions">
-              <button class="btn btn-primary btn-sm" onclick="exportData('JSON 2023-2024')">📄 JSON</button>
-              <button class="btn btn-navy btn-sm" onclick="exportData('Excel 2023-2024')">📊 Excel</button>
-              <button class="btn btn-gold btn-sm" onclick="showToast('جارٍ استعادة البيانات...')">🔄 استعادة</button>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-  </main>
+  </div>
+</main>
 </div>
 
-<!-- ═══ MODALS ════════════════════════════════ -->
-
-<!-- Modal: Add Speciality -->
-<div class="modal-overlay" id="specModal">
-  <div class="modal-box">
-    <div class="modal-title">➕ إضافة تخصص جديد</div>
-    <div class="form-group">
-      <label class="form-label">اسم التخصص</label>
-      <input class="form-input" id="specModalName" placeholder="أدخل اسم التخصص...">
+<!-- MODALS -->
+<div class="mo" id="mSess">
+  <div class="mb">
+    <div class="mt" id="mSessTitle">➕ إضافة حصة</div>
+    <input type="hidden" id="esSessId">
+    <div class="frow2">
+      <div class="fg"><label class="fl">اليوم</label>
+        <select class="fs" id="ms-day">
+          <option>السبت</option><option>الأحد</option><option>الاثنين</option>
+          <option>الثلاثاء</option><option>الأربعاء</option><option>الخميس</option>
+        </select></div>
+      <div class="fg"><label class="fl">الفترة</label>
+        <select class="fs" id="ms-slot">
+          <option value="08:00-09:30">08:00 - 09:30</option>
+          <option value="09:30-11:00">09:30 - 11:00</option>
+          <option value="11:15-12:45">11:15 - 12:45</option>
+          <option value="13:30-15:00">13:30 - 15:00</option>
+          <option value="15:00-16:30">15:00 - 16:30</option>
+        </select></div>
     </div>
-    <div class="form-group">
-      <label class="form-label">المستوى</label>
-      <select class="form-select" id="specModalLevel">
-        <option>سنة أولى ليسانس</option>
-        <option>سنة ثانية ليسانس</option>
-        <option>سنة ثالثة ليسانس</option>
-        <option>سنة أولى ماستر</option>
-        <option>سنة ثانية ماستر</option>
-      </select>
+    <div class="fg"><label class="fl">اسم المادة</label>
+      <input class="fi" id="ms-subj" placeholder="اسم المادة..."></div>
+    <div class="frow2">
+      <div class="fg"><label class="fl">المستوى</label><select class="fs" id="ms-lv"></select></div>
+      <div class="fg"><label class="fl">القسم</label><select class="fs" id="ms-dp"></select></div>
     </div>
-    <div class="form-group">
-      <label class="form-label">القسم</label>
-      <select class="form-select" id="specModalDept">
-        <option>قسم السنة أولى جذع مشترك</option>
-        <option>قسم العلوم الاقتصادية</option>
-        <option>قسم علوم التسيير</option>
-        <option>قسم علوم المالية والمحاسبة</option>
-        <option>قسم العلوم التجارية</option>
-      </select>
+    <div class="frow2">
+      <div class="fg"><label class="fl">الأستاذ</label><select class="fs" id="ms-tch"></select></div>
+      <div class="fg"><label class="fl">القاعة</label><select class="fs" id="ms-rm"></select></div>
     </div>
-    <div class="modal-actions">
-      <button class="btn btn-primary" onclick="confirmAddSpec()">✅ إضافة</button>
-      <button class="btn" style="background:var(--gray-light);color:var(--text-mid);" onclick="closeModal('specModal')">إلغاء</button>
+    <div class="fg"><label class="fl">نوع الحصة</label>
+      <select class="fs" id="ms-type">
+        <option value="tlc">محاضرة</option>
+        <option value="ttd">أعمال موجهة</option>
+        <option value="ttp">أعمال تطبيقية</option>
+        <option value="tot">أخرى</option>
+      </select></div>
+    <div class="ma">
+      <button class="btn bp" onclick="saveSess()">✅ حفظ</button>
+      <button class="btn" style="background:var(--gray-light);color:var(--text-mid);" onclick="closeM('mSess')">إلغاء</button>
     </div>
   </div>
 </div>
 
-<!-- Modal: Edit -->
-<div class="modal-overlay" id="editModal">
-  <div class="modal-box">
-    <div class="modal-title" id="editModalTitle">✏️ تعديل</div>
-    <div class="form-group">
-      <label class="form-label" id="editModalLabel">الاسم الجديد</label>
-      <input class="form-input" id="editModalInput" placeholder="أدخل الاسم...">
+<div class="mo" id="mExam">
+  <div class="mb">
+    <div class="mt" id="mExamTitle">➕ إضافة امتحان</div>
+    <input type="hidden" id="esExamId">
+    <div class="fg"><label class="fl">المادة</label>
+      <input class="fi" id="me-subj" placeholder="اسم المادة..."></div>
+    <div class="frow2">
+      <div class="fg"><label class="fl">المستوى</label><select class="fs" id="me-lv"></select></div>
+      <div class="fg"><label class="fl">القسم</label><select class="fs" id="me-dp"></select></div>
     </div>
-    <div class="modal-actions">
-      <button class="btn btn-primary" onclick="confirmEdit()">✅ حفظ</button>
-      <button class="btn" style="background:var(--gray-light);color:var(--text-mid);" onclick="closeModal('editModal')">إلغاء</button>
+    <div class="frow2">
+      <div class="fg"><label class="fl">التاريخ</label>
+        <input class="fi" id="me-date" type="date"></div>
+      <div class="fg"><label class="fl">الدور</label>
+        <select class="fs" id="me-round">
+          <option value="1">الدور الأول</option>
+          <option value="2">الدور الثاني</option>
+        </select></div>
     </div>
-  </div>
-</div>
-
-<!-- Modal: Add Year -->
-<div class="modal-overlay" id="yearModal">
-  <div class="modal-box">
-    <div class="modal-title">📅 إضافة سنة دراسية</div>
-    <p style="font-size:13px;color:var(--gray);margin-bottom:14px;">سيتم إضافة السنة التالية تلقائياً بعد آخر سنة مسجلة.</p>
-    <div style="background:var(--gray-light);border-radius:10px;padding:14px;text-align:center;">
-      <div style="font-size:22px;font-weight:800;color:var(--navy);" id="nextYearPreview">2030/2031</div>
-      <div style="font-size:12px;color:var(--gray);margin-top:4px;">السنة التي سيتم إضافتها</div>
+    <div class="frow2">
+      <div class="fg"><label class="fl">بداية</label>
+        <input class="fi" id="me-start" type="time" value="08:00"></div>
+      <div class="fg"><label class="fl">نهاية</label>
+        <input class="fi" id="me-end" type="time" value="10:00"></div>
     </div>
-    <div class="modal-actions">
-      <button class="btn btn-primary" onclick="confirmAddYear()">✅ إضافة</button>
-      <button class="btn" style="background:var(--gray-light);color:var(--text-mid);" onclick="closeModal('yearModal')">إلغاء</button>
+    <div class="frow2">
+      <div class="fg"><label class="fl">الأستاذ</label><select class="fs" id="me-tch"></select></div>
+      <div class="fg"><label class="fl">القاعة</label><select class="fs" id="me-rm"></select></div>
     </div>
-  </div>
-</div>
-
-<!-- Modal: Add Level -->
-<div class="modal-overlay" id="levelModal">
-  <div class="modal-box">
-    <div class="modal-title">🎓 إضافة مستوى جديد</div>
-    <div class="form-group">
-      <label class="form-label">اسم المستوى</label>
-      <input class="form-input" id="levelModalInput" placeholder="مثال: سنة ثالثة ماستر...">
-    </div>
-    <div class="modal-actions">
-      <button class="btn btn-primary" onclick="confirmAddLevel()">✅ إضافة</button>
-      <button class="btn" style="background:var(--gray-light);color:var(--text-mid);" onclick="closeModal('levelModal')">إلغاء</button>
+    <div class="ma">
+      <button class="btn bp" onclick="saveExam()">✅ حفظ</button>
+      <button class="btn" style="background:var(--gray-light);color:var(--text-mid);" onclick="closeM('mExam')">إلغاء</button>
     </div>
   </div>
 </div>
 
-<!-- Toast -->
+<div class="mo" id="mSpec">
+  <div class="mb">
+    <div class="mt">➕ تفاصيل التخصص</div>
+    <input type="hidden" id="spName">
+    <div class="fg"><label class="fl">المستوى</label><select class="fs" id="sp-lv"></select></div>
+    <div class="fg"><label class="fl">القسم</label><select class="fs" id="sp-dp"></select></div>
+    <div class="ma">
+      <button class="btn bp" onclick="confSpec()">✅ إضافة</button>
+      <button class="btn" style="background:var(--gray-light);color:var(--text-mid);" onclick="closeM('mSpec')">إلغاء</button>
+    </div>
+  </div>
+</div>
+
+<div class="mo" id="mEdit">
+  <div class="mb">
+    <div class="mt" id="mEditTitle">✏️ تعديل</div>
+    <input type="hidden" id="enType"><input type="hidden" id="enIdx">
+    <div class="fg"><label class="fl">الاسم الجديد</label>
+      <input class="fi" id="enInput"></div>
+    <div class="ma">
+      <button class="btn bp" onclick="confEdit()">✅ حفظ</button>
+      <button class="btn" style="background:var(--gray-light);color:var(--text-mid);" onclick="closeM('mEdit')">إلغاء</button>
+    </div>
+  </div>
+</div>
+
 <div id="toast"></div>
 
 <script>
-// ─── STATE ──────────────────────────────────
-let sidebarVisible = true;
-let editTarget = null;
-let yearList = ['2025/2026','2026/2027','2027/2028','2028/2029','2029/2030'];
-let nextYearIdx = 5; // next after 2029/2030
+// ── CONSTANTS ──────────────────────────────────────
+const DAYS=['السبت','الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس'];
+const SLOTS=['08:00-09:30','09:30-11:00','11:15-12:45','13:30-15:00','15:00-16:30'];
+const SL={'08:00-09:30':'08:00 - 09:30','09:30-11:00':'09:30 - 11:00',
+  '11:15-12:45':'11:15 - 12:45','13:30-15:00':'13:30 - 15:00','15:00-16:30':'15:00 - 16:30'};
+const TL={'tlc':'محاضرة','ttd':'أعمال موجهة','ttp':'أعمال تطبيقية','tot':'أخرى'};
+const TC={'tlc':'#dbeafe','ttd':'#dcfce7','ttp':'#fed7aa','tot':'#ede9fe'};
+const AMPHI=['مدرج أ','مدرج ب','مدرج ج'];
+const SK='univ_tt_v4';
 
-// ─── SIDEBAR TOGGLE ─────────────────────────
-function toggleSidebar() {
-  sidebarVisible = !sidebarVisible;
-  document.getElementById('sidebar').classList.toggle('hidden', !sidebarVisible);
-  document.getElementById('main').classList.toggle('expanded', !sidebarVisible);
-  document.getElementById('sidebarToggle').textContent = sidebarVisible ? '☰' : '◁';
+// ── DEFAULT STATE ─────────────────────────────────
+function defState(){
+  const rooms=[];
+  for(let i=1;i<=48;i++) rooms.push('القاعة '+i);
+  rooms.push(...AMPHI);
+  return{
+    years:['2025/2026','2026/2027','2027/2028','2028/2029','2029/2030'],
+    levels:['سنة أولى ليسانس','سنة ثانية ليسانس','سنة ثالثة ليسانس','سنة أولى ماستر','سنة ثانية ماستر'],
+    depts:['قسم السنة أولى جذع مشترك','قسم العلوم الاقتصادية','قسم علوم التسيير','قسم علوم المالية والمحاسبة','قسم العلوم التجارية'],
+    specs:[],teachers:[],rooms,sessions:[],exams:[],archive:[],
+    ay:'2025/2026',al:'سنة أولى ليسانس',ad:'قسم السنة أولى جذع مشترك',round:1
+  };
 }
 
-// ─── ACCORDION ─────────────────────────────
-function toggleAcc(btn) {
-  const body = btn.nextElementSibling;
-  const isOpen = btn.classList.contains('open');
-  document.querySelectorAll('.accordion-btn.open').forEach(b => {
-    b.classList.remove('open');
-    b.nextElementSibling.classList.remove('open');
+let S={};
+function load(){try{const d=localStorage.getItem(SK);S=d?JSON.parse(d):defState();}catch(e){S=defState();}}
+function save(){try{localStorage.setItem(SK,JSON.stringify(S));}catch(e){}}
+function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,6);}
+
+// ── SIDEBAR ───────────────────────────────────────
+let sbOpen=true;
+function toggleSB(){
+  sbOpen=!sbOpen;
+  document.getElementById('sidebar').classList.toggle('hidden',!sbOpen);
+  document.getElementById('main').classList.toggle('exp',!sbOpen);
+  document.getElementById('sb-toggle').textContent=sbOpen?'☰':'◁';
+}
+
+// ── ACCORDION ─────────────────────────────────────
+function toggleAcc(btn){
+  const b=btn.nextElementSibling,was=btn.classList.contains('open');
+  document.querySelectorAll('.acb.open').forEach(x=>{x.classList.remove('open');x.nextElementSibling.classList.remove('open');});
+  if(!was){btn.classList.add('open');b.classList.add('open');}
+}
+
+// ── PAGES ─────────────────────────────────────────
+function showPg(id,btn){
+  document.querySelectorAll('.pg').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('pg-'+id).classList.add('active');
+  if(btn)btn.classList.add('active');
+  if(id==='rooms')renderRooms();
+  if(id==='timetable')renderTT();
+  if(id==='exams')renderExams();
+  if(id==='archive')renderArchive();
+}
+
+// ── RENDER SIDEBAR ────────────────────────────────
+function renderYrList(){
+  const sel=document.getElementById('yrSel');
+  sel.innerHTML=S.years.map(y=>`<option${y===S.ay?' selected':''}>${y}</option>`).join('')
+    +'<option value="__add__">➕ إضافة سنة دراسية</option>';
+  document.getElementById('yrList').innerHTML=S.years.map((y,i)=>
+    `<div class="icard"><span>📅 ${y}</span><div class="iac">
+    <button class="icb ied" onclick="openEdit('year',${i},'${y}')">✏️</button>
+    <button class="icb idl" onclick="rmYear(${i})">🗑️</button>
+    </div></div>`).join('');
+  document.getElementById('ybadge').textContent=S.ay;
+}
+function renderLvList(){
+  const sel=document.getElementById('lvSel');
+  sel.innerHTML=S.levels.map(l=>`<option${l===S.al?' selected':''}>${l}</option>`).join('')
+    +'<option value="__add__">➕ إضافة مستوى</option>';
+  document.getElementById('lvList').innerHTML=S.levels.map((l,i)=>
+    `<div class="icard"><span>${l}</span><div class="iac">
+    <button class="icb idl" onclick="rmLv(${i})">🗑️</button></div></div>`).join('');
+  syncSel('tt-lv',S.levels,S.al);syncSel('ms-lv',S.levels);syncSel('me-lv',S.levels);syncSel('sp-lv',S.levels);
+}
+function renderDptList(){
+  syncSel('dptSel',S.depts,S.ad);
+  document.getElementById('dptList').innerHTML=S.depts.map((d,i)=>
+    `<div class="icard"><span>${d}</span><div class="iac">
+    <button class="icb ied" onclick="openEdit('dept',${i},'${d}')">✏️</button>
+    <button class="icb idl" onclick="rmDpt(${i})">🗑️</button></div></div>`).join('');
+  syncSel('tt-dp',S.depts,S.ad);syncSel('ms-dp',S.depts);syncSel('me-dp',S.depts);syncSel('sp-dp',S.depts);
+}
+function renderSpList(){
+  document.getElementById('spList').innerHTML=S.specs.length
+    ?S.specs.map((s,i)=>`<div class="icard"><span><span class="bdg bgl">${s.ls}</span> ${s.name}</span>
+      <div class="iac"><button class="icb idl" onclick="rmSp(${i})">🗑️</button></div></div>`).join('')
+    :'<div style="font-size:10.5px;color:var(--gray);">لا توجد تخصصات</div>';
+}
+function renderTchList(){
+  document.getElementById('tchList').innerHTML=S.teachers.map((t,i)=>
+    `<div class="icard"><span>👨‍🏫 ${t}</span><div class="iac">
+    <button class="icb ied" onclick="openEdit('teacher',${i},'${t}')">✏️</button>
+    <button class="icb idl" onclick="rmTch(${i})">🗑️</button></div></div>`).join('');
+  const opts=S.teachers.map(t=>`<option>${t}</option>`).join('');
+  ['ms-tch','me-tch'].forEach(id=>{const el=document.getElementById(id);if(el)el.innerHTML=opts;});
+  const cpT=document.getElementById('cp-teach');
+  if(cpT)cpT.innerHTML='<option value="">-- الكل --</option>'+opts;
+  updStats();
+}
+function renderRmList(){
+  document.getElementById('rmList').innerHTML=S.rooms.slice(0,8).map((r,i)=>
+    `<div class="icard"><span>🏫 ${r}</span><div class="iac">
+    <button class="icb idl" onclick="rmRm(${i})">🗑️</button></div></div>`).join('')
+    +(S.rooms.length>8?`<div style="font-size:10px;color:var(--gray);padding:4px;text-align:center;">... و ${S.rooms.length-8} آخرين</div>`:'');
+  const opts=S.rooms.map(r=>`<option>${r}</option>`).join('');
+  ['ms-rm','me-rm'].forEach(id=>{const el=document.getElementById(id);if(el)el.innerHTML=opts;});
+  const cpR=document.getElementById('cp-room');if(cpR)cpR.innerHTML=opts;
+  updStats();
+}
+function updStats(){
+  document.getElementById('st1').textContent=S.rooms.length;
+  document.getElementById('st2').textContent=S.teachers.length;
+  document.getElementById('st3').textContent=S.sessions.filter(s=>s.y===S.ay).length;
+  document.getElementById('st4').textContent=S.exams.filter(e=>e.y===S.ay).length;
+}
+function syncSel(id,arr,selected){
+  const el=document.getElementById(id);if(!el)return;
+  el.innerHTML=arr.map(v=>`<option${v===selected?' selected':''}>${v}</option>`).join('');
+}
+function renderAll(){
+  renderYrList();renderLvList();renderDptList();renderSpList();
+  renderTchList();renderRmList();renderTT();renderExams();renderArchive();
+}
+
+// ── YEAR / LEVEL / DEPT CRUD ─────────────────────
+function onYearCh(){
+  const v=document.getElementById('yrSel').value;
+  if(v==='__add__'){addNextYear();}
+  else{S.ay=v;save();renderAll();}
+}
+function addNextYear(){
+  const last=S.years[S.years.length-1];
+  const[a,b]=last.split('/').map(Number);
+  const next=`${a+1}/${b+1}`;
+  if(!S.years.includes(next)){S.years.push(next);}
+  S.ay=next;save();renderAll();toast('✅ أضيفت السنة '+next);
+}
+function rmYear(i){
+  if(!confirm('حذف '+S.years[i]+'؟'))return;
+  const r=S.years.splice(i,1)[0];
+  S.sessions=S.sessions.filter(s=>s.y!==r);
+  S.exams=S.exams.filter(e=>e.y!==r);
+  if(S.ay===r)S.ay=S.years[0]||'';
+  save();renderAll();toast('🗑️ تم الحذف');
+}
+function onLvCh(){
+  const v=document.getElementById('lvSel').value;
+  if(v==='__add__'){
+    const n=prompt('اسم المستوى الجديد:');
+    if(n&&!S.levels.includes(n)){S.levels.push(n);S.al=n;}
+  }else S.al=v;
+  save();renderAll();
+}
+function rmLv(i){S.levels.splice(i,1);save();renderAll();}
+function onDptCh(){S.ad=document.getElementById('dptSel').value;save();renderTT();}
+function rmDpt(i){S.depts.splice(i,1);save();renderAll();}
+
+function addTeacher(){const v=document.getElementById('tchIn').value.trim();if(!v)return;S.teachers.push(v);document.getElementById('tchIn').value='';save();renderTchList();toast('✅ أضيف: '+v);}
+function rmTch(i){S.teachers.splice(i,1);save();renderTchList();toast('🗑️ تم الحذف');}
+
+function addRoom(){const v=document.getElementById('rmIn').value.trim();if(!v)return;S.rooms.unshift(v);document.getElementById('rmIn').value='';save();renderRmList();toast('✅ أضيفت: '+v);}
+function rmRm(i){S.rooms.splice(i,1);save();renderRmList();toast('🗑️ تم الحذف');}
+
+function addSpec(){
+  const n=document.getElementById('spIn').value.trim();
+  if(!n){toast('⚠️ أدخل اسم التخصص');return;}
+  document.getElementById('spName').value=n;openM('mSpec');
+}
+function confSpec(){
+  const n=document.getElementById('spName').value;
+  const lv=document.getElementById('sp-lv').value;
+  const dp=document.getElementById('sp-dp').value;
+  const m={'ليسانس':'L','ماستر':'M'},nm={'أولى':'1','ثانية':'2','ثالثة':'3'};
+  let ls='';for(const k in m)if(lv.includes(k))ls=m[k];for(const k in nm)if(lv.includes(k))ls+=nm[k];
+  S.specs.push({name:n,lv,dp,ls:ls||'+'});
+  document.getElementById('spIn').value='';
+  save();renderSpList();closeM('mSpec');toast('✅ أضيف التخصص: '+n);
+}
+function rmSp(i){S.specs.splice(i,1);save();renderSpList();}
+
+// ── EDIT MODAL ────────────────────────────────────
+function openEdit(type,idx,cur){
+  document.getElementById('enType').value=type;
+  document.getElementById('enIdx').value=idx;
+  document.getElementById('enInput').value=cur;
+  const lbl={year:'سنة دراسية',teacher:'أستاذ',dept:'قسم'};
+  document.getElementById('mEditTitle').textContent='✏️ تعديل '+lbl[type];
+  openM('mEdit');
+}
+function confEdit(){
+  const type=document.getElementById('enType').value;
+  const idx=parseInt(document.getElementById('enIdx').value);
+  const val=document.getElementById('enInput').value.trim();
+  if(!val)return;
+  if(type==='year'){const o=S.years[idx];S.years[idx]=val;S.sessions.forEach(s=>{if(s.y===o)s.y=val;});S.exams.forEach(e=>{if(e.y===o)e.y=val;});if(S.ay===o)S.ay=val;}
+  else if(type==='teacher'){const o=S.teachers[idx];S.teachers[idx]=val;S.sessions.forEach(s=>{if(s.tch===o)s.tch=val;});}
+  else if(type==='dept'){S.depts[idx]=val;}
+  save();renderAll();closeM('mEdit');toast('✅ تم التعديل');
+}
+
+// ── TIMETABLE ─────────────────────────────────────
+let dragId=null;
+
+function curSessions(){
+  const lv=document.getElementById('tt-lv')?.value||S.al;
+  const dp=document.getElementById('tt-dp')?.value||S.ad;
+  return S.sessions.filter(s=>s.y===S.ay&&s.lv===lv&&s.dp===dp);
+}
+
+function renderTT(){
+  const ss=curSessions();
+  const mp={};
+  ss.forEach(s=>{
+    if(!mp[s.day])mp[s.day]={};
+    if(!mp[s.day][s.slot])mp[s.day][s.slot]=[];
+    mp[s.day][s.slot].push(s);
   });
-  if (!isOpen) {
-    btn.classList.add('open');
-    body.classList.add('open');
+  let h=`<thead><tr><th style="width:72px;">الوقت</th>${DAYS.map(d=>`<th>${d}</th>`).join('')}</tr></thead><tbody>`;
+  SLOTS.forEach(slot=>{
+    h+=`<tr><td class="tc">${SL[slot].replace(' - ','<br>')}</td>`;
+    DAYS.forEach(day=>{
+      const cells=(mp[day]&&mp[day][slot])||[];
+      const isEmpty=!cells.length;
+      h+=`<td class="${isEmpty?'ec':''}"
+        ondragover="event.preventDefault();this.classList.add('drop-over')"
+        ondragleave="this.classList.remove('drop-over')"
+        ondrop="onDrop(event,'${day}','${slot}')"
+        ${isEmpty?`onclick="openAddSess('${day}','${slot}')"`:''}
+      >`;
+      cells.forEach(s=>{
+        h+=`<div class="sc ${s.type}" draggable="true"
+          ondragstart="onDS(event,'${s.id}')"
+          ondragend="document.querySelectorAll('.sc').forEach(x=>x.classList.remove('dragging'))"
+        ><button class="sceb" onclick="event.stopPropagation();openEditSess('${s.id}')">✏️</button>
+        <button class="scdb" onclick="event.stopPropagation();delSess('${s.id}')">✕</button>
+        <div class="ss">${s.subj}</div>
+        <div class="si">👨‍🏫 ${s.tch}</div>
+        <div class="si">🏫 ${s.rm}</div>
+        <div class="si" style="font-size:9px;opacity:.7;">${TL[s.type]||''}</div>
+        </div>`;
+      });
+      h+='</td>';
+    });
+    h+='</tr>';
+  });
+  h+='</tbody>';
+  document.getElementById('ttbl').innerHTML=h;
+  updStats();
+}
+
+function onDS(e,id){
+  dragId=id;
+  document.querySelectorAll('.sc').forEach(x=>x.classList.remove('dragging'));
+  e.currentTarget.classList.add('dragging');
+  e.dataTransfer.effectAllowed='move';
+}
+function onDrop(e,day,slot){
+  e.preventDefault();
+  e.currentTarget.classList.remove('drop-over');
+  if(!dragId)return;
+  const s=S.sessions.find(x=>x.id===dragId);if(!s)return;
+  // Check conflict
+  const conflict=S.sessions.find(x=>x.id!==dragId&&x.day===day&&x.slot===slot&&x.lv===s.lv&&x.dp===s.dp);
+  if(conflict){toast('⚠️ تعارض: توجد حصة في هذه الخلية');dragId=null;return;}
+  s.day=day;s.slot=slot;
+  dragId=null;save();renderTT();toast('✅ تم نقل الحصة');
+}
+
+// ── SESSION MODAL ─────────────────────────────────
+function openAddSess(day,slot){
+  document.getElementById('esSessId').value='';
+  document.getElementById('mSessTitle').textContent='➕ إضافة حصة';
+  document.getElementById('ms-subj').value='';
+  if(day)document.getElementById('ms-day').value=day;
+  if(slot)document.getElementById('ms-slot').value=slot;
+  const lv=document.getElementById('tt-lv')?.value||S.al;
+  const dp=document.getElementById('tt-dp')?.value||S.ad;
+  document.getElementById('ms-lv').value=lv;
+  document.getElementById('ms-dp').value=dp;
+  openM('mSess');
+}
+function openEditSess(id){
+  const s=S.sessions.find(x=>x.id===id);if(!s)return;
+  document.getElementById('esSessId').value=id;
+  document.getElementById('mSessTitle').textContent='✏️ تعديل الحصة';
+  document.getElementById('ms-subj').value=s.subj;
+  document.getElementById('ms-day').value=s.day;
+  document.getElementById('ms-slot').value=s.slot;
+  document.getElementById('ms-lv').value=s.lv;
+  document.getElementById('ms-dp').value=s.dp;
+  document.getElementById('ms-tch').value=s.tch;
+  document.getElementById('ms-rm').value=s.rm;
+  document.getElementById('ms-type').value=s.type;
+  openM('mSess');
+}
+function saveSess(){
+  const id=document.getElementById('esSessId').value;
+  const subj=document.getElementById('ms-subj').value.trim();
+  if(!subj){toast('⚠️ أدخل اسم المادة');return;}
+  const data={
+    id:id||uid(),y:S.ay,
+    lv:document.getElementById('ms-lv').value,
+    dp:document.getElementById('ms-dp').value,
+    day:document.getElementById('ms-day').value,
+    slot:document.getElementById('ms-slot').value,
+    subj,tch:document.getElementById('ms-tch').value,
+    rm:document.getElementById('ms-rm').value,
+    type:document.getElementById('ms-type').value
+  };
+  if(id){const i=S.sessions.findIndex(s=>s.id===id);if(i>-1)S.sessions[i]=data;}
+  else S.sessions.push(data);
+  save();renderTT();closeM('mSess');toast(id?'✅ تم التعديل':'✅ تمت الإضافة');
+}
+function delSess(id){
+  if(!confirm('حذف هذه الحصة؟'))return;
+  S.sessions=S.sessions.filter(s=>s.id!==id);
+  save();renderTT();toast('🗑️ تم الحذف');
+}
+
+// ── EXAMS ─────────────────────────────────────────
+function setRound(r,btn){
+  S.round=r;save();
+  document.querySelectorAll('#pg-exams .vt').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');renderExams();
+}
+function renderExams(){
+  const ex=S.exams.filter(e=>e.y===S.ay&&e.round==S.round).sort((a,b)=>a.date>b.date?1:-1);
+  const tb=document.getElementById('exTbody');
+  if(!ex.length){tb.innerHTML=`<tr><td colspan="8" style="text-align:center;padding:18px;color:var(--gray);font-size:12px;">لا توجد امتحانات - اضغط "إضافة"</td></tr>`;updStats();return;}
+  tb.innerHTML=ex.map(e=>`<tr>
+    <td><strong>${e.subj}</strong></td>
+    <td>${e.lv}</td><td>${e.dp}</td>
+    <td>${e.date||'-'}</td>
+    <td>${e.start} - ${e.end}</td>
+    <td>${e.rm}</td><td>${e.tch}</td>
+    <td style="white-space:nowrap;">
+      <button class="btn bp bsm" onclick="openEditExam('${e.id}')">✏️</button>
+      <button class="btn bd bsm" onclick="delExam('${e.id}')">🗑️</button>
+    </td>
+  </tr>`).join('');
+  updStats();
+}
+function openAddExam(){
+  document.getElementById('esExamId').value='';
+  document.getElementById('mExamTitle').textContent='➕ إضافة امتحان';
+  ['me-subj','me-date'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  document.getElementById('me-round').value=S.round;
+  openM('mExam');
+}
+function openEditExam(id){
+  const e=S.exams.find(x=>x.id===id);if(!e)return;
+  document.getElementById('esExamId').value=id;
+  document.getElementById('mExamTitle').textContent='✏️ تعديل امتحان';
+  document.getElementById('me-subj').value=e.subj;
+  document.getElementById('me-lv').value=e.lv;
+  document.getElementById('me-dp').value=e.dp;
+  document.getElementById('me-date').value=e.date;
+  document.getElementById('me-round').value=e.round;
+  document.getElementById('me-start').value=e.start;
+  document.getElementById('me-end').value=e.end;
+  document.getElementById('me-tch').value=e.tch;
+  document.getElementById('me-rm').value=e.rm;
+  openM('mExam');
+}
+function saveExam(){
+  const id=document.getElementById('esExamId').value;
+  const subj=document.getElementById('me-subj').value.trim();
+  if(!subj){toast('⚠️ أدخل اسم المادة');return;}
+  const data={
+    id:id||uid(),y:S.ay,
+    lv:document.getElementById('me-lv').value,
+    dp:document.getElementById('me-dp').value,
+    subj,date:document.getElementById('me-date').value,
+    round:parseInt(document.getElementById('me-round').value),
+    start:document.getElementById('me-start').value,
+    end:document.getElementById('me-end').value,
+    tch:document.getElementById('me-tch').value,
+    rm:document.getElementById('me-rm').value
+  };
+  if(id){const i=S.exams.findIndex(e=>e.id===id);if(i>-1)S.exams[i]=data;}
+  else S.exams.push(data);
+  save();renderExams();closeM('mExam');toast(id?'✅ تم التعديل':'✅ تمت الإضافة');
+}
+function delExam(id){if(!confirm('حذف؟'))return;S.exams=S.exams.filter(e=>e.id!==id);save();renderExams();toast('🗑️ تم الحذف');}
+
+// ── ROOMS ─────────────────────────────────────────
+function renderRooms(){
+  const day=document.getElementById('rm-day').value;
+  const slot=document.getElementById('rm-slot').value;
+  const occ=S.sessions.filter(s=>s.y===S.ay&&s.day===day&&s.slot===slot);
+  const occRms=occ.map(s=>s.rm);
+
+  // Amphi
+  document.getElementById('rm-amphi').innerHTML=
+    '<div style="font-size:11px;font-weight:700;color:var(--text-mid);margin-bottom:7px;">🏛️ المدرجات</div>'+
+    AMPHI.map(r=>{
+      const info=occ.find(x=>x.rm===r);
+      return `<div class="rcard ${info?'occ':'free'}" style="display:inline-flex;flex-direction:column;align-items:center;min-width:100px;margin-left:8px;">
+        ${r}<div class="rs">${info?'🔴 '+info.subj:'🟢 متاح'}</div></div>`;
+    }).join('');
+
+  // Regular rooms
+  const reg=S.rooms.filter(r=>!AMPHI.includes(r));
+  const fc=reg.filter(r=>!occRms.includes(r)).length;
+  const oc=reg.length-fc;
+  document.getElementById('rm-stats').innerHTML=
+    `<span>🟢 متاحة: <strong>${fc}</strong></span>
+     <span>🔴 مشغولة: <strong>${oc}</strong></span>
+     <span>📊 <strong>${reg.length?Math.round(oc/reg.length*100):0}%</strong> نسبة الإشغال</span>`;
+
+  document.getElementById('rm-grid').innerHTML=reg.map(r=>{
+    const info=occ.find(x=>x.rm===r);
+    return `<div class="rcard ${info?'occ':'free'}">${r}<div class="rs">${info?'🔴 '+info.subj:'🟢 متاح'}</div></div>`;
+  }).join('');
+}
+
+// ── COMPENSATION ──────────────────────────────────
+function findFree(){
+  const day=document.getElementById('cp-day').value;
+  const room=document.getElementById('cp-room').value;
+  const tch=document.getElementById('cp-teach').value;
+  const occSlots=S.sessions
+    .filter(s=>s.y===S.ay&&s.day===day&&(s.rm===room||(tch&&s.tch===tch)))
+    .map(s=>s.slot);
+  const freeSlots=SLOTS.filter(sl=>!occSlots.includes(sl));
+  const el=document.getElementById('cp-res');
+  el.innerHTML=freeSlots.length
+    ?`<div class="cr"><h4 style="font-size:12px;font-weight:700;color:var(--teal);margin-bottom:8px;">✅ أوقات الفراغ - ${day} - ${room}</h4>
+       ${freeSlots.map(sl=>`<span class="tt-tag">⏰ ${SL[sl]}</span>`).join('')}</div>`
+    :'<div class="cr" style="border-color:var(--danger)"><p style="color:var(--danger);font-size:12px;font-weight:600;">⛔ لا توجد أوقات فراغ</p></div>';
+}
+
+// ── ARCHIVE ───────────────────────────────────────
+function renderArchive(){
+  const el=document.getElementById('arcList');
+  if(!S.archive.length){el.innerHTML='<div style="color:var(--gray);text-align:center;padding:20px;font-size:12px;">لا يوجد أرشيف — أرشف السنة الحالية لحفظها</div>';return;}
+  el.innerHTML=S.archive.map((a,i)=>`
+    <div class="arc">
+      <div><h4 style="font-size:13px;font-weight:700;color:var(--navy);">📅 ${a.yr}</h4>
+        <p style="font-size:10.5px;color:var(--gray);margin-top:2px;">أُرشف في: ${a.date} · ${a.sc} حصة · ${a.ec} امتحان · ${a.tc} أستاذ</p></div>
+      <div style="display:flex;gap:6px;">
+        <button class="btn bp bsm" onclick="expArcJSON(${i})">📄 JSON</button>
+        <button class="btn bn bsm" onclick="expArcExcel(${i})">📊 Excel</button>
+        <button class="btn bd bsm" onclick="rmArc(${i})">🗑️</button>
+      </div>
+    </div>`).join('');
+}
+function doArchive(){
+  const ss=S.sessions.filter(s=>s.y===S.ay);
+  const ex=S.exams.filter(e=>e.y===S.ay);
+  S.archive.unshift({
+    yr:S.ay,date:new Date().toLocaleDateString('ar-DZ'),
+    sc:ss.length,ec:ex.length,tc:S.teachers.length,
+    sessions:JSON.parse(JSON.stringify(ss)),
+    exams:JSON.parse(JSON.stringify(ex)),
+    teachers:[...S.teachers],rooms:[...S.rooms]
+  });
+  save();renderArchive();toast('📦 تمت الأرشفة: '+S.ay);
+}
+function rmArc(i){if(!confirm('حذف الأرشيف؟'))return;S.archive.splice(i,1);save();renderArchive();}
+function expArcJSON(i){
+  const blob=new Blob([JSON.stringify(S.archive[i],null,2)],{type:'application/json'});
+  dl(blob,'archive-'+S.archive[i].yr.replace('/','_')+'.json');toast('📄 تم تصدير JSON');
+}
+function expArcExcel(i){
+  const a=S.archive[i];
+  buildExcel(a.sessions,a.exams,'archive-'+a.yr.replace('/','_'));
+}
+
+// ── EXCEL ─────────────────────────────────────────
+function expExcel(){
+  const ss=S.sessions.filter(s=>s.y===S.ay);
+  buildExcel(ss,[],'timetable-'+S.ay.replace('/','_'));
+}
+function expExamsExcel(){
+  const ex=S.exams.filter(e=>e.y===S.ay);
+  const wb=XLSX.utils.book_new();
+  const data=[['المادة','المستوى','القسم','التاريخ','الدور','البداية','النهاية','الأستاذ','القاعة']];
+  ex.forEach(e=>data.push([e.subj,e.lv,e.dp,e.date,'الدور '+e.round,e.start,e.end,e.tch,e.rm]));
+  const ws=XLSX.utils.aoa_to_sheet(data);
+  ws['!cols']=[{wch:20},{wch:22},{wch:28},{wch:12},{wch:12},{wch:10},{wch:10},{wch:24},{wch:18}];
+  XLSX.utils.book_append_sheet(wb,ws,'الامتحانات');
+  XLSX.writeFile(wb,'exams-'+S.ay.replace('/','_')+'.xlsx');
+  toast('📊 تم تصدير الامتحانات');
+}
+function buildExcel(sessions,exams,fname){
+  const wb=XLSX.utils.book_new();
+  // Per level+dept grids
+  const lvs=[...new Set(sessions.map(s=>s.lv))];
+  const dps=[...new Set(sessions.map(s=>s.dp))];
+  lvs.forEach(lv=>dps.forEach(dp=>{
+    const filt=sessions.filter(s=>s.lv===lv&&s.dp===dp);
+    if(!filt.length)return;
+    const rows=[['الفترة',...DAYS]];
+    SLOTS.forEach(slot=>{
+      const row=[SL[slot]];
+      DAYS.forEach(day=>{
+        const found=filt.filter(s=>s.day===day&&s.slot===slot);
+        row.push(found.map(s=>`${s.subj} / ${s.tch} / ${s.rm}`).join(' | ')||'');
+      });
+      rows.push(row);
+    });
+    const ws=XLSX.utils.aoa_to_sheet(rows);
+    ws['!cols']=[{wch:14},...DAYS.map(()=>({wch:24}))];
+    const sn=(lv.slice(0,8)+'-'+dp.slice(0,8)).slice(0,31);
+    XLSX.utils.book_append_sheet(wb,ws,sn);
+  }));
+  // Full list sheet
+  const list=[['المادة','اليوم','الفترة','المستوى','القسم','الأستاذ','القاعة','النوع']];
+  sessions.forEach(s=>list.push([s.subj,s.day,SL[s.slot],s.lv,s.dp,s.tch,s.rm,TL[s.type]]));
+  const wsL=XLSX.utils.aoa_to_sheet(list);
+  wsL['!cols']=[{wch:20},{wch:10},{wch:14},{wch:22},{wch:26},{wch:22},{wch:14},{wch:14}];
+  XLSX.utils.book_append_sheet(wb,wsL,'كل الحصص');
+  if(exams&&exams.length){
+    const ed=[['المادة','التاريخ','الدور','البداية','النهاية','الأستاذ','القاعة']];
+    exams.forEach(e=>ed.push([e.subj,e.date,'الدور '+e.round,e.start,e.end,e.tch,e.rm]));
+    XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(ed),'الامتحانات');
   }
+  XLSX.writeFile(wb,fname+'.xlsx');
+  toast('📊 تم تصدير Excel بنجاح');
 }
 
-// ─── PAGE NAVIGATION ────────────────────────
-function showPage(page, btn) {
-  document.querySelectorAll('.page-section').forEach(p => p.classList.remove('active'));
-  document.getElementById('page-' + page).classList.add('active');
-  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
-  if (btn) btn.classList.add('active');
+// ── PRINT ─────────────────────────────────────────
+function printTT(){
+  const lv=document.getElementById('tt-lv')?.value||S.al;
+  const dp=document.getElementById('tt-dp')?.value||S.ad;
+  const ss=S.sessions.filter(s=>s.y===S.ay&&s.lv===lv&&s.dp===dp);
+  const mp={};
+  ss.forEach(s=>{if(!mp[s.day])mp[s.day]={};if(!mp[s.day][s.slot])mp[s.day][s.slot]=[];mp[s.day][s.slot].push(s);});
+  let rows='';
+  SLOTS.forEach(slot=>{
+    rows+=`<tr><td style="background:#eef;font-weight:700;text-align:center;font-size:9pt;padding:5px;width:80px;">${SL[slot]}</td>`;
+    DAYS.forEach(day=>{
+      const cells=(mp[day]&&mp[day][slot])||[];
+      rows+=`<td style="padding:4px;border:1px solid #ccc;vertical-align:top;min-height:50px;">`;
+      cells.forEach(s=>{rows+=`<div style="background:${TC[s.type]||'#eee'};border-radius:4px;padding:4px 5px;margin:2px 0;font-size:8pt;line-height:1.4;"><strong>${s.subj}</strong><br>${s.tch}<br>${s.rm}</div>`;});
+      rows+='</td>';
+    });
+    rows+='</tr>';
+  });
+  const w=window.open('','_blank','width=980,height=650');
+  w.document.write(`<!DOCTYPE html><html dir="rtl"><head><meta charset="UTF-8">
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;800&display=swap" rel="stylesheet">
+    <style>body{font-family:'Cairo',sans-serif;direction:rtl;margin:15mm;}
+    h2{font-size:14pt;color:#0f1f3d;margin-bottom:3px;}p{font-size:9pt;color:#666;margin-bottom:8px;}
+    table{width:100%;border-collapse:collapse;}th{background:#0f1f3d;color:#e0be7a;padding:7px 5px;font-size:9pt;border:1px solid #444;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+    td{border:1px solid #ddd;}@media print{body{margin:5mm;}}</style>
+    </head><body>
+    <h2>📅 جدول التوقيت الأسبوعي — ${S.ay}</h2>
+    <p>${lv} | ${dp}</p>
+    <table><thead><tr><th>الفترة</th>${DAYS.map(d=>`<th>${d}</th>`).join('')}</tr></thead>
+    <tbody>${rows}</tbody></table>
+    <script>window.onload=function(){window.print();}<\/script>
+    </body></html>`);
+  w.document.close();
 }
 
-// ─── YEAR HANDLING ─────────────────────────
-function handleYearChange() {
-  const sel = document.getElementById('yearSelect');
-  if (sel.value === '__add__') {
-    const years = [2025,2026,2027,2028,2029,...Array.from({length:nextYearIdx},(_,i)=>2030+i)];
-    const lastYear = years[years.length-1];
-    document.getElementById('nextYearPreview').textContent = `${lastYear}/${lastYear+1}`;
-    openModal('yearModal');
-    sel.value = yearList[yearList.length-1];
-  }
-}
+// ── MODAL HELPERS ─────────────────────────────────
+function openM(id){document.getElementById(id).classList.add('show');}
+function closeM(id){document.getElementById(id).classList.remove('show');}
+document.querySelectorAll('.mo').forEach(m=>{m.addEventListener('click',e=>{if(e.target===m)m.classList.remove('show');});});
 
-function confirmAddYear() {
-  const preview = document.getElementById('nextYearPreview').textContent;
-  yearList.push(preview);
-  nextYearIdx++;
-  const sel = document.getElementById('yearSelect');
-  const opt = document.createElement('option');
-  opt.textContent = preview;
-  sel.insertBefore(opt, sel.lastElementChild);
-  const li = document.createElement('div');
-  li.className = 'item-card';
-  li.innerHTML = `<span>📅 ${preview}</span><div class="item-actions">
-    <button class="ic-btn ic-edit" onclick="editItem(this,'سنة دراسية')">✏️</button>
-    <button class="ic-btn ic-delete" onclick="deleteItem(this)">🗑️</button>
-  </div>`;
-  document.getElementById('yearList').appendChild(li);
-  closeModal('yearModal');
-  showToast(`✅ تمت إضافة السنة الدراسية ${preview}`);
-}
+// ── DOWNLOAD HELPER ───────────────────────────────
+function dl(blob,name){const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;a.click();}
 
-// ─── LEVEL HANDLING ─────────────────────────
-function handleLevelChange() {
-  const sel = document.getElementById('levelSelect');
-  if (sel.value === '__add__') {
-    openModal('levelModal');
-    sel.value = 'سنة أولى ليسانس';
-  }
-}
+// ── TOAST ─────────────────────────────────────────
+let toastT;
+function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove('show'),2800);}
 
-function confirmAddLevel() {
-  const name = document.getElementById('levelModalInput').value.trim();
-  if (!name) return;
-  const sel = document.getElementById('levelSelect');
-  const opt = document.createElement('option');
-  opt.textContent = name;
-  sel.insertBefore(opt, sel.lastElementChild);
-  const li = document.createElement('div');
-  li.className = 'item-card';
-  li.innerHTML = `<span><span class="badge badge-navy">+</span> ${name}</span>
-    <div class="item-actions"><button class="ic-btn ic-delete" onclick="deleteItem(this)">🗑️</button></div>`;
-  document.getElementById('levelList').appendChild(li);
-  closeModal('levelModal');
-  document.getElementById('levelModalInput').value = '';
-  showToast(`✅ تمت إضافة المستوى: ${name}`);
-}
-
-// ─── TEACHER ────────────────────────────────
-function addTeacher() {
-  const input = document.getElementById('teacherInput');
-  const name = input.value.trim();
-  if (!name) { showToast('⚠️ أدخل اسم الأستاذ'); return; }
-  const li = document.createElement('div');
-  li.className = 'item-card';
-  li.innerHTML = `<span>👨‍🏫 ${name}</span>
-    <div class="item-actions">
-      <button class="ic-btn ic-edit" onclick="editItem(this,'أستاذ')">✏️</button>
-      <button class="ic-btn ic-delete" onclick="deleteItem(this)">🗑️</button>
-    </div>`;
-  document.getElementById('teacherList').appendChild(li);
-  input.value = '';
-  showToast(`✅ تمت إضافة الأستاذ: ${name}`);
-}
-
-// ─── ROOM ────────────────────────────────────
-function addRoom() {
-  const input = document.getElementById('roomInput');
-  const name = input.value.trim();
-  if (!name) { showToast('⚠️ أدخل اسم القاعة'); return; }
-  const li = document.createElement('div');
-  li.className = 'item-card';
-  li.innerHTML = `<span>🏫 ${name}</span>
-    <div class="item-actions"><button class="ic-btn ic-delete" onclick="deleteItem(this)">🗑️</button></div>`;
-  document.getElementById('roomList').appendChild(li);
-  input.value = '';
-  showToast(`✅ تمت إضافة القاعة: ${name}`);
-}
-
-function showAllRooms() {
-  showToast('🏫 عرض قائمة القاعات الكاملة...');
-}
-
-// ─── SPECIALITY ──────────────────────────────
-function addSpeciality() {
-  const name = document.getElementById('specInput').value.trim();
-  if (!name) { showToast('⚠️ أدخل اسم التخصص'); return; }
-  document.getElementById('specModalName').value = name;
-  openModal('specModal');
-}
-
-function confirmAddSpec() {
-  const name = document.getElementById('specModalName').value.trim();
-  const level = document.getElementById('specModalLevel').value;
-  const dept = document.getElementById('specModalDept').value;
-  const badge = level.includes('ماستر') ? 'M' : 'L';
-  const num = level.includes('أولى') ? '1' : level.includes('ثانية') ? '2' : '3';
-  const li = document.createElement('div');
-  li.className = 'item-card';
-  li.innerHTML = `<span><span class="badge badge-gold">${badge}${num}</span> ${name}</span>
-    <div class="item-actions"><button class="ic-btn ic-delete" onclick="deleteItem(this)">🗑️</button></div>`;
-  document.getElementById('specList').appendChild(li);
-  document.getElementById('specInput').value = '';
-  document.getElementById('specModalName').value = '';
-  closeModal('specModal');
-  showToast(`✅ تمت إضافة التخصص: ${name}`);
-}
-
-// ─── GENERIC EDIT / DELETE ──────────────────
-function editItem(btn, type) {
-  editTarget = btn.closest('.item-card');
-  document.getElementById('editModalTitle').textContent = `✏️ تعديل ${type}`;
-  document.getElementById('editModalLabel').textContent = `الاسم الجديد للـ${type}`;
-  document.getElementById('editModalInput').value = editTarget.querySelector('span').textContent.trim().replace(/^[^\s]+\s/,'');
-  openModal('editModal');
-}
-
-function confirmEdit() {
-  const val = document.getElementById('editModalInput').value.trim();
-  if (!val || !editTarget) return;
-  const span = editTarget.querySelector('span');
-  const badge = span.querySelector('.badge');
-  if (badge) span.innerHTML = badge.outerHTML + ' ' + val;
-  else span.textContent = span.textContent.charAt(0) + ' ' + val;
-  closeModal('editModal');
-  showToast('✅ تم التعديل بنجاح');
-}
-
-function deleteItem(btn) {
-  const card = btn.closest('.item-card');
-  card.style.opacity = '0';
-  card.style.transform = 'translateX(20px)';
-  card.style.transition = 'all 0.3s';
-  setTimeout(() => card.remove(), 300);
-  showToast('🗑️ تم الحذف');
-}
-
-// ─── MODAL ──────────────────────────────────
-function openModal(id) {
-  document.getElementById(id).classList.add('show');
-}
-function closeModal(id) {
-  document.getElementById(id).classList.remove('show');
-}
-document.querySelectorAll('.modal-overlay').forEach(m => {
-  m.addEventListener('click', e => { if (e.target === m) m.classList.remove('show'); });
-});
-
-// ─── EXAM TABS ──────────────────────────────
-function switchExamView(label, btn) {
-  document.querySelectorAll('.view-tab').forEach(t => t.classList.remove('active'));
-  btn.classList.add('active');
-  showToast(`📋 عرض ${label}`);
-}
-
-// ─── COMPENSATION ───────────────────────────
-const allSlots = ['08:00 - 09:30','09:30 - 11:00','11:15 - 12:45','13:30 - 15:00','15:00 - 16:30'];
-const occupiedSlots = {
-  'مدرج أ': ['08:00 - 09:30','13:30 - 15:00'],
-  'مدرج ب': ['11:15 - 12:45'],
-  'مدرج ج': ['09:30 - 11:00','13:30 - 15:00'],
-  'القاعة 01': ['08:00 - 09:30','09:30 - 11:00'],
-};
-
-function findFreeSlots() {
-  const room = document.getElementById('compRoomSelect').value;
-  const occ = occupiedSlots[room] || [];
-  const free = allSlots.filter(s => !occ.includes(s));
-  document.getElementById('compRoomName').textContent = room;
-  const slotsDiv = document.getElementById('compSlots');
-  slotsDiv.innerHTML = free.length
-    ? free.map(s => `<span class="time-slot-tag">⏰ ${s}</span>`).join('')
-    : '<p style="color:var(--danger);font-size:12px;">⛔ لا توجد أوقات فراغ</p>';
-  document.getElementById('compResult').style.display = 'block';
-  document.getElementById('compEmpty').style.display = 'none';
-}
-
-// ─── ARCHIVE ────────────────────────────────
-function archiveCurrentYear() {
-  const year = document.getElementById('globalYear').value;
-  const card = document.createElement('div');
-  card.className = 'archive-card';
-  const now = new Date().toLocaleDateString('ar-DZ');
-  card.innerHTML = `<div class="archive-info">
-    <h4>📅 السنة الدراسية ${year}</h4>
-    <p>تمت الأرشفة في: ${now} · 0 حصة · 5 أقسام · 24 أستاذ</p>
-  </div>
-  <div class="archive-actions">
-    <button class="btn btn-primary btn-sm" onclick="exportData('JSON')">📄 JSON</button>
-    <button class="btn btn-navy btn-sm" onclick="exportData('Excel')">📊 Excel</button>
-    <button class="btn btn-gold btn-sm">🔄 استعادة</button>
-  </div>`;
-  document.getElementById('archiveList').prepend(card);
-  showToast(`📦 تمت أرشفة السنة الدراسية ${year}`);
-}
-
-function exportData(label) {
-  showToast(`📤 جارٍ تصدير ${label}...`);
-}
-
-// ─── TOAST ──────────────────────────────────
-let toastTimer;
-function showToast(msg) {
-  const t = document.getElementById('toast');
-  t.textContent = msg;
-  t.classList.add('show');
-  clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => t.classList.remove('show'), 2800);
-}
-
-// ─── ROOMS GRID ─────────────────────────────
-function buildRoomsGrid() {
-  const grid = document.getElementById('roomsGrid');
-  const occupied = [3,7,12,15,20,22,30,35,40,43,48,2,9,18,28];
-  for (let i = 1; i <= 48; i++) {
-    const div = document.createElement('div');
-    const isOcc = occupied.includes(i);
-    div.className = `room-card ${isOcc ? 'occupied' : 'free'}`;
-    div.innerHTML = `قاعة ${i}<div class="room-status">${isOcc ? '🔴 مشغولة' : '🟢 متاحة'}</div>`;
-    grid.appendChild(div);
-  }
-}
-
-// ─── INIT ────────────────────────────────────
-buildRoomsGrid();
+// ── INIT ──────────────────────────────────────────
+load();
+renderAll();
 </script>
 </body>
 </html>
