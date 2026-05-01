@@ -511,8 +511,12 @@ table.tt td.ec:hover::after{color:var(--teal);}
   position:relative;cursor:default;
 }
 .type-card:hover{transform:translateY(-3px);box-shadow:0 8px 24px rgba(0,0,0,.12);}
-.type-card .tc-icon{font-size:30px;margin-bottom:8px;display:block;}
-.type-card .tc-label{font-size:13.5px;font-weight:800;font-family:'Tajawal',sans-serif;line-height:1.3;}
+.type-card .tc-icon{display:none;}
+.type-card .tc-label{font-size:14px;font-weight:800;font-family:'Tajawal',sans-serif;line-height:1.4;}
+.type-card .tc-code{font-size:11px;font-weight:700;opacity:.75;margin-top:5px;display:block;}
+/* بطاقة الحصة — نصوص أكبر */
+.sc .ss{font-weight:800;font-size:12.5px;}
+.sc .si{font-size:11px;opacity:.9;margin-top:2px;}
 .type-card .tc-code{font-size:10px;font-weight:600;opacity:.7;margin-top:4px;display:block;}
 .type-card .tc-actions{
   position:absolute;top:8px;left:8px;display:flex;gap:4px;
@@ -2975,9 +2979,9 @@ function renderTT(){
           ><button class="sceb" onclick="event.stopPropagation();openEditSess('${s.id}')">✏️</button>
           <button class="scdb" onclick="event.stopPropagation();delSess('${s.id}')">✕</button>
           <div class="ss">${s.subj}</div>
-          <div class="si">👨‍🏫 ${s.tch}</div>
-          <div class="si">🏫 ${s.rm}</div>
-          <div class="si" style="font-size:9px;opacity:.65;">${TL[s.type]||''}</div>
+          <div class="si">${s.tch}</div>
+          <div class="si">${s.rm}</div>
+          <div class="si" style="font-size:10px;opacity:.65;">${TL[s.type]||''}</div>
           </div>`;
         });
         tbl+='</td>';
@@ -4018,7 +4022,7 @@ function syncSessTypeButtons(){
   container.innerHTML=S.sessionTypes.map(t=>`
     <button class="sess-type-btn${t.id===cur?' active':''}"
       data-type="${t.id}" onclick="setSessType('${t.id}',this)">
-      ${t.icon||'📌'} ${t.label}${t.code?' ('+t.code+')':''}
+      ${t.label}${t.code?' ('+t.code+')':''}
     </button>`).join('');
 }
 
