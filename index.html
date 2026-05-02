@@ -1471,7 +1471,10 @@ table.occ-matrix td.cell-occ:hover{background:#fee2e2;filter:brightness(.97);}
             <option value="dean">عميد</option>
             <option value="vdean">نائب عميد</option>
             <option value="hod">رئيس قسم</option>
+            <option value="vhod">نائب رئيس قسم</option>
             <option value="hspec">مسؤول تخصص</option>
+            <option value="hspec_m">مسؤول تخصص ماستر</option>
+            <option value="hspec_l">مسؤول تخصص ليسانس</option>
             <option value="hlab">مدير مخبر</option>
           </select>
         </div>
@@ -2001,10 +2004,154 @@ const RANKS={
   sha:{label:'أستاذ مشارك',cls:'rank-sha',short:'مشارك'}
 };
 const KIND_LABELS={permanent:'أستاذ دائم',temporary:'أستاذ مؤقت',associate:'أستاذ مشارك'};
-const POST_LABELS={dean:'عميد',vdean:'نائب عميد',hod:'رئيس قسم',hspec:'مسؤول تخصص',hlab:'مدير مخبر'};
-const POST_COLORS={dean:'background:#fef3cd;color:#92400e;',vdean:'background:#dbeafe;color:#1e40af;',hod:'background:#dcfce7;color:#166534;',hspec:'background:#ede9fe;color:#4c1d95;',hlab:'background:#fee2e2;color:#991b1b;'};
+const POST_LABELS={dean:'عميد',vdean:'نائب عميد',hod:'رئيس قسم',vhod:'نائب رئيس قسم',hspec:'مسؤول تخصص',hspec_m:'مسؤول تخصص ماستر',hspec_l:'مسؤول تخصص ليسانس',hlab:'مدير مخبر'};
+const POST_COLORS={dean:'background:#fef3cd;color:#92400e;',vdean:'background:#dbeafe;color:#1e40af;',hod:'background:#dcfce7;color:#166534;',vhod:'background:#d1fae5;color:#065f46;',hspec:'background:#ede9fe;color:#4c1d95;',hspec_m:'background:#f3e8ff;color:#6b21a8;',hspec_l:'background:#e8f4fd;color:#1a6fa8;',hlab:'background:#fee2e2;color:#991b1b;'};
 
 // -- DEFAULT STATE ---------------------------------
+/* -- DEFAULT TEACHERS (134 أستاذ من ملف الكلية 2025) -- */
+function DEFAULT_TEACHERS(){
+  const p='permanent';
+  return [
+    // ===== قسم السنة أولى جذع مشترك =====
+    {name:'لخضر عبيرات',rank:'prof',dept:'قسم السنة أولى جذع مشترك',kind:p,post:'hod'},
+    {name:'ابرهيم بورنان',rank:'prof',dept:'قسم السنة أولى جذع مشترك',kind:p,post:''},
+    {name:'ميلود زيد الخير',rank:'prof',dept:'قسم السنة أولى جذع مشترك',kind:p,post:''},
+    {name:'عبد القادر الشارف',rank:'prof',dept:'قسم السنة أولى جذع مشترك',kind:p,post:''},
+    {name:'عائشة صفراني',rank:'prof',dept:'قسم السنة أولى جذع مشترك',kind:p,post:''},
+    {name:'بشير عبد العالي',rank:'prof',dept:'قسم السنة أولى جذع مشترك',kind:p,post:''},
+    {name:'الأميـن حلمـوس',rank:'prof',dept:'قسم السنة أولى جذع مشترك',kind:p,post:''},
+    {name:'شلوفي عمير',rank:'prof',dept:'قسم السنة أولى جذع مشترك',kind:p,post:''},
+    {name:'جدي العربي',rank:'prof',dept:'قسم السنة أولى جذع مشترك',kind:p,post:''},
+    {name:'عبد الحفيظي عيسى',rank:'mca',dept:'قسم السنة أولى جذع مشترك',kind:p,post:''},
+    {name:'زينب العقون',rank:'mcb',dept:'قسم السنة أولى جذع مشترك',kind:p,post:''},
+    {name:'شرماط طاهر',rank:'mca',dept:'قسم السنة أولى جذع مشترك',kind:p,post:''},
+    {name:'بعداش الطاهر',rank:'prof',dept:'قسم السنة أولى جذع مشترك',kind:p,post:''},
+    {name:'العيد رزق الله',rank:'mca',dept:'قسم السنة أولى جذع مشترك',kind:p,post:''},
+    {name:'بداوي محمد',rank:'prof',dept:'قسم السنة أولى جذع مشترك',kind:p,post:''},
+    {name:'لبرق محمد رياض',rank:'mca',dept:'قسم السنة أولى جذع مشترك',kind:p,post:''},
+    {name:'عامري محمد الطاهر',rank:'mca',dept:'قسم السنة أولى جذع مشترك',kind:p,post:''},
+    {name:'مراد بديرينة',rank:'maa',dept:'قسم السنة أولى جذع مشترك',kind:p,post:''},
+    {name:'هواري سليمة',rank:'maa',dept:'قسم السنة أولى جذع مشترك',kind:p,post:''},
+    {name:'طالب حسينة',rank:'mcb',dept:'قسم السنة أولى جذع مشترك',kind:p,post:''},
+    {name:'فغول جنات',rank:'mcb',dept:'قسم السنة أولى جذع مشترك',kind:p,post:''},
+    {name:'بورزق أسامة',rank:'mcb',dept:'قسم السنة أولى جذع مشترك',kind:p,post:''},
+    {name:'حجاج شافية',rank:'mcb',dept:'قسم السنة أولى جذع مشترك',kind:p,post:''},
+    {name:'لطرش مباركة امة الله',rank:'mcb',dept:'قسم السنة أولى جذع مشترك',kind:p,post:''},
+    {name:'قواسمي رشيدة',rank:'mcb',dept:'قسم السنة أولى جذع مشترك',kind:p,post:''},
+    {name:'صالح اعمر',rank:'mcb',dept:'قسم السنة أولى جذع مشترك',kind:p,post:''},
+    {name:'عاشور عادل',rank:'prof',dept:'قسم السنة أولى جذع مشترك',kind:p,post:''},
+    {name:'جخدم موسى',rank:'mca',dept:'قسم السنة أولى جذع مشترك',kind:p,post:''},
+    {name:'بن عمومة همامة',rank:'mab',dept:'قسم السنة أولى جذع مشترك',kind:p,post:''},
+    // ===== قسم علوم التسيير =====
+    {name:'بوخلخال خالد سيف الاسلام',rank:'mcb',dept:'قسم علوم التسيير',kind:p,post:'hod'},
+    {name:'محمد قويدري',rank:'prof',dept:'قسم علوم التسيير',kind:p,post:'hlab'},
+    {name:'مقدم عبيرات',rank:'prof',dept:'قسم علوم التسيير',kind:p,post:''},
+    {name:'قويدر عياش',rank:'prof',dept:'قسم علوم التسيير',kind:p,post:''},
+    {name:'عائشة شتاتحة',rank:'prof',dept:'قسم علوم التسيير',kind:p,post:''},
+    {name:'معمر قربة',rank:'prof',dept:'قسم علوم التسيير',kind:p,post:'hlab'},
+    {name:'عبد القادر بلخضر',rank:'prof',dept:'قسم علوم التسيير',kind:p,post:''},
+    {name:'بلقاسم حمدي',rank:'prof',dept:'قسم علوم التسيير',kind:p,post:''},
+    {name:'خنيش يوسف',rank:'prof',dept:'قسم علوم التسيير',kind:p,post:''},
+    {name:'عبد القادر بن برطال',rank:'prof',dept:'قسم علوم التسيير',kind:p,post:'hspec_m'},
+    {name:'لعجالي عادل',rank:'prof',dept:'قسم علوم التسيير',kind:p,post:''},
+    {name:'نعيمة عبدي',rank:'prof',dept:'قسم علوم التسيير',kind:p,post:''},
+    {name:'أحميدة فرحات',rank:'prof',dept:'قسم علوم التسيير',kind:p,post:''},
+    {name:'نعيجات عبد الحميد',rank:'prof',dept:'قسم علوم التسيير',kind:p,post:'hspec_m'},
+    {name:'سيد حياة',rank:'prof',dept:'قسم علوم التسيير',kind:p,post:''},
+    {name:'شتيح عبد القادر',rank:'prof',dept:'قسم علوم التسيير',kind:p,post:''},
+    {name:'آمال مطابس',rank:'prof',dept:'قسم علوم التسيير',kind:p,post:''},
+    {name:'عبد القادر قرادي',rank:'mca',dept:'قسم علوم التسيير',kind:p,post:''},
+    {name:'أمينة ريان',rank:'prof',dept:'قسم علوم التسيير',kind:p,post:''},
+    {name:'هناء نورالدين',rank:'mcb',dept:'قسم علوم التسيير',kind:p,post:'hspec_l'},
+    {name:'بعاج الهاشمي',rank:'mca',dept:'قسم علوم التسيير',kind:p,post:'hspec_m'},
+    {name:'جوبر محمد',rank:'mca',dept:'قسم علوم التسيير',kind:p,post:''},
+    {name:'عبد الله ابرهيمي',rank:'maa',dept:'قسم علوم التسيير',kind:p,post:''},
+    {name:'فضيلة حويو',rank:'maa',dept:'قسم علوم التسيير',kind:p,post:''},
+    {name:'يوسف بوخلخال',rank:'mcb',dept:'قسم علوم التسيير',kind:p,post:''},
+    {name:'بوعيسى كريم',rank:'mcb',dept:'قسم علوم التسيير',kind:p,post:''},
+    {name:'رحماني يوسف زكرياء',rank:'mca',dept:'قسم علوم التسيير',kind:p,post:''},
+    {name:'بن الشريط بسمة',rank:'mcb',dept:'قسم علوم التسيير',kind:p,post:''},
+    {name:'عماري حسين',rank:'mcb',dept:'قسم علوم التسيير',kind:p,post:''},
+    {name:'رقيق حليمة',rank:'mcb',dept:'قسم علوم التسيير',kind:p,post:''},
+    {name:'قندوز خالد بن الوليد',rank:'mcb',dept:'قسم علوم التسيير',kind:p,post:''},
+    {name:'النعاس سعيد علي',rank:'mcb',dept:'قسم علوم التسيير',kind:p,post:''},
+    {name:'طليبي خيرة',rank:'mcb',dept:'قسم علوم التسيير',kind:p,post:''},
+    // ===== قسم العلوم الاقتصادية =====
+    {name:'بن تربح تربح',rank:'prof',dept:'قسم العلوم الاقتصادية',kind:p,post:'hod'},
+    {name:'محمد فرحي',rank:'prof',dept:'قسم العلوم الاقتصادية',kind:p,post:''},
+    {name:'عبد القادر حفاي',rank:'prof',dept:'قسم العلوم الاقتصادية',kind:p,post:''},
+    {name:'حمزة طيبي',rank:'prof',dept:'قسم العلوم الاقتصادية',kind:p,post:''},
+    {name:'صفية علاوي',rank:'prof',dept:'قسم العلوم الاقتصادية',kind:p,post:''},
+    {name:'عبد الهادي مسعودي',rank:'prof',dept:'قسم العلوم الاقتصادية',kind:p,post:'vdean'},
+    {name:'الطيب بن عون',rank:'prof',dept:'قسم العلوم الاقتصادية',kind:p,post:''},
+    {name:'هيشر أحمد التجاني',rank:'prof',dept:'قسم العلوم الاقتصادية',kind:p,post:''},
+    {name:'رخرور يوسف',rank:'prof',dept:'قسم العلوم الاقتصادية',kind:p,post:''},
+    {name:'احمد بوجلال',rank:'prof',dept:'قسم العلوم الاقتصادية',kind:p,post:''},
+    {name:'محمد بن جاب الله',rank:'prof',dept:'قسم العلوم الاقتصادية',kind:p,post:''},
+    {name:'محمد دوة',rank:'prof',dept:'قسم العلوم الاقتصادية',kind:p,post:''},
+    {name:'مسعود بن مويزة',rank:'prof',dept:'قسم العلوم الاقتصادية',kind:p,post:'vdean'},
+    {name:'رايس مراد',rank:'prof',dept:'قسم العلوم الاقتصادية',kind:p,post:''},
+    {name:'عائشة بن عطالله',rank:'prof',dept:'قسم العلوم الاقتصادية',kind:p,post:''},
+    {name:'ابوبكر نبق',rank:'prof',dept:'قسم العلوم الاقتصادية',kind:p,post:''},
+    {name:'محمد بوهالي',rank:'prof',dept:'قسم العلوم الاقتصادية',kind:p,post:''},
+    {name:'بن دحان الياس لزهر',rank:'mca',dept:'قسم العلوم الاقتصادية',kind:p,post:''},
+    {name:'عمر متيجي',rank:'mca',dept:'قسم العلوم الاقتصادية',kind:p,post:''},
+    {name:'مختار رنان',rank:'mca',dept:'قسم العلوم الاقتصادية',kind:p,post:''},
+    {name:'قميتي عفاف',rank:'mca',dept:'قسم العلوم الاقتصادية',kind:p,post:''},
+    {name:'خيرة بلقاسم فيلالي',rank:'maa',dept:'قسم العلوم الاقتصادية',kind:p,post:''},
+    {name:'كيرد ربيعة',rank:'mcb',dept:'قسم العلوم الاقتصادية',kind:p,post:''},
+    {name:'جوادي محمد الصديق',rank:'mcb',dept:'قسم العلوم الاقتصادية',kind:p,post:''},
+    {name:'محجوبي حمزة',rank:'mca',dept:'قسم العلوم الاقتصادية',kind:p,post:'vhod'},
+    {name:'مخنث فطوم',rank:'mcb',dept:'قسم العلوم الاقتصادية',kind:p,post:''},
+    // ===== قسم العلوم التجارية =====
+    {name:'عبد الجبار مختاري',rank:'prof',dept:'قسم العلوم التجارية',kind:p,post:'hod'},
+    {name:'جلولي قشوة',rank:'prof',dept:'قسم العلوم التجارية',kind:p,post:''},
+    {name:'قرش عبد القادر',rank:'prof',dept:'قسم العلوم التجارية',kind:p,post:''},
+    {name:'سعد أولاد العيد',rank:'prof',dept:'قسم العلوم التجارية',kind:p,post:''},
+    {name:'عبد العليم تاوتي',rank:'prof',dept:'قسم العلوم التجارية',kind:p,post:''},
+    {name:'صولي علي',rank:'prof',dept:'قسم العلوم التجارية',kind:p,post:''},
+    {name:'احمد بن مويزة',rank:'prof',dept:'قسم العلوم التجارية',kind:p,post:''},
+    {name:'مصطفى ساحي',rank:'prof',dept:'قسم العلوم التجارية',kind:p,post:''},
+    {name:'إبراهيم عبد الحفيظي',rank:'prof',dept:'قسم العلوم التجارية',kind:p,post:''},
+    {name:'العيد خيراني',rank:'prof',dept:'قسم العلوم التجارية',kind:p,post:''},
+    {name:'خديجة قورين',rank:'mca',dept:'قسم العلوم التجارية',kind:p,post:''},
+    {name:'الرق زينب',rank:'prof',dept:'قسم العلوم التجارية',kind:p,post:''},
+    {name:'مراد مصطفى',rank:'mca',dept:'قسم العلوم التجارية',kind:p,post:''},
+    {name:'آسيا فريحة قلومة',rank:'mcb',dept:'قسم العلوم التجارية',kind:p,post:''},
+    {name:'بختة فرحات',rank:'maa',dept:'قسم العلوم التجارية',kind:p,post:''},
+    {name:'العيش احمد',rank:'mcb',dept:'قسم العلوم التجارية',kind:p,post:''},
+    // ===== قسم علوم المالية والمحاسبة =====
+    {name:'الطاهر مخلوفي',rank:'prof',dept:'قسم علوم المالية والمحاسبة',kind:p,post:'hod'},
+    {name:'لعلا رمضاني',rank:'prof',dept:'قسم علوم المالية والمحاسبة',kind:p,post:''},
+    {name:'علال بن ثابت',rank:'prof',dept:'قسم علوم المالية والمحاسبة',kind:p,post:''},
+    {name:'احمد بساس',rank:'prof',dept:'قسم علوم المالية والمحاسبة',kind:p,post:''},
+    {name:'مصطفى بورنان',rank:'prof',dept:'قسم علوم المالية والمحاسبة',kind:p,post:''},
+    {name:'أسماء الزاوي',rank:'prof',dept:'قسم علوم المالية والمحاسبة',kind:p,post:''},
+    {name:'سارة حدة بودربالة',rank:'prof',dept:'قسم علوم المالية والمحاسبة',kind:p,post:''},
+    {name:'فاطمة الزهراء بوداود',rank:'prof',dept:'قسم علوم المالية والمحاسبة',kind:p,post:''},
+    {name:'محمد لمين حساب',rank:'prof',dept:'قسم علوم المالية والمحاسبة',kind:p,post:''},
+    {name:'احمد نقاز',rank:'prof',dept:'قسم علوم المالية والمحاسبة',kind:p,post:''},
+    {name:'بن الطيرش عطاءالله',rank:'prof',dept:'قسم علوم المالية والمحاسبة',kind:p,post:''},
+    {name:'جقيدل يحي',rank:'prof',dept:'قسم علوم المالية والمحاسبة',kind:p,post:''},
+    {name:'الطاهر جعمات',rank:'prof',dept:'قسم علوم المالية والمحاسبة',kind:p,post:'dean'},
+    {name:'مخلوفي عزوز',rank:'prof',dept:'قسم علوم المالية والمحاسبة',kind:p,post:''},
+    {name:'سعيداني محمد السعيد',rank:'prof',dept:'قسم علوم المالية والمحاسبة',kind:p,post:''},
+    {name:'قويدر نبق',rank:'prof',dept:'قسم علوم المالية والمحاسبة',kind:p,post:''},
+    {name:'مدوخ ماجدة',rank:'prof',dept:'قسم علوم المالية والمحاسبة',kind:p,post:''},
+    {name:'سميرة مشراوي',rank:'prof',dept:'قسم علوم المالية والمحاسبة',kind:p,post:''},
+    {name:'خيرة بوهالي',rank:'mca',dept:'قسم علوم المالية والمحاسبة',kind:p,post:''},
+    {name:'طعابة سمية',rank:'mcb',dept:'قسم علوم المالية والمحاسبة',kind:p,post:''},
+    {name:'فاطمة بوهالي',rank:'mcb',dept:'قسم علوم المالية والمحاسبة',kind:p,post:''},
+    {name:'سويح جمال',rank:'mca',dept:'قسم علوم المالية والمحاسبة',kind:p,post:''},
+    {name:'احمد قربة',rank:'maa',dept:'قسم علوم المالية والمحاسبة',kind:p,post:''},
+    {name:'عامر إبراهيم',rank:'maa',dept:'قسم علوم المالية والمحاسبة',kind:p,post:''},
+    {name:'يونس ريمة',rank:'mcb',dept:'قسم علوم المالية والمحاسبة',kind:p,post:''},
+    {name:'حمودة ام الخير',rank:'mcb',dept:'قسم علوم المالية والمحاسبة',kind:p,post:''},
+    {name:'محراز شعبان',rank:'mcb',dept:'قسم علوم المالية والمحاسبة',kind:p,post:''},
+    {name:'تيهامي وداد',rank:'mcb',dept:'قسم علوم المالية والمحاسبة',kind:p,post:''},
+  ];
+}
+
 function defState(){
   const rooms=[];
   for(let i=1;i<=48;i++) rooms.push('القاعة '+i);
@@ -2027,12 +2174,7 @@ function defState(){
     activeTT:null,
     registeredTTs:[],
     settings:{ministry:'',university:'جامعة عمار ثليجي الأغواط',faculty:'كلية العلوم الاقتصادية والتجارية وعلوم التسيير',logo:''},
-    teachers:[
-      {name:'أ. محمد بن عمر',kind:'permanent'},
-      {name:'د. فاطمة زهراء',kind:'permanent'},
-      {name:'أ. علي حسين',kind:'permanent'},
-      {name:'د. يوسف قاسمي',kind:'permanent'}
-    ],rooms,sessions:[],exams:[],archive:[],
+    teachers:DEFAULT_TEACHERS(),rooms,sessions:[],exams:[],archive:[],
     ay:'2025/2026',al:'سنة أولى ليسانس',ad:'قسم السنة أولى جذع مشترك',round:1
   };
 }
@@ -2041,6 +2183,10 @@ let S={};
 function load(){
   try{const d=localStorage.getItem(SK);S=d?JSON.parse(d):defState();}catch(e){S=defState();}
   if(!S.subjects||!S.subjects.length) S.subjects=DEFAULT_SUBJECTS();
+  // دمج الأساتذة الافتراضيين مع الموجودين (إضافة الجدد بدون حذف المدخلين يدوياً)
+  DEFAULT_TEACHERS().forEach(def=>{
+    if(!S.teachers.find(t=>t.name===def.name))S.teachers.push(def);
+  });
   if(!S.periods||!S.periods.length) S.periods=['السداسي الأول','السداسي الثاني'];
   if(!S.groups||!S.groups.length)   S.groups=['الفوج1','الفوج2','الفوج3','الفوج4','الفوج5','الفوج6','الفوج7','الفوج8'];
   if(!S.sections||!S.sections.length)S.sections=['الفصيلة1','الفصيلة2','الفصيلة3'];
