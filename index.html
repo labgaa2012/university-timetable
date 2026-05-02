@@ -1464,6 +1464,17 @@ table.occ-matrix td.cell-occ:hover{background:#fee2e2;filter:brightness(.97);}
             <option value="associate">أستاذ مشارك</option>
           </select>
         </div>
+        <div class="fg">
+          <label class="fl">المنصب</label>
+          <select class="fs" id="tchPost">
+            <option value="">-- بدون منصب --</option>
+            <option value="dean">عميد</option>
+            <option value="vdean">نائب عميد</option>
+            <option value="hod">رئيس قسم</option>
+            <option value="hspec">مسؤول تخصص</option>
+            <option value="hlab">مدير مخبر</option>
+          </select>
+        </div>
         <button class="btn bg" onclick="addTeacher()" style="white-space:nowrap;align-self:flex-end;">➕ إضافة</button>
       </div>
 
@@ -1990,6 +2001,8 @@ const RANKS={
   sha:{label:'أستاذ مشارك',cls:'rank-sha',short:'مشارك'}
 };
 const KIND_LABELS={permanent:'أستاذ دائم',temporary:'أستاذ مؤقت',associate:'أستاذ مشارك'};
+const POST_LABELS={dean:'عميد',vdean:'نائب عميد',hod:'رئيس قسم',hspec:'مسؤول تخصص',hlab:'مدير مخبر'};
+const POST_COLORS={dean:'background:#fef3cd;color:#92400e;',vdean:'background:#dbeafe;color:#1e40af;',hod:'background:#dcfce7;color:#166534;',hspec:'background:#ede9fe;color:#4c1d95;',hlab:'background:#fee2e2;color:#991b1b;'};
 
 // -- DEFAULT STATE ---------------------------------
 function defState(){
@@ -2053,7 +2066,7 @@ function load(){
     save();
   }
   S.teachers=S.teachers.map(t=>({
-    name:t.name||'',kind:t.kind||'permanent',rank:t.rank||'mca',dept:t.dept||''
+    name:t.name||'',kind:t.kind||'permanent',rank:t.rank||'mca',dept:t.dept||'',post:t.post||''
   }));
 }
 function save(){try{localStorage.setItem(SK,JSON.stringify(S));}catch(e){}}
@@ -2635,6 +2648,8 @@ function renderTchGrid(){
         :t.kind==='associate'?'<span class="kb-a">مشارك</span>'
         :'<span class="kb-t">مؤقت</span>';
       const sc=S.sessions.filter(s=>s.tch===t.name&&s.y===S.ay).length;
+      const postBadge=t.post&&POST_LABELS[t.post]
+        ?`<span class="rank-badge" style="${POST_COLORS[t.post]||''}">${POST_LABELS[t.post]}</span>`:'';
       return `<div class="mgmt-card">
         <div class="mc-left" style="flex:1;min-width:0;">
           <div class="mc-avatar" style="font-size:14px;">👨‍🏫</div>
@@ -2642,7 +2657,7 @@ function renderTchGrid(){
             <div class="mc-name">${t.name}</div>
             <div class="mc-sub" style="display:flex;gap:5px;flex-wrap:wrap;margin-top:4px;">
               <span class="rank-badge ${rk.cls}">${rk.label}</span>
-              ${kb}
+              ${kb}${postBadge}
             </div>
             <div style="font-size:10px;color:var(--gray);margin-top:3px;">
               ${t.dept?'🏛 '+t.dept+' · ':''}${sc} حصة هذا الفصل
@@ -2682,7 +2697,8 @@ function addTeacher(){
   const rank=document.getElementById('tchRank')?.value||'mca';
   const dept=document.getElementById('tchDept')?.value||'';
   const kind=document.getElementById('tchKind')?.value||'permanent';
-  S.teachers.push({name:n,rank,dept,kind});
+  const post=document.getElementById('tchPost')?.value||'';
+  S.teachers.push({name:n,rank,dept,kind,post});
   document.getElementById('tchIn').value='';
   save();renderTchGrid();toast('✅ أضيف: '+n);
 }
@@ -2692,18 +2708,19 @@ function rmTch(i){
 }
 function expTeachersExcel(){
   const wb=XLSX.utils.book_new();
-  const data=[['الاسم واللقب','الرتبة','القسم','الحالة','عدد الحصص ('+S.ay+')']];
+  const data=[['الاسم واللقب','الرتبة','القسم','الحالة','المنصب','عدد الحصص ('+S.ay+')']];
   S.teachers.forEach(t=>{
     data.push([
       t.name,
       RANKS[t.rank]?.label||'-',
       t.dept||'-',
       KIND_LABELS[t.kind]||'-',
+      POST_LABELS[t.post]||'-',
       S.sessions.filter(s=>s.tch===t.name&&s.y===S.ay).length
     ]);
   });
   const ws=XLSX.utils.aoa_to_sheet(data);
-  ws['!cols']=[{wch:28},{wch:22},{wch:26},{wch:14},{wch:14}];
+  ws['!cols']=[{wch:28},{wch:22},{wch:26},{wch:14},{wch:14},{wch:14}];
   XLSX.utils.book_append_sheet(wb,ws,'الأساتذة');
   XLSX.writeFile(wb,'teachers-'+S.ay.replace('/','_')+'.xlsx');
   toast('📊 تم تصدير قائمة الأساتذة');
