@@ -796,6 +796,16 @@ table.occ-matrix td.cell-occ:hover{background:#fee2e2;filter:brightness(.97);}
 <aside id="sidebar">
   <div class="sb-hdr"><h2>⚙️ لوحة الإدارة</h2></div>
 
+  <!-- إعدادات عامة -->
+  <button class="sb-nav-btn" id="snb-settings" onclick="showMgmtPg('settings')"
+    style="background:linear-gradient(90deg,rgba(201,168,76,.12),transparent);border-bottom:2px solid var(--gold);">
+    <div class="snb-left">
+      <div class="ai" style="background:linear-gradient(135deg,var(--gold),var(--gold-light));">⚙️</div>
+      <span style="color:var(--navy);font-weight:800;">إعدادات عامة</span>
+    </div>
+    <span class="snb-arrow" style="color:var(--gold);">←</span>
+  </button>
+
   <!-- NAV BUTTON: السنة الدراسية -->
   <button class="sb-nav-btn" id="snb-years" onclick="showMgmtPg('years')">
     <div class="snb-left">
@@ -948,6 +958,70 @@ table.occ-matrix td.cell-occ:hover{background:#fee2e2;filter:brightness(.97);}
     <div class="stat s2"><div class="sval" id="st2">0</div><div class="slbl">الأساتذة</div></div>
     <div class="stat s3"><div class="sval" id="st3">0</div><div class="slbl">الحصص المجدولة</div></div>
     <div class="stat s4"><div class="sval" id="st4">0</div><div class="slbl">الامتحانات</div></div>
+  </div>
+
+  <!-- ══ SETTINGS PAGE ══ -->
+  <div class="pg" id="pg-settings">
+    <div class="mc" style="max-width:560px;margin:0 auto;">
+      <div class="mgmt-header">
+        <div class="mct"><div class="mcti">⚙️</div>الإعدادات العامة</div>
+        <button class="btn bp bsm" onclick="showPg('timetable',document.querySelector('.nav-tab'))">← العودة</button>
+      </div>
+
+      <!-- شعار الجامعة -->
+      <div style="display:flex;flex-direction:column;align-items:center;margin-bottom:24px;">
+        <div id="logo-preview" style="width:76px;height:76px;border-radius:12px;
+          border:2px dashed #d0dae8;background:#f8fafc;
+          display:flex;align-items:center;justify-content:center;
+          font-size:28px;margin-bottom:10px;overflow:hidden;cursor:pointer;"
+          onclick="document.getElementById('logo-file').click()" title="انقر لاختيار شعار">
+          🎓
+        </div>
+        <input type="file" id="logo-file" accept="image/*" style="display:none" onchange="onLogoChange(this)">
+        <button class="btn" style="background:var(--gray-light);color:var(--text-mid);font-size:11.5px;"
+          onclick="document.getElementById('logo-file').click()">
+          📂 استعراض — اختر شعار الجامعة
+        </button>
+        <div style="font-size:10.5px;color:var(--gray);margin-top:5px;">
+          يقبل: JPG، PNG، SVG، WEBP — يُحوَّل تلقائياً لـ 75×75 بكسل
+        </div>
+      </div>
+
+      <!-- الحقول النصية -->
+      <div class="fg" style="margin-bottom:14px;">
+        <label class="fl" style="font-size:12px;margin-bottom:6px;">اسم الوزارة</label>
+        <input class="fi" id="set-ministry" placeholder="مثال: وزارة التعليم العالي والبحث العلمي"
+          style="font-size:13px;">
+      </div>
+      <div class="fg" style="margin-bottom:14px;">
+        <label class="fl" style="font-size:12px;margin-bottom:6px;">اسم الجامعة</label>
+        <input class="fi" id="set-university" placeholder="مثال: جامعة عمار ثليجي الأغواط"
+          style="font-size:13px;">
+      </div>
+      <div class="fg" style="margin-bottom:24px;">
+        <label class="fl" style="font-size:12px;margin-bottom:6px;">اسم الكلية</label>
+        <input class="fi" id="set-faculty" placeholder="مثال: كلية العلوم الاقتصادية والتجارية وعلوم التسيير"
+          style="font-size:13px;">
+      </div>
+
+      <!-- زر الحفظ -->
+      <button class="btn bg" onclick="saveSettings()" style="width:100%;justify-content:center;padding:12px;font-size:14px;">
+        💾 حفظ الإعدادات
+      </button>
+
+      <!-- معاينة الترويسة -->
+      <div id="settings-preview" style="display:none;margin-top:20px;border:1.5px solid #e0e8f5;border-radius:10px;padding:14px;background:#fafbfd;">
+        <div style="font-size:10.5px;font-weight:700;color:var(--gray);margin-bottom:10px;">معاينة الترويسة:</div>
+        <div style="display:flex;align-items:center;gap:12px;direction:rtl;">
+          <img id="preview-logo-img" src="" style="width:56px;height:56px;border-radius:8px;object-fit:contain;" onerror="this.style.display='none'">
+          <div>
+            <div id="preview-ministry" style="font-size:10px;color:var(--gray);"></div>
+            <div id="preview-university" style="font-size:13px;font-weight:800;color:var(--navy);font-family:'Tajawal',sans-serif;"></div>
+            <div id="preview-faculty" style="font-size:11px;color:var(--text-mid);"></div>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 
   <!-- ══ YEARS MANAGEMENT PAGE ══ -->
@@ -1933,8 +2007,9 @@ function defState(){
       {id:'ttp',      label:'أعمال تطبيقية TP',          code:'TP',  icon:'🔬'},
       {id:'ttd-remote',label:'تقييم مستمر عن بعد',       code:'TD-E',icon:'💻'}
     ],
-    activeTT:null, // {period,lv,dp,spec,section,group}
-    registeredTTs:[], // [{period,lv,dp,spec,section,group}]
+    activeTT:null,
+    registeredTTs:[],
+    settings:{ministry:'',university:'جامعة عمار ثليجي الأغواط',faculty:'كلية العلوم الاقتصادية والتجارية وعلوم التسيير',logo:''},
     teachers:[
       {name:'أ. محمد بن عمر',kind:'permanent'},
       {name:'د. فاطمة زهراء',kind:'permanent'},
@@ -1953,6 +2028,7 @@ function load(){
   if(!S.groups||!S.groups.length)   S.groups=['الفوج1','الفوج2','الفوج3','الفوج4','الفوج5','الفوج6','الفوج7','الفوج8'];
   if(!S.sections||!S.sections.length)S.sections=['الفصيلة1','الفصيلة2','الفصيلة3'];
   if(!S.registeredTTs)               S.registeredTTs=[];
+  if(!S.settings)                    S.settings={ministry:'',university:'',faculty:'',logo:''};
   if(!S.sessionTypes||!S.sessionTypes.length) S.sessionTypes=[
     {id:'tlc',       label:'محاضرة',              code:'CM',  icon:'📖'},
     {id:'tlc-remote',label:'محاضرة عن بعد',       code:'CM-E',icon:'🖥️'},
@@ -2017,6 +2093,7 @@ function showMgmtPg(id){
   document.getElementById('pg-'+id).classList.add('active');
   const btn=document.getElementById('snb-'+id);
   if(btn)btn.classList.add('active-pg');
+  if(id==='settings')loadSettingsPage();
   if(id==='teachers')renderTchGrid();
   if(id==='rooms-manage')renderRmGrid();
   if(id==='specs')renderSpGrid();
@@ -4585,9 +4662,95 @@ function editGrp(i){
   S.groups[i]=n;save();renderGrpGrid();toast('✅ تم التعديل');
 }
 
+// -- SETTINGS --------------------------------------
+function loadSettingsPage(){
+  const st=S.settings||{};
+  const el=id=>document.getElementById(id);
+  if(el('set-ministry'))el('set-ministry').value=st.ministry||'';
+  if(el('set-university'))el('set-university').value=st.university||'';
+  if(el('set-faculty'))el('set-faculty').value=st.faculty||'';
+  // logo
+  const prev=el('logo-preview');
+  if(prev){
+    if(st.logo){
+      prev.innerHTML=`<img src="${st.logo}" style="width:100%;height:100%;object-fit:contain;border-radius:10px;">`;
+    } else {
+      prev.innerHTML='🎓';
+    }
+  }
+  updateSettingsPreview();
+}
+function onLogoChange(input){
+  const file=input.files[0];if(!file)return;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    const img=new Image();
+    img.onload=()=>{
+      // تحويل إلى 75×75 بكسل (≈2cm × 2cm على 96dpi)
+      const canvas=document.createElement('canvas');
+      canvas.width=75;canvas.height=75;
+      const ctx=canvas.getContext('2d');
+      ctx.drawImage(img,0,0,75,75);
+      const dataUrl=canvas.toDataURL('image/png');
+      // تحديث الـ preview
+      const prev=document.getElementById('logo-preview');
+      if(prev)prev.innerHTML=`<img src="${dataUrl}" style="width:100%;height:100%;object-fit:contain;border-radius:10px;">`;
+      // حفظ مؤقت في data attribute حتى يضغط حفظ
+      document.getElementById('logo-file').dataset.dataurl=dataUrl;
+      updateSettingsPreview();
+    };
+    img.src=e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+function updateSettingsPreview(){
+  const ministry=document.getElementById('set-ministry')?.value||'';
+  const university=document.getElementById('set-university')?.value||'';
+  const faculty=document.getElementById('set-faculty')?.value||'';
+  const logo=document.getElementById('logo-file')?.dataset?.dataurl||S.settings?.logo||'';
+  const pv=document.getElementById('settings-preview');
+  if(!pv)return;
+  if(ministry||university||faculty||logo){
+    pv.style.display='block';
+    const mi=document.getElementById('preview-ministry');if(mi)mi.textContent=ministry;
+    const un=document.getElementById('preview-university');if(un)un.textContent=university;
+    const fa=document.getElementById('preview-faculty');if(fa)fa.textContent=faculty;
+    const li=document.getElementById('preview-logo-img');
+    if(li){li.src=logo||'';li.style.display=logo?'':'none';}
+  } else {
+    pv.style.display='none';
+  }
+}
+function saveSettings(){
+  const logo=document.getElementById('logo-file')?.dataset?.dataurl||S.settings?.logo||'';
+  S.settings={
+    ministry:document.getElementById('set-ministry')?.value?.trim()||'',
+    university:document.getElementById('set-university')?.value?.trim()||'',
+    faculty:document.getElementById('set-faculty')?.value?.trim()||'',
+    logo
+  };
+  save();
+  // تحديث عنوان الصفحة والـ header
+  const h1=document.querySelector('header .logo h1');
+  if(h1&&S.settings.university)h1.textContent=S.settings.university;
+  const sub=document.querySelector('header .logo span');
+  if(sub&&S.settings.faculty)sub.textContent=S.settings.faculty;
+  toast('✅ تم حفظ الإعدادات');
+  updateSettingsPreview();
+}
+
 // -- INIT ------------------------------------------
 load();
 renderAll();
+// تطبيق الإعدادات المحفوظة
+if(S.settings?.university){
+  const h1=document.querySelector('header .logo h1');
+  if(h1)h1.textContent=S.settings.university;
+}
+if(S.settings?.faculty){
+  const sub=document.querySelector('header .logo span');
+  if(sub)sub.textContent=S.settings.faculty;
+}
 </script>
 </body>
 </html>
