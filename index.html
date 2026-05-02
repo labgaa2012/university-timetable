@@ -3173,6 +3173,18 @@ function renderTT(){
     }
   }
 
+  // -- تنظيف: حذف مفاتيح بـ group='' إذا كانت هناك مفاتيح بنفس spec/section وgroup محدد --
+  const keyArr=[...keySet];
+  keyArr.forEach(k=>{
+    const p=k.split('|||');
+    if(p[4]!=='')return; // مفتاح بفوج محدد → نبقيه
+    const prefix=p.slice(0,4).join('|||');
+    if(keyArr.some(k2=>{
+      const p2=k2.split('|||');
+      return p2.slice(0,4).join('|||')===prefix && p2[4]!=='';
+    })) keySet.delete(k); // نحذف المفتاح الفارغ
+  });
+
   // ترتيب المفاتيح: لكل spec → sections مرتبة → groups مرتبة
   const keys=[...keySet].map(k=>{
     const[lv,dp,spec,sec,grp]=k.split('|||');
