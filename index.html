@@ -1032,6 +1032,7 @@ table.occ-matrix td.cell-occ:hover{background:#fee2e2;filter:brightness(.97);}
           <select class="fs" id="tt-year-sel" onchange="onTTYearChange(this.value)"
             style="font-weight:700;min-width:120px;"></select>
           <button class="btn bg" onclick="openAddTimetable()">📋 إضافة جدول</button>
+          <button class="btn" onclick="openInstallTT()" style="background:#7c3aed;color:#fff;">⚡ تنصيب جداول</button>
           <button class="btn bn" onclick="expExcel()">📊 تصدير</button>
           <button class="btn bi" onclick="trigImp('imp-sessions')">📥 استيراد</button>
           <button class="btn btpl" onclick="dlTemplate('sessions')">📋 قالب</button>
@@ -1532,6 +1533,62 @@ table.occ-matrix td.cell-occ:hover{background:#fee2e2;filter:brightness(.97);}
 </div>
 
 <!-- MODALS -->
+<!-- MODAL: تنصيب جداول -->
+<div class="mo" id="mInstallTT">
+  <div class="mb" style="width:460px;">
+    <div class="mt" style="display:flex;align-items:center;gap:8px;">
+      <span style="font-size:20px;">⚡</span> تنصيب جداول
+    </div>
+    <div style="background:#f5f3ff;border:1.5px solid #c4b5fd;border-radius:9px;padding:10px 14px;font-size:11.5px;color:#4c1d95;margin-bottom:14px;">
+      ينشئ جداول فارغة جاهزة للبرمجة بعدد الفصائل والأفواج المحددة
+    </div>
+    <div class="frow2">
+      <div class="fg">
+        <label class="fl">الفترة</label>
+        <select class="fs" id="it-period">
+          <option value="">-- كل الفترات --</option>
+        </select>
+      </div>
+      <div class="fg">
+        <label class="fl">المستوى</label>
+        <select class="fs" id="it-lv" onchange="onItLvChange()"></select>
+      </div>
+    </div>
+    <div class="frow2">
+      <div class="fg">
+        <label class="fl">القسم</label>
+        <select class="fs" id="it-dp" onchange="onItDpChange()"></select>
+      </div>
+      <div class="fg">
+        <label class="fl">التخصص</label>
+        <select class="fs" id="it-spec">
+          <option value="">-- اختر التخصص --</option>
+        </select>
+      </div>
+    </div>
+    <div class="frow2">
+      <div class="fg">
+        <label class="fl">عدد الفصائل</label>
+        <select class="fs" id="it-nsec" onchange="updateItPreview()">
+          ${Array.from({length:10},(_,i)=>`<option value="${i+1}"${i===0?' selected':''}>${i+1} فصيلة</option>`).join('')}
+        </select>
+      </div>
+      <div class="fg">
+        <label class="fl">عدد الأفواج لكل فصيلة</label>
+        <select class="fs" id="it-ngrp" onchange="updateItPreview()">
+          ${Array.from({length:15},(_,i)=>`<option value="${i+1}"${i===7?' selected':''}>${i+1} فوج</option>`).join('')}
+        </select>
+      </div>
+    </div>
+    <!-- معاينة -->
+    <div id="it-preview" style="background:var(--gray-light);border-radius:8px;padding:10px 12px;font-size:11.5px;color:var(--text-mid);margin-top:4px;"></div>
+    <div class="ma">
+      <button class="btn" onclick="confirmInstallTT()" style="background:#7c3aed;color:#fff;flex:1;justify-content:center;">⚡ تنصيب</button>
+      <button class="btn" style="background:var(--gray-light);color:var(--text-mid);" onclick="closeM('mInstallTT')">إلغاء</button>
+    </div>
+  </div>
+</div>
+
 <!-- MODAL: إضافة جدول (اختيار المجموعة) -->
 <div class="mo" id="mAddTimetable">
   <div class="mb" style="width:440px;">
@@ -1869,6 +1926,7 @@ function defState(){
       {id:'ttd-remote',label:'تقييم مستمر عن بعد',       code:'TD-E',icon:'💻'}
     ],
     activeTT:null, // {period,lv,dp,spec,section,group}
+    registeredTTs:[], // [{period,lv,dp,spec,section,group}]
     teachers:[
       {name:'أ. محمد بن عمر',kind:'permanent'},
       {name:'د. فاطمة زهراء',kind:'permanent'},
@@ -1884,7 +1942,9 @@ function load(){
   try{const d=localStorage.getItem(SK);S=d?JSON.parse(d):defState();}catch(e){S=defState();}
   if(!S.subjects||!S.subjects.length) S.subjects=DEFAULT_SUBJECTS();
   if(!S.periods||!S.periods.length) S.periods=['السداسي الأول','السداسي الثاني'];
-  if(!S.groups||!S.groups.length)     S.groups=['الفوج1','الفوج2','الفوج3','الفوج4','الفوج5','الفوج6','الفوج7','الفوج8'];
+  if(!S.groups||!S.groups.length)   S.groups=['الفوج1','الفوج2','الفوج3','الفوج4','الفوج5','الفوج6','الفوج7','الفوج8'];
+  if(!S.sections||!S.sections.length)S.sections=['الفصيلة1','الفصيلة2','الفصيلة3'];
+  if(!S.registeredTTs)               S.registeredTTs=[];
   if(!S.sessionTypes||!S.sessionTypes.length) S.sessionTypes=[
     {id:'tlc',       label:'محاضرة',              code:'CM',  icon:'📖'},
     {id:'tlc-remote',label:'محاضرة عن بعد',       code:'CM-E',icon:'🖥️'},
@@ -2711,6 +2771,83 @@ function onTTFilterChange(field, value){
   renderTT();
 }
 
+// -- INSTALL TIMETABLES ----------------------------
+function openInstallTT(){
+  // populate selects
+  const perOpts='<option value="">-- كل الفترات --</option>'
+    +S.periods.map((p,i)=>`<option value="${i+1}">${p}</option>`).join('');
+  document.getElementById('it-period').innerHTML=perOpts;
+  const lvOpts=S.levels.map(l=>`<option>${l}</option>`).join('');
+  document.getElementById('it-lv').innerHTML=lvOpts;
+  const dpOpts=S.depts.map(d=>`<option>${d}</option>`).join('');
+  document.getElementById('it-dp').innerHTML=dpOpts;
+  onItLvChange();
+  updateItPreview();
+  openM('mInstallTT');
+}
+function onItLvChange(){
+  const lv=document.getElementById('it-lv')?.value||'';
+  const dp=document.getElementById('it-dp')?.value||'';
+  const specs=S.specs.filter(sp=>(!lv||sp.lv===lv)&&(!dp||sp.dp===dp));
+  const el=document.getElementById('it-spec');
+  if(el)el.innerHTML='<option value="">-- اختر التخصص --</option>'
+    +specs.map(sp=>`<option value="${sp.name}">${sp.name}</option>`).join('');
+  updateItPreview();
+}
+function onItDpChange(){
+  onItLvChange();
+}
+function updateItPreview(){
+  const nsec=parseInt(document.getElementById('it-nsec')?.value||'1');
+  const ngrp=parseInt(document.getElementById('it-ngrp')?.value||'8');
+  const spec=document.getElementById('it-spec')?.value||'';
+  const total=nsec*ngrp;
+  const el=document.getElementById('it-preview');
+  if(!el)return;
+  if(!spec){el.innerHTML='اختر التخصص أولاً';return;}
+  el.innerHTML=`سيُنشأ: <strong>${nsec}</strong> فصيلة × <strong>${ngrp}</strong> فوج = <strong style="color:#7c3aed;">${total} جدول</strong><br>
+    <span style="font-size:10.5px;">${Array.from({length:nsec},(_,si)=>
+      (S.sections[si]||'الفصيلة'+(si+1))
+    ).join(' ، ')} — ${Array.from({length:ngrp},(_,gi)=>
+      (S.groups[gi]||'الفوج'+(gi+1))
+    ).join(' ، ')}</span>`;
+}
+function confirmInstallTT(){
+  const period=document.getElementById('it-period')?.value||'';
+  const lv=document.getElementById('it-lv')?.value||'';
+  const dp=document.getElementById('it-dp')?.value||'';
+  const spec=document.getElementById('it-spec')?.value||'';
+  if(!lv){toast('⚠️ اختر المستوى');return;}
+  if(!dp){toast('⚠️ اختر القسم');return;}
+  if(!spec){toast('⚠️ اختر التخصص');return;}
+  const nsec=parseInt(document.getElementById('it-nsec')?.value||'1');
+  const ngrp=parseInt(document.getElementById('it-ngrp')?.value||'8');
+  const per=period?parseInt(period):'';
+
+  // توليد كل مجموعات (فصيلة × فوج) وتسجيلها
+  let added=0;
+  for(let si=0;si<nsec;si++){
+    const secName=S.sections[si]||('الفصيلة'+(si+1));
+    for(let gi=0;gi<ngrp;gi++){
+      const grpName=S.groups[gi]||('الفوج'+(gi+1));
+      // تحقق: هل مسجّل بالفعل؟
+      const exists=S.registeredTTs.find(t=>
+        t.lv===lv&&t.dp===dp&&t.spec===spec&&
+        t.section===secName&&t.group===grpName&&
+        (per?t.period===per:true)
+      );
+      if(!exists){
+        S.registeredTTs.push({period:per,lv,dp,spec,section:secName,group:grpName});
+        added++;
+      }
+    }
+  }
+  // تفعيل الفلتر ليعرض الجداول الجديدة
+  S.activeTT={period:per,lv,dp,spec,section:'',group:''};
+  save();closeM('mInstallTT');renderTT();
+  toast(`⚡ تم تنصيب ${added} جدول — ${nsec} فصيلة × ${ngrp} فوج`);
+}
+
 // -- ADD TIMETABLE MODAL ---------------------------
 function openAddTimetable(){
   // populate selects
@@ -3002,7 +3139,20 @@ function renderTT(){
   allSess.forEach(s=>{
     keySet.add([s.lv,s.dp,s.spec||'',s.section||'',s.group||''].join('|||'));
   });
-  // نضيف مجموعة activeTT إذا لم تكن في النتائج حتى يمكن الإضافة
+  // نضيف الجداول المسجّلة (registeredTTs) المطابقة للفلتر
+  S.registeredTTs.forEach(t=>{
+    if(
+      (!curPer||t.period==curPer)&&
+      (!curLv||t.lv===curLv)&&
+      (!curDp||t.dp===curDp)&&
+      (!curSpec||t.spec===curSpec)&&
+      (!curSec||t.section===curSec)&&
+      (!curGrp||t.group===curGrp)
+    ){
+      keySet.add([t.lv,t.dp,t.spec||'',t.section||'',t.group||''].join('|||'));
+    }
+  });
+  // نضيف activeTT دائماً إذا وُجد
   if(S.activeTT&&(curLv||curDp||curSpec)){
     keySet.add([curLv,curDp,curSpec,curSec,curGrp].join('|||'));
   }
