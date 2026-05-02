@@ -539,6 +539,17 @@ table.tt td.ec:hover::after{color:var(--teal);}
 .tc-6{background:#fefce8;border-color:#fde047;color:#713f12;}
 .tc-7{background:#f0fdf4;border-color:#4ade80;color:#14532d;}
 
+/* SPEC SEPARATOR HEADER */
+.spec-block{margin-bottom:28px;}
+.spec-block-header{
+  display:flex;align-items:center;gap:10px;
+  padding:10px 18px;border-radius:10px;
+  background:linear-gradient(90deg,var(--teal),var(--teal-light));
+  color:#fff;margin-bottom:10px;
+}
+.spec-block-header h3{font-size:13.5px;font-weight:800;font-family:'Tajawal',sans-serif;flex:1;}
+.spec-block-header .sb-meta{font-size:10.5px;opacity:.85;}
+
 /* GROUP SUB-TABLE */
 .grp-block{margin-bottom:20px;}
 .grp-block-header{
@@ -2910,41 +2921,34 @@ function setSem(n){
 }
 
 function renderTT(){
-  // -- Active banner --
   const banner=document.getElementById('tt-active-banner-wrap');
   const container=document.getElementById('ttbl-container');
   if(!banner||!container)return;
 
-  // -- بناء شريط الفلاتر دائماً --
-  const lvOpts=S.levels.map(l=>`<option value="${l}"${S.activeTT?.lv===l?' selected':''}>${l}</option>`).join('');
-  const dpOpts=S.depts.map(d=>`<option value="${d}"${S.activeTT?.dp===d?' selected':''}>${d}</option>`).join('');
-  // التخصصات تعتمد على المستوى والقسم الحاليين
-  const curLv=S.activeTT?.lv||S.levels[0]||'';
-  const curDp=S.activeTT?.dp||S.depts[0]||'';
-  const filteredSpecs=S.specs.filter(sp=>
-    (!curLv||sp.lv===curLv)&&(!curDp||sp.dp===curDp)
-  );
-  const spOpts='<option value="">-- كل التخصصات --</option>'
-    +filteredSpecs.map(sp=>`<option value="${sp.name}"${S.activeTT?.spec===sp.name?' selected':''}>${sp.name}</option>`).join('');
-  const secOpts='<option value="">-- كل الفصائل --</option>'
-    +S.sections.map(s=>`<option value="${s}"${S.activeTT?.section===s?' selected':''}>${s}</option>`).join('');
-  const grpOpts='<option value="">-- كل الأفواج --</option>'
-    +S.groups.map(g=>`<option value="${g}"${S.activeTT?.group===g?' selected':''}>${g}</option>`).join('');
+  // -- شريط الفلاتر --
+  const att=S.activeTT||{};
+  const curLv=att.lv||'';const curDp=att.dp||'';
+  const curSpec=att.spec||'';const curSec=att.section||'';
+  const curGrp=att.group||'';const curPer=att.period||'';
 
-  // الفترة (السداسي)
-  const periodOpts='<option value="">-- كل الفترات --</option>'
-    +S.periods.map((p,i)=>{
-      const val=i+1;
-      const sel=(S.activeTT?.period===val)?' selected':'';
-      return `<option value="${val}"${sel}>${p}</option>`;
-    }).join('');
+  const lvOpts=S.levels.map(l=>`<option value="${l}"${l===curLv?' selected':''}>${l}</option>`).join('');
+  const dpOpts=S.depts.map(d=>`<option value="${d}"${d===curDp?' selected':''}>${d}</option>`).join('');
+  const filteredSpecs=S.specs.filter(sp=>(!curLv||sp.lv===curLv)&&(!curDp||sp.dp===curDp));
+  const spOpts='<option value="">كل التخصصات</option>'
+    +filteredSpecs.map(sp=>`<option value="${sp.name}"${sp.name===curSpec?' selected':''}>${sp.name}</option>`).join('');
+  const secOpts='<option value="">كل الفصائل</option>'
+    +S.sections.map(s=>`<option value="${s}"${s===curSec?' selected':''}>${s}</option>`).join('');
+  const grpOpts='<option value="">كل الأفواج</option>'
+    +S.groups.map(g=>`<option value="${g}"${g===curGrp?' selected':''}>${g}</option>`).join('');
+  const perOpts='<option value="">كل الفترات</option>'
+    +S.periods.map((p,i)=>{const v=i+1;return `<option value="${v}"${v===curPer?' selected':''}>${p}</option>`;}).join('');
 
   banner.innerHTML=`<div class="tt-filter-bar">
-    <span class="tt-filter-title">📅 الجدول النشط</span>
+    <span class="tt-filter-title">📅 الجداول</span>
     <div class="tt-filter-sep"></div>
     <div style="display:flex;flex-direction:column;gap:2px;">
       <label>الفترة</label>
-      <select onchange="onTTFilterChange('period',this.value?parseInt(this.value):'')">${periodOpts}</select>
+      <select onchange="onTTFilterChange('period',this.value?parseInt(this.value):'')">${perOpts}</select>
     </div>
     <div style="display:flex;flex-direction:column;gap:2px;">
       <label>المستوى</label>
@@ -2956,7 +2960,7 @@ function renderTT(){
     </div>
     <div style="display:flex;flex-direction:column;gap:2px;">
       <label>التخصص</label>
-      <select id="tt-spec-sel" onchange="onTTFilterChange('spec',this.value)">${spOpts}</select>
+      <select onchange="onTTFilterChange('spec',this.value)">${spOpts}</select>
     </div>
     <div class="tt-filter-sep"></div>
     <div style="display:flex;flex-direction:column;gap:2px;">
@@ -2969,119 +2973,192 @@ function renderTT(){
     </div>
   </div>`;
 
-  if(!S.activeTT){
+  // -- تجميع الحصص المطابقة للفلتر --
+  const allSess=S.sessions.filter(s=>
+    s.y===S.ay &&
+    (!curPer||s.sem==curPer) &&
+    (!curLv||s.lv===curLv) &&
+    (!curDp||s.dp===curDp) &&
+    (!curSpec||s.spec===curSpec) &&
+    (!curSec||s.section===curSec) &&
+    (!curGrp||s.group===curGrp)
+  );
+
+  // لا توجد فلاتر مُختارة بعد
+  if(!curLv&&!curDp&&!curSpec&&!curSec&&!curGrp&&!curPer){
     container.innerHTML=`<div class="tt-empty-state">
       <div class="es-icon">📋</div>
-      <h3>اختر المجموعة من القوائم أعلاه</h3>
-      <p>اختر المستوى والقسم والتخصص لعرض الجدول</p>
+      <h3>اختر فلتراً لعرض الجداول</h3>
+      <p>اختر على الأقل المستوى أو القسم أو الفترة من القوائم أعلاه</p>
     </div>`;
-    return;
+    updStats();return;
   }
 
-  // استخراج متغيرات الجدول النشط
-  const{lv,dp,spec,section,group}=S.activeTT;
-
-  // -- تحديد الأفواج المطلوب عرضها --
-  // إذا اختار فوج محدد → فوج واحد فقط
-  // إذا لم يختر فوج → كل الأفواج الموجودة في الحصص + الأفواج المعرّفة
-  let groupsToRender=[];
-  if(group){
-    // فوج محدد
-    groupsToRender=[group];
-  } else {
-    // كل الأفواج المعرّفة (بالترتيب) + حصص بدون فوج
-    const usedGroups=new Set(
-      S.sessions
-        .filter(s=>s.y===S.ay&&s.lv===lv&&s.dp===dp&&s.spec===spec&&
-          (!section||s.section===section))
-        .map(s=>s.group||'')
-    );
-    // أفواج معرّفة بالترتيب
-    groupsToRender=S.groups.filter(g=>usedGroups.has(g));
-    // إذا فيه حصص بدون فوج، نضيف "كل الأفواج"
-    if(usedGroups.has(''))groupsToRender.unshift('');
-    // إذا لا توجد حصص بعد، نعرض أفواجاً فارغة للبرمجة
-    if(groupsToRender.length===0)groupsToRender=[''];
+  // -- بناء مفاتيح التجميع حسب (spec، section، group) --
+  // نجمع الحصص الموجودة + نضمن عرض جدول فارغ للمجموعة النشطة إذا لم توجد حصص
+  const keySet=new Set();
+  allSess.forEach(s=>{
+    keySet.add([s.lv,s.dp,s.spec||'',s.section||'',s.group||''].join('|||'));
+  });
+  // نضيف مجموعة activeTT إذا لم تكن في النتائج حتى يمكن الإضافة
+  if(S.activeTT&&(curLv||curDp||curSpec)){
+    keySet.add([curLv,curDp,curSpec,curSec,curGrp].join('|||'));
   }
 
-  // -- بناء HTML لكل فوج --
-  container.innerHTML=groupsToRender.map((grp,gIdx)=>{
-    const colorCls=`gh-${gIdx%8}`;
-    const grpLabel=grp||'(بدون فوج)';
-    const header= group
-      ? '' // لا نعرض header إذا فوج واحد فقط
-      : `<div class="grp-block-header ${colorCls}">
-          <div class="grp-dot"></div>
-          <span>👥 ${grpLabel}</span>
-          <span style="font-size:10px;opacity:.8;margin-right:auto;">
-            ${section?'🗂️ '+section+' — ':''} ${spec}
-          </span>
-        </div>`;
+  // ترتيب المفاتيح: لكل spec → sections مرتبة → groups مرتبة
+  const keys=[...keySet].map(k=>{
+    const[lv,dp,spec,sec,grp]=k.split('|||');
+    return{lv,dp,spec,sec,grp,
+      specIdx:S.specs.findIndex(sp=>sp.name===spec),
+      secIdx:S.sections.indexOf(sec),
+      grpIdx:S.groups.indexOf(grp)
+    };
+  }).sort((a,b)=>{
+    if(a.spec!==b.spec)return a.specIdx-b.specIdx;
+    if(a.sec!==b.sec)return a.secIdx-b.secIdx;
+    return a.grpIdx-b.grpIdx;
+  });
 
-    // الحصص لهذا الفوج
-    const ss=S.sessions.filter(s=>
-      s.y===S.ay && s.lv===lv && s.dp===dp && s.spec===spec &&
-      (!section||s.section===section) &&
-      (s.group||'')===(grp||'')
-    );
-    const mp={};
-    ss.forEach(s=>{
-      if(!mp[s.day])mp[s.day]={};
-      if(!mp[s.day][s.slot])mp[s.day][s.slot]=[];
-      mp[s.day][s.slot].push(s);
-    });
+  if(!keys.length){
+    container.innerHTML=`<div class="tt-empty-state">
+      <div class="es-icon">📭</div>
+      <h3>لا توجد حصص بعد</h3>
+      <p>انقر على أي خلية في الجدول لإضافة حصة</p>
+    </div>`;
+    updStats();return;
+  }
 
-    let tbl=`<table class="tt" style="border-top:${group?'':'0'}">
-      <thead><tr>
-        <th style="min-width:78px;position:sticky;right:0;z-index:4;">اليوم</th>
-        ${SLOTS.map(sl=>`<th style="min-width:140px;">${SL[sl].replace(' - ','<br>')}</th>`).join('')}
-      </tr></thead><tbody>`;
+  // -- تجميع حسب التخصص لإضافة عنوان فاصل --
+  const specGroups={};
+  keys.forEach(k=>{
+    const specKey=`${k.lv}|||${k.dp}|||${k.spec}`;
+    if(!specGroups[specKey])specGroups[specKey]={lv:k.lv,dp:k.dp,spec:k.spec,keys:[]};
+    specGroups[specKey].keys.push(k);
+  });
 
-    DAYS.forEach(day=>{
-      tbl+=`<tr><td class="tc" style="position:sticky;right:0;z-index:3;background:var(--gray-light);">${day}</td>`;
-      SLOTS.forEach(slot=>{
-        const cells=(mp[day]&&mp[day][slot])||[];
-        const isEmpty=!cells.length;
-        // encode params for onclick
-        const dayE=day.replace(/'/g,"\\'");
-        const slotE=slot.replace(/'/g,"\\'");
-        const grpE=(grp||'').replace(/'/g,"\\'");
-        tbl+=`<td class="${isEmpty?'ec':''}"
-          ondragover="event.preventDefault();this.classList.add('drop-over')"
-          ondragleave="this.classList.remove('drop-over')"
-          ondrop="onDrop(event,'${dayE}','${slotE}')"
-          ${isEmpty?`onclick="openAddSessForGroup('${dayE}','${slotE}','${grpE}')"`:''}
-        >`;
-        cells.forEach(s=>{
-          tbl+=`<div class="sc ${s.type}" draggable="true"
-            ondragstart="onDS(event,'${s.id}')"
-            ondragend="document.querySelectorAll('.sc').forEach(x=>x.classList.remove('dragging'))"
-          ><button class="sceb" onclick="event.stopPropagation();openEditSess('${s.id}')">✏️</button>
-          <button class="scdb" onclick="event.stopPropagation();delSess('${s.id}')">✕</button>
-          <div class="ss">${s.subj}</div>
-          <div class="si">${s.tch}</div>
-          <div class="si">${s.rm}</div>
-          <div class="si" style="font-size:10px;opacity:.65;">${TL[s.type]||''}</div>
-          </div>`;
-        });
-        tbl+='</td>';
+  let html='';
+  let gColorIdx=0;
+
+  Object.values(specGroups).forEach(sg=>{
+    const showSpecHeader=!curSpec||Object.keys(specGroups).length>1;
+    if(showSpecHeader){
+      const lbl=sg.spec||sg.dp||sg.lv;
+      html+=`<div class="spec-block-header">
+        <h3>${sg.spec||'—'}</h3>
+        <span class="sb-meta">${sg.lv} · ${sg.dp.replace('قسم ','')}</span>
+      </div>`;
+    }
+
+    sg.keys.forEach(k=>{
+      // عنوان الفوج / الفصيلة
+      const showGrpHdr=sg.keys.length>1||!curGrp;
+      const colorCls=`gh-${gColorIdx%8}`;
+      gColorIdx++;
+      const grpLabel=k.grp||(k.sec?k.sec:'الكل');
+      const subLabel=[k.sec&&`🗂️ ${k.sec}`,k.grp&&`👥 ${k.grp}`].filter(Boolean).join(' ');
+
+      const grpHdr=showGrpHdr
+        ?`<div class="grp-block-header ${colorCls}">
+            <div class="grp-dot"></div>
+            <span>${subLabel||'— كل الأفواج —'}</span>
+            <button class="btn" style="margin-right:auto;padding:3px 10px;font-size:10px;background:rgba(255,255,255,.2);color:#fff;border-radius:6px;border:1px solid rgba(255,255,255,.3);"
+              onclick="setActiveTTFromKey('${k.lv}','${k.dp}','${k.spec}','${k.sec}','${k.grp}')">
+              + إضافة حصة
+            </button>
+          </div>`
+        :'';
+
+      // بناء map الحصص
+      const ss=allSess.filter(s=>
+        s.lv===k.lv&&s.dp===k.dp&&
+        (s.spec||'')===k.spec&&
+        (s.section||'')===k.sec&&
+        (s.group||'')===k.grp
+      );
+      const mp={};
+      ss.forEach(s=>{
+        if(!mp[s.day])mp[s.day]={};
+        if(!mp[s.day][s.slot])mp[s.day][s.slot]=[];
+        mp[s.day][s.slot].push(s);
       });
-      tbl+='</tr>';
+
+      let tbl=`<table class="tt">
+        <thead><tr>
+          <th style="min-width:78px;position:sticky;right:0;z-index:4;">اليوم</th>
+          ${SLOTS.map(sl=>`<th style="min-width:140px;">${SL[sl].replace(' - ','<br>')}</th>`).join('')}
+        </tr></thead><tbody>`;
+
+      DAYS.forEach(day=>{
+        tbl+=`<tr><td class="tc" style="position:sticky;right:0;z-index:3;background:var(--gray-light);">${day}</td>`;
+        SLOTS.forEach(slot=>{
+          const cells=(mp[day]&&mp[day][slot])||[];
+          const isEmpty=!cells.length;
+          const dE=day.replace(/'/g,"\\'");
+          const slE=slot.replace(/'/g,"\\'");
+          const gE=k.grp.replace(/'/g,"\\'");
+          tbl+=`<td class="${isEmpty?'ec':''}"
+            ondragover="event.preventDefault();this.classList.add('drop-over')"
+            ondragleave="this.classList.remove('drop-over')"
+            ondrop="onDropWithKey(event,'${dE}','${slE}','${k.lv}','${k.dp}','${k.spec}','${k.sec}','${gE}')"
+            ${isEmpty?`onclick="openAddSessWithKey('${dE}','${slE}','${k.lv}','${k.dp}','${k.spec}','${k.sec}','${gE}')"`:''}
+          >`;
+          cells.forEach(s=>{
+            tbl+=`<div class="sc ${s.type}" draggable="true"
+              ondragstart="onDS(event,'${s.id}')"
+              ondragend="document.querySelectorAll('.sc').forEach(x=>x.classList.remove('dragging'))"
+            ><button class="sceb" onclick="event.stopPropagation();openEditSess('${s.id}')">✏️</button>
+            <button class="scdb" onclick="event.stopPropagation();delSess('${s.id}')">✕</button>
+            <div class="ss">${s.subj}</div>
+            <div class="si">${s.tch}</div>
+            <div class="si">${s.rm}</div>
+            <div class="si" style="font-size:10px;opacity:.65;">${TL[s.type]||''}</div>
+            </div>`;
+          });
+          tbl+='</td>';
+        });
+        tbl+='</tr>';
+      });
+      tbl+='</tbody></table>';
+
+      html+=`<div class="grp-block">${grpHdr}<div class="ttw">${tbl}</div></div>`;
     });
-    tbl+='</tbody></table>';
 
-    return `<div class="grp-block">${header}<div class="ttw">${tbl}</div></div>`;
-  }).join('');
+    if(showSpecHeader)html+=`</div>`;
+  });
 
+  container.innerHTML=html;
   updStats();
 }
 
-// فتح modal الإضافة مع تحديد الفوج مسبقاً
-function openAddSessForGroup(day,slot,grp){
-  if(!S.activeTT){toast('⚠️ اضغط "إضافة جدول" أولاً');return;}
-  // حفّظ الفوج المستهدف مؤقتاً
+// -- HELPERS للنقر في وضع multi-view --
+function setActiveTTFromKey(lv,dp,spec,sec,grp){
+  S.activeTT={period:S.activeTT?.period||'',lv,dp,spec,section:sec,group:grp};
+  save();
+}
+function openAddSessWithKey(day,slot,lv,dp,spec,sec,grp){
+  // تأكد أن activeTT يطابق هذه المجموعة قبل الفتح
+  S.activeTT={period:S.activeTT?.period||'',lv,dp,spec,section:sec,group:grp};
   S._pendingGroup=grp;
   openAddSess(day,slot);
+}
+function openAddSessForGroup(day,slot,grp){
+  if(!S.activeTT){toast('⚠️ اختر فلتراً أولاً');return;}
+  S._pendingGroup=grp;
+  openAddSess(day,slot);
+}
+function onDropWithKey(e,day,slot,lv,dp,spec,sec,grp){
+  e.preventDefault();
+  e.currentTarget.classList.remove('drop-over');
+  if(!dragId)return;
+  const s=S.sessions.find(x=>x.id===dragId);if(!s)return;
+  const conflict=S.sessions.find(x=>
+    x.id!==dragId&&x.day===day&&x.slot===slot&&
+    x.lv===lv&&x.dp===dp&&x.spec===spec&&
+    (x.section||'')===(sec||'')&&(x.group||'')===(grp||'')
+  );
+  if(conflict){toast('⚠️ تعارض: توجد حصة في هذه الخلية');dragId=null;return;}
+  s.day=day;s.slot=slot;s.lv=lv;s.dp=dp;s.spec=spec;s.section=sec;s.group=grp;
+  dragId=null;save();renderTT();toast('✅ تم نقل الحصة');
 }
 
 function onDS(e,id){
