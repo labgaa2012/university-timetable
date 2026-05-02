@@ -6,6 +6,8 @@
 <title>نظام جداول التوقيت والامتحانات</title>
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800;900&family=Tajawal:wght@300;400;500;700;800&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <style>
 :root{
   --navy:#0f1f3d;--navy-mid:#162847;--navy-light:#1e3a5f;
@@ -1110,7 +1112,7 @@ table.occ-matrix td.cell-occ:hover{background:#fee2e2;filter:brightness(.97);}
           <button class="btn bn" onclick="expExcel()">📊 تصدير</button>
           <button class="btn bi" onclick="trigImp('imp-sessions')">📥 استيراد</button>
           <button class="btn btpl" onclick="dlTemplate('sessions')">📋 قالب</button>
-          <button class="btn bp" onclick="printTT()">🖨️ طباعة</button>
+          <button class="btn bp" onclick="exportPDF()" id="btn-pdf">📄 تصدير PDF</button>
         </div>
       </div>
       <!-- بانر الجدول النشط -->
@@ -4352,38 +4354,157 @@ function buildExcel(sessions,exams,fname){
 }
 
 // -- PRINT -----------------------------------------
-function printTT(){
-  const lv=document.getElementById('tt-lv')?.value||S.al;
-  const dp=document.getElementById('tt-dp')?.value||S.ad;
-  const ss=S.sessions.filter(s=>s.y===S.ay&&s.lv===lv&&s.dp===dp);
-  const mp={};
-  ss.forEach(s=>{if(!mp[s.day])mp[s.day]={};if(!mp[s.day][s.slot])mp[s.day][s.slot]=[];mp[s.day][s.slot].push(s);});
-  let rows='';
-  SLOTS.forEach(slot=>{
-    rows+=`<tr><td style="background:#eef;font-weight:700;text-align:center;font-size:9pt;padding:5px;width:80px;">${SL[slot]}</td>`;
-    DAYS.forEach(day=>{
-      const cells=(mp[day]&&mp[day][slot])||[];
-      rows+=`<td style="padding:4px;border:1px solid #ccc;vertical-align:top;min-height:50px;">`;
-      cells.forEach(s=>{rows+=`<div style="background:${TC[s.type]||'#eee'};border-radius:4px;padding:4px 5px;margin:2px 0;font-size:8pt;line-height:1.4;"><strong>${s.subj}</strong><br>${s.tch}<br>${s.rm}</div>`;});
-      rows+='</td>';
+async function exportPDF(){
+  const btn=document.getElementById('btn-pdf');
+  if(btn){btn.disabled=true;btn.textContent='⏳ جاري التصدير...';}
+  try{
+    const att=S.activeTT||{};
+    const title=[att.spec||'',att.lv||S.al,att.dp||S.ad].filter(Boolean).join(' — ');
+    const period=att.period?S.periods[att.period-1]||'':'';
+
+    // -- بناء HTML الجدول الكامل --
+    const allSess=S.sessions.filter(s=>
+      s.y===S.ay&&
+      (!att.period||s.sem==att.period)&&
+      (!att.lv||s.lv===att.lv)&&
+      (!att.dp||s.dp===att.dp)&&
+      (!att.spec||s.spec===att.spec)&&
+      (!att.section||s.section===att.section)&&
+      (!att.group||s.group===att.group)
+    );
+
+    // تجميع حسب المجموعات
+    const keySet=new Set();
+    allSess.forEach(s=>keySet.add([s.lv,s.dp,s.spec||'',s.section||'',s.group||''].join('|||')));
+    S.registeredTTs.forEach(t=>{
+      if((!att.lv||t.lv===att.lv)&&(!att.dp||t.dp===att.dp)&&(!att.spec||t.spec===att.spec))
+        keySet.add([t.lv,t.dp,t.spec||'',t.section||'',t.group||''].join('|||'));
     });
-    rows+='</tr>';
-  });
-  const w=window.open('','_blank','width=980,height=650');
-  w.document.write(`<!DOCTYPE html><html dir="rtl"><head><meta charset="UTF-8">
-    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;800&display=swap" rel="stylesheet">
-    <style>body{font-family:'Cairo',sans-serif;direction:rtl;margin:15mm;}
-    h2{font-size:14pt;color:#0f1f3d;margin-bottom:3px;}p{font-size:9pt;color:#666;margin-bottom:8px;}
-    table{width:100%;border-collapse:collapse;}th{background:#0f1f3d;color:#e0be7a;padding:7px 5px;font-size:9pt;border:1px solid #444;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
-    td{border:1px solid #ddd;}@media print{body{margin:5mm;}}</style>
-    </head><body>
-    <h2>📅 جدول التوقيت الأسبوعي — ${S.ay}</h2>
-    <p>${lv} | ${dp}</p>
-    <table><thead><tr><th>الفترة</th>${DAYS.map(d=>`<th>${d}</th>`).join('')}</tr></thead>
-    <tbody>${rows}</tbody></table>
-    <script>window.onload=function(){window.print();}<\/script>
-    </body></html>`);
-  w.document.close();
+    const keyArr=[...keySet];
+    keyArr.forEach(k=>{
+      const p=k.split('|||');
+      if(p[4]!==''){
+        const pref=p.slice(0,4).join('|||');
+        if(keyArr.some(k2=>{const p2=k2.split('|||');return p2.slice(0,4).join('|||')===pref&&p2[4]!=='';}))
+          keySet.delete(k.split('|||').slice(0,4).join('|||')+'|||');
+      }
+    });
+
+    const keys=[...keySet].map(k=>{
+      const[lv,dp,spec,sec,grp]=k.split('|||');
+      return{lv,dp,spec,sec,grp};
+    });
+
+    if(!keys.length){toast('⚠️ لا توجد بيانات للتصدير');return;}
+
+    // CSS خاص بالـ PDF
+    const css=`
+      *{box-sizing:border-box;font-family:'Cairo',Arial,sans-serif;}
+      body{direction:rtl;margin:0;padding:10px;background:#fff;color:#111;}
+      .pdf-header{text-align:center;margin-bottom:10px;border-bottom:2px solid #0f1f3d;padding-bottom:8px;}
+      .pdf-header h1{font-size:13pt;color:#0f1f3d;margin:0 0 3px;}
+      .pdf-header p{font-size:8pt;color:#555;margin:0;}
+      .grp-title{background:#0f1f3d;color:#c9a84c;padding:5px 10px;font-size:9pt;font-weight:700;margin:8px 0 3px;border-radius:5px;}
+      table{width:100%;border-collapse:collapse;margin-bottom:10px;font-size:7.5pt;}
+      th{background:#0f1f3d;color:#c9a84c;padding:5px 3px;text-align:center;border:1px solid #999;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+      td{border:1px solid #ccc;padding:2px;vertical-align:top;min-height:40px;}
+      .day-cell{background:#f0f4f8;font-weight:700;text-align:center;font-size:8pt;width:52px;color:#0f1f3d;}
+      .sc-p{border-radius:4px;padding:3px 4px;margin:1px 0;line-height:1.3;font-size:7pt;}
+      .sc-p strong{display:block;font-size:7.5pt;}
+      .tlc{background:#dbeafe;}
+      .tlc-remote{background:#e0f2fe;}
+      .ttd{background:#dcfce7;}
+      .ttp{background:#fed7aa;}
+      .ttd-remote{background:#fce7f3;}
+    `;
+
+    // بناء جدول HTML لكل مجموعة
+    let tablesHtml='';
+    keys.forEach(k=>{
+      const mp={};
+      allSess.filter(s=>s.lv===k.lv&&s.dp===k.dp&&(s.spec||'')===k.spec&&(s.section||'')===k.sec&&(s.group||'')===k.grp)
+        .forEach(s=>{if(!mp[s.day])mp[s.day]={};if(!mp[s.day][s.slot])mp[s.day][s.slot]=[];mp[s.day][s.slot].push(s);});
+
+      const grpLabel=[k.sec&&'🗂️ '+k.sec,k.grp&&'👥 '+k.grp].filter(Boolean).join(' ');
+      if(keys.length>1)tablesHtml+=`<div class="grp-title">${grpLabel||'—'} &nbsp;·&nbsp; ${k.spec||k.dp}</div>`;
+
+      tablesHtml+=`<table><thead><tr><th>اليوم</th>${SLOTS.map(sl=>`<th>${SL[sl].replace(' - ','<br>')}</th>`).join('')}</tr></thead><tbody>`;
+      DAYS.forEach(day=>{
+        tablesHtml+=`<tr><td class="day-cell">${day}</td>`;
+        SLOTS.forEach(slot=>{
+          const cells=(mp[day]&&mp[day][slot])||[];
+          tablesHtml+=`<td>`;
+          cells.forEach(s=>{
+            tablesHtml+=`<div class="sc-p ${s.type}"><strong>${s.subj}</strong>${s.tch?'<span> '+s.tch+'</span>':''}${s.rm?' · '+s.rm:''}</div>`;
+          });
+          tablesHtml+=`</td>`;
+        });
+        tablesHtml+=`</tr>`;
+      });
+      tablesHtml+=`</tbody></table>`;
+    });
+
+    // إنشاء iframe مخفي للرسم
+    const iframe=document.createElement('iframe');
+    iframe.style.cssText='position:fixed;left:-9999px;top:-9999px;width:1100px;background:#fff;border:none;';
+    document.body.appendChild(iframe);
+    const doc=iframe.contentDocument||iframe.contentWindow.document;
+    doc.open();
+    doc.write(`<!DOCTYPE html><html dir="rtl"><head><meta charset="UTF-8">
+      <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;800&display=swap" rel="stylesheet">
+      <style>${css}</style></head><body>
+      <div class="pdf-header">
+        <h1>${S.settings?.university||'جامعة عمار ثليجي الأغواط'} — ${S.settings?.faculty||'كلية العلوم الاقتصادية'}</h1>
+        <p>جدول التوقيت الأسبوعي — ${S.ay}${period?' | '+period:''}${title?' | '+title:''}</p>
+      </div>
+      ${tablesHtml}
+      </body></html>`);
+    doc.close();
+
+    // انتظر تحميل الخط
+    await new Promise(r=>setTimeout(r,1200));
+
+    const canvas=await html2canvas(iframe.contentDocument.body,{
+      scale:1.8,useCORS:true,backgroundColor:'#ffffff',
+      width:1100,windowWidth:1100
+    });
+    document.body.removeChild(iframe);
+
+    const{jsPDF}=window.jspdf;
+    const pdf=new jsPDF({orientation:'landscape',unit:'mm',format:'a4'});
+    const pW=pdf.internal.pageSize.getWidth();
+    const pH=pdf.internal.pageSize.getHeight();
+    const imgData=canvas.toDataURL('image/jpeg',0.92);
+    const imgH=canvas.height*(pW/canvas.width);
+
+    if(imgH<=pH){
+      pdf.addImage(imgData,'JPEG',0,0,pW,imgH);
+    } else {
+      // جداول متعددة الصفحات
+      let yOff=0;
+      while(yOff<canvas.height){
+        const pageH=Math.min(pH/(pW/canvas.width),canvas.height-yOff);
+        const tmpCanvas=document.createElement('canvas');
+        tmpCanvas.width=canvas.width;tmpCanvas.height=pageH*(pW===297?1:1);
+        const chunkH=Math.round(canvas.height*(pH/imgH));
+        tmpCanvas.width=canvas.width;tmpCanvas.height=chunkH;
+        const ctx=tmpCanvas.getContext('2d');
+        ctx.drawImage(canvas,0,-yOff);
+        pdf.addImage(tmpCanvas.toDataURL('image/jpeg',0.92),'JPEG',0,0,pW,pH);
+        yOff+=chunkH;
+        if(yOff<canvas.height)pdf.addPage();
+      }
+    }
+
+    const fname=`جدول_التوقيت_${(att.spec||att.dp||'').replace(/\s/g,'_')}_${S.ay.replace('/','_')}.pdf`;
+    pdf.save(fname);
+    toast('✅ تم تصدير PDF: '+fname);
+  } catch(e){
+    console.error(e);
+    toast('❌ خطأ في التصدير: '+e.message);
+  } finally {
+    if(btn){btn.disabled=false;btn.textContent='📄 تصدير PDF';}
+  }
 }
 
 // -- MODAL HELPERS ---------------------------------
