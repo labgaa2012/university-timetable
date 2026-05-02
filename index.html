@@ -2755,10 +2755,12 @@ function confirmAddTimetable(){
   if(!spec){toast('⚠️ اختر التخصص');return;}
   const section=document.getElementById('att-section')?.value||'';
   const group=document.getElementById('att-group')?.value||'';
-  S.activeTT={lv,dp,spec,section,group};
+  // نحافظ على الفترة المختارة سابقاً إن وُجدت
+  const period=S.activeTT?.period||'';
+  S.activeTT={period,lv,dp,spec,section,group};
   save();closeM('mAddTimetable');
   renderTT();
-  toast('✅ جدول جديد: '+spec+(section?' — '+section:'')+(group?' — '+group:''));
+  toast('✅ جدول: '+spec+(section?' — '+section:'')+(group?' — '+group:''));
 }
 
 // -- SEARCHABLE DROPDOWN ---------------------------
@@ -3040,35 +3042,38 @@ function renderTT(){
   let gColorIdx=0;
 
   Object.values(specGroups).forEach(sg=>{
-    const showSpecHeader=!curSpec||Object.keys(specGroups).length>1;
+    const showSpecHeader=Object.keys(specGroups).length>1||!curSpec;
+    let sgHtml='';
     if(showSpecHeader){
-      const lbl=sg.spec||sg.dp||sg.lv;
-      html+=`<div class="spec-block-header">
+      sgHtml+=`<div class="spec-block-header">
         <h3>${sg.spec||'—'}</h3>
         <span class="sb-meta">${sg.lv} · ${sg.dp.replace('قسم ','')}</span>
       </div>`;
     }
 
     sg.keys.forEach(k=>{
-      // عنوان الفوج / الفصيلة
       const showGrpHdr=sg.keys.length>1||!curGrp;
       const colorCls=`gh-${gColorIdx%8}`;
       gColorIdx++;
-      const grpLabel=k.grp||(k.sec?k.sec:'الكل');
       const subLabel=[k.sec&&`🗂️ ${k.sec}`,k.grp&&`👥 ${k.grp}`].filter(Boolean).join(' ');
+      // escape all key parts for onclick
+      const lvE=k.lv.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+      const dpE=k.dp.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+      const spE=k.spec.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+      const seE=k.sec.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+      const gE=k.grp.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
 
       const grpHdr=showGrpHdr
         ?`<div class="grp-block-header ${colorCls}">
             <div class="grp-dot"></div>
-            <span>${subLabel||'— كل الأفواج —'}</span>
+            <span>${subLabel||'— عام —'}</span>
             <button class="btn" style="margin-right:auto;padding:3px 10px;font-size:10px;background:rgba(255,255,255,.2);color:#fff;border-radius:6px;border:1px solid rgba(255,255,255,.3);"
-              onclick="setActiveTTFromKey('${k.lv}','${k.dp}','${k.spec}','${k.sec}','${k.grp}')">
+              onclick="openAddSessWithKey('__','__','${lvE}','${dpE}','${spE}','${seE}','${gE}')">
               + إضافة حصة
             </button>
           </div>`
         :'';
 
-      // بناء map الحصص
       const ss=allSess.filter(s=>
         s.lv===k.lv&&s.dp===k.dp&&
         (s.spec||'')===k.spec&&
@@ -3095,12 +3100,11 @@ function renderTT(){
           const isEmpty=!cells.length;
           const dE=day.replace(/'/g,"\\'");
           const slE=slot.replace(/'/g,"\\'");
-          const gE=k.grp.replace(/'/g,"\\'");
           tbl+=`<td class="${isEmpty?'ec':''}"
             ondragover="event.preventDefault();this.classList.add('drop-over')"
             ondragleave="this.classList.remove('drop-over')"
-            ondrop="onDropWithKey(event,'${dE}','${slE}','${k.lv}','${k.dp}','${k.spec}','${k.sec}','${gE}')"
-            ${isEmpty?`onclick="openAddSessWithKey('${dE}','${slE}','${k.lv}','${k.dp}','${k.spec}','${k.sec}','${gE}')"`:''}
+            ondrop="onDropWithKey(event,'${dE}','${slE}','${lvE}','${dpE}','${spE}','${seE}','${gE}')"
+            ${isEmpty?`onclick="openAddSessWithKey('${dE}','${slE}','${lvE}','${dpE}','${spE}','${seE}','${gE}')"`:''}
           >`;
           cells.forEach(s=>{
             tbl+=`<div class="sc ${s.type}" draggable="true"
@@ -3119,11 +3123,10 @@ function renderTT(){
         tbl+='</tr>';
       });
       tbl+='</tbody></table>';
-
-      html+=`<div class="grp-block">${grpHdr}<div class="ttw">${tbl}</div></div>`;
+      sgHtml+=`<div class="grp-block">${grpHdr}<div class="ttw">${tbl}</div></div>`;
     });
 
-    if(showSpecHeader)html+=`</div>`;
+    html+=showSpecHeader?`<div class="spec-block">${sgHtml}</div>`:sgHtml;
   });
 
   container.innerHTML=html;
@@ -3136,10 +3139,17 @@ function setActiveTTFromKey(lv,dp,spec,sec,grp){
   save();
 }
 function openAddSessWithKey(day,slot,lv,dp,spec,sec,grp){
-  // تأكد أن activeTT يطابق هذه المجموعة قبل الفتح
   S.activeTT={period:S.activeTT?.period||'',lv,dp,spec,section:sec,group:grp};
-  S._pendingGroup=grp;
-  openAddSess(day,slot);
+  save();
+  if(day==='__'||slot==='__'){
+    // فتح من زر "إضافة حصة" في header المجموعة — نفتح بدون يوم/فترة محددة
+    S._pendingGroup=grp;
+    // نختار أول يوم وفترة فارغَين تلقائياً أو نفتح modal مباشرة
+    openAddSess(DAYS[0],SLOTS[0]);
+  } else {
+    S._pendingGroup=grp;
+    openAddSess(day,slot);
+  }
 }
 function openAddSessForGroup(day,slot,grp){
   if(!S.activeTT){toast('⚠️ اختر فلتراً أولاً');return;}
