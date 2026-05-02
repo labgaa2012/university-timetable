@@ -3855,32 +3855,43 @@ function calcTeacherOvertime(tchName){
   const sessions=S.sessions.filter(s=>s.y===S.ay&&s.tch===tchName);
   const tchObj=S.teachers.find(t=>t.name===tchName)||{kind:'permanent'};
 
-  let firstLecCount=0,repLecCount=0,tdTpCount=0,otherCount=0;
-  sessions.forEach(s=>{
-    if(s.type==='tlc'){
-      if(s.firstLec===0) repLecCount++;
-      else firstLecCount++;
-    } else if(s.type==='ttd'||s.type==='ttp'){
-      tdTpCount++;
-    } else {
-      otherCount++;
-    }
+  // -- المحاضرات: نُزيل التكرار عبر الأفواج (نفس اليوم+الفترة+المادة = حصة واحدة) --
+  const lecSessions=sessions.filter(s=>s.type==='tlc'||s.type==='tlc-remote');
+  const tdTpSessions=sessions.filter(s=>
+    s.type==='ttd'||s.type==='ttp'||
+    s.type==='ttd-remote'||
+    (s.type!=='tlc'&&s.type!=='tlc-remote')
+  );
+
+  // مفتاح التميّز للمحاضرة: يوم + فترة + مادة (بغض النظر عن الفوج)
+  const uniqueLecKeys=new Set(lecSessions.map(s=>`${s.day}|${s.slot}|${s.subj}`));
+
+  // كل مفتاح فريد = محاضرة فريدة
+  // نأخذ أول حصة لكل مفتاح لمعرفة firstLec
+  let firstLecCount=0,repLecCount=0;
+  uniqueLecKeys.forEach(key=>{
+    const [day,slot,subj]=key.split('|');
+    const sample=lecSessions.find(s=>s.day===day&&s.slot===slot&&s.subj===subj);
+    if(sample?.firstLec===0) repLecCount++;
+    else firstLecCount++;
   });
 
-  // Equivalent hours:  1 session = 1.5 real hours
-  const eqFirstLec = firstLecCount * 2.25;   // 1.5 × 1.5
-  const eqRepLec   = repLecCount  * 1.5;     // 1.5 × 1
-  const eqTdTp     = tdTpCount    * 1.5;     // 1.5 × 1
-  const eqOther    = otherCount   * 1.5;
-  const totalEq    = eqFirstLec + eqRepLec + eqTdTp + eqOther;
+  // -- TD/TP: كل فوج له حصة مستقلة تُحسب منفردة --
+  const tdTpCount=tdTpSessions.length;
 
-  const quorum=(tchObj.kind==='permanent')?QUORUM:0; // temporary & associate = no quorum
-  const overtime   = Math.max(0, totalEq - quorum);
+  // Equivalent hours
+  const eqFirstLec = firstLecCount * 2.25;
+  const eqRepLec   = repLecCount   * 1.5;
+  const eqTdTp     = tdTpCount     * 1.5;
+  const totalEq    = eqFirstLec + eqRepLec + eqTdTp;
+
+  const quorum=(tchObj.kind==='permanent')?QUORUM:0;
+  const overtime=Math.max(0, totalEq - quorum);
 
   return{
     name:tchName, kind:tchObj.kind, sessions:sessions.length,
-    firstLecCount, repLecCount, tdTpCount, otherCount,
-    eqFirstLec, eqRepLec, eqTdTp, eqOther, totalEq,
+    firstLecCount, repLecCount, tdTpCount, otherCount:0,
+    eqFirstLec, eqRepLec, eqTdTp, eqOther:0, totalEq,
     quorum, overtime
   };
 }
