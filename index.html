@@ -3504,8 +3504,15 @@ function openEditSess(id){
   const s=S.sessions.find(x=>x.id===id);if(!s)return;
   document.getElementById('esSessId').value=id;
   document.getElementById('mSessTitle').textContent='✏️ تعديل الحصة';
-  document.getElementById('mSess').dataset.day=s.day;
-  document.getElementById('mSess').dataset.slot=s.slot;
+  // حفظ بيانات الحصة الأصلية كاملةً في الـ dataset للاسترداد عند الحفظ
+  const modal=document.getElementById('mSess');
+  modal.dataset.day=s.day;
+  modal.dataset.slot=s.slot;
+  modal.dataset.group=s.group||'';
+  modal.dataset.lv=s.lv||'';
+  modal.dataset.dp=s.dp||'';
+  modal.dataset.spec=s.spec||'';
+  modal.dataset.section=s.section||'';
   // sem
   const semNum=s.sem||parseInt(S.activeTT?.period||1);
   document.getElementById('ms-sem').value=semNum;
@@ -3535,66 +3542,54 @@ function saveSess(){
   const id=document.getElementById('esSessId').value;
   const subj=getSessionSubj();
   if(!subj){toast('⚠️ اختر أو أدخل اسم المقياس');return;}
-  if(!S.activeTT){toast('⚠️ لا يوجد جدول نشط');return;}
   const modal=document.getElementById('mSess');
   const day=modal.dataset.day;
   const slot=modal.dataset.slot;
-  const grp=modal.dataset.group!==undefined ? modal.dataset.group : (S.activeTT.group||'');
-  const{lv,dp,spec,section}=S.activeTT;
   const sem=parseInt(document.getElementById('ms-sem')?.value||'1');
   const type=document.getElementById('ms-type').value;
   const tch=document.getElementById('ms-tch')?.value||'';
   const rm=document.getElementById('ms-rm')?.value||'';
   const firstLec=parseInt(document.getElementById('ms-firstlec').value||'1');
 
-  const data={
-    id:id||uid(),y:S.ay,
-    lv,dp,spec,section,group:grp,
-    day,slot,sem,subj,tch,rm,type,firstLec
-  };
-
   if(id){
+    // -- وضع التعديل: نحافظ على lv/dp/spec/section/group الأصلية من الـ dataset --
+    const lv=modal.dataset.lv||'';
+    const dp=modal.dataset.dp||'';
+    const spec=modal.dataset.spec||'';
+    const section=modal.dataset.section||'';
+    const grp=modal.dataset.group||'';
+    const data={id,y:S.ay,lv,dp,spec,section,group:grp,day,slot,sem,subj,tch,rm,type,firstLec};
     const i=S.sessions.findIndex(s=>s.id===id);
     if(i>-1)S.sessions[i]=data;
+    save();renderTT();closeM('mSess');
+    toast('✅ تم التعديل');
   } else {
+    // -- وضع الإضافة: نأخذ من activeTT --
+    if(!S.activeTT){toast('⚠️ لا يوجد جدول نشط');return;}
+    const{lv,dp,spec,section}=S.activeTT;
+    const grp=modal.dataset.group!==undefined?modal.dataset.group:(S.activeTT.group||'');
+    const data={id:uid(),y:S.ay,lv,dp,spec,section,group:grp,day,slot,sem,subj,tch,rm,type,firstLec};
     S.sessions.push(data);
-
-    // -- النسخ التلقائي للمحاضرات --
-    // يسري فقط على المحاضرة والمحاضرة عن بعد عند إضافة حصة جديدة
+    // النسخ التلقائي للمحاضرات
     if(type==='tlc'||type==='tlc-remote'){
-      // الأفواج المستهدفة: كل الأفواج ضمن نفس الفصيلة والتخصص (باستثناء الفوج الحالي)
       const targetGroups=S.groups.filter(g=>g!==grp&&g!=='');
-
-      // للأفواج التي لم تُضَف لها هذه الحصة بعد في نفس اليوم والفترة
       let copied=0;
       targetGroups.forEach(g=>{
-        // تحقق: هل هناك حصة لهذا الفوج في نفس اليوم/الفترة/التخصص/الفصيلة؟
         const exists=S.sessions.find(s=>
           s.y===S.ay&&s.lv===lv&&s.dp===dp&&s.spec===spec&&
-          s.section===section&&s.group===g&&
-          s.day===day&&s.slot===slot
+          s.section===section&&s.group===g&&s.day===day&&s.slot===slot
         );
-        if(!exists){
-          S.sessions.push({
-            ...data,
-            id:uid(),
-            group:g,
-            firstLec:0  // المحاضرات المنسوخة = مكررة (×1.5)
-          });
-          copied++;
-        }
+        if(!exists){S.sessions.push({...data,id:uid(),group:g,firstLec:0});copied++;}
       });
-
       if(copied>0){
         save();renderTT();closeM('mSess');
-        toast(`✅ أُضيفت المحاضرة + نُسخت تلقائياً لـ ${copied} فوج آخر (محاضرة مكررة)`);
+        toast(`✅ أُضيفت + نُسخت لـ ${copied} فوج آخر`);
         return;
       }
     }
+    save();renderTT();closeM('mSess');
+    toast('✅ تمت الإضافة');
   }
-
-  save();renderTT();closeM('mSess');
-  toast(id?'✅ تم التعديل':'✅ تمت الإضافة');
 }
 function delSess(id){
   const s=S.sessions.find(x=>x.id===id);
