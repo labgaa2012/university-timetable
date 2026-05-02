@@ -3357,11 +3357,12 @@ function renderTT(){
             ${isEmpty?`onclick="openAddSessWithKey('${dE}','${slE}','${lvE}','${dpE}','${spE}','${seE}','${gE}')"`:''}
           >`;
           cells.forEach(s=>{
+            const sid=s.id;
             tbl+=`<div class="sc ${s.type}" draggable="true"
-              ondragstart="onDS(event,'${s.id}')"
+              ondragstart="onDS(event,'${sid}')"
               ondragend="document.querySelectorAll('.sc').forEach(x=>x.classList.remove('dragging'))"
-            ><button class="sceb" onclick="event.stopPropagation();openEditSess('${s.id}')">✏️</button>
-            <button class="scdb" onclick="event.stopPropagation();delSess('${s.id}')">✕</button>
+            ><button class="sceb" draggable="false" onmousedown="event.stopPropagation()" onclick="event.stopPropagation();openEditSess('${sid}')">✏️</button>
+            <button class="scdb" draggable="false" onmousedown="event.stopPropagation()" onclick="event.stopPropagation();delSess('${sid}')">✕</button>
             <div class="ss">${s.subj}</div>
             <div class="si">${s.tch}</div>
             <div class="si">${s.rm}</div>
@@ -3561,8 +3562,22 @@ function saveSess(){
     const data={id,y:S.ay,lv,dp,spec,section,group:grp,day,slot,sem,subj,tch,rm,type,firstLec};
     const i=S.sessions.findIndex(s=>s.id===id);
     if(i>-1)S.sessions[i]=data;
+
+    // إذا المحاضرة → طبّق نفس التغييرات (أستاذ، قاعة، مادة، نوع) على باقي أفواج نفس الفصيلة
+    if((type==='tlc'||type==='tlc-remote')&&section){
+      const orig=S.sessions[i];
+      S.sessions.forEach((s,idx)=>{
+        if(idx===i)return;
+        if(s.y===S.ay&&s.lv===lv&&s.dp===dp&&s.spec===spec&&
+          s.section===section&&s.day===day&&s.slot===slot&&
+          (s.type==='tlc'||s.type==='tlc-remote')){
+          S.sessions[idx]={...s,subj,tch,rm,type};
+        }
+      });
+    }
     save();renderTT();closeM('mSess');
-    toast('✅ تم التعديل');
+    toast('✅ تم التعديل'+(type==='tlc'||type==='tlc-remote')?(' (جميع الأفواج)':''));
+
   } else {
     // -- وضع الإضافة: نأخذ من activeTT --
     if(!S.activeTT){toast('⚠️ لا يوجد جدول نشط');return;}
