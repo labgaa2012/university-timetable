@@ -3597,9 +3597,30 @@ function saveSess(){
   toast(id?'✅ تم التعديل':'✅ تمت الإضافة');
 }
 function delSess(id){
-  if(!confirm('حذف هذه الحصة؟'))return;
-  S.sessions=S.sessions.filter(s=>s.id!==id);
-  save();renderTT();toast('🗑️ تم الحذف');
+  const s=S.sessions.find(x=>x.id===id);
+  if(!s)return;
+  const isLec=s.type==='tlc'||s.type==='tlc-remote';
+  if(isLec&&s.section){
+    // المحاضرة: نحذف لجميع أفواج نفس الفصيلة في نفس اليوم+الفترة+المادة
+    const affected=S.sessions.filter(x=>
+      x.y===s.y && x.lv===s.lv && x.dp===s.dp &&
+      x.spec===s.spec && x.section===s.section &&
+      x.day===s.day && x.slot===s.slot && x.subj===s.subj &&
+      (x.type==='tlc'||x.type==='tlc-remote')
+    );
+    if(affected.length>1){
+      if(!confirm(`حذف هذه المحاضرة من جميع الأفواج (${affected.length} فوج)؟`))return;
+    } else {
+      if(!confirm('حذف هذه الحصة؟'))return;
+    }
+    const ids=new Set(affected.map(x=>x.id));
+    S.sessions=S.sessions.filter(x=>!ids.has(x.id));
+  } else {
+    if(!confirm('حذف هذه الحصة؟'))return;
+    S.sessions=S.sessions.filter(x=>x.id!==id);
+  }
+  save();renderTT();
+  toast(`🗑️ تم الحذف${isLec&&s.section?' (جميع الأفواج)':''}`);
 }
 
 // -- EXAMS -----------------------------------------
