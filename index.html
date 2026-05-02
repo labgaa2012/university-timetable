@@ -3161,9 +3161,16 @@ function renderTT(){
       keySet.add([t.lv,t.dp,t.spec||'',t.section||'',t.group||''].join('|||'));
     }
   });
-  // نضيف activeTT دائماً إذا وُجد
+  // نضيف activeTT فقط إذا لم يكن هناك registeredTTs تغطي نفس المجموعة
+  // ونتجنب إضافة مجموعة بـ group فارغ إذا كانت مجموعات مسجّلة موجودة
   if(S.activeTT&&(curLv||curDp||curSpec)){
-    keySet.add([curLv,curDp,curSpec,curSec,curGrp].join('|||'));
+    const hasRegistered=S.registeredTTs.some(t=>
+      (!curLv||t.lv===curLv)&&(!curDp||t.dp===curDp)&&(!curSpec||t.spec===curSpec)
+    );
+    // نضيف activeTT فقط إذا لا توجد مجموعات مسجّلة (وضع يدوي)
+    if(!hasRegistered){
+      keySet.add([curLv,curDp,curSpec,curSec,curGrp].join('|||'));
+    }
   }
 
   // ترتيب المفاتيح: لكل spec → sections مرتبة → groups مرتبة
@@ -3226,10 +3233,6 @@ function renderTT(){
         ?`<div class="grp-block-header ${colorCls}">
             <div class="grp-dot"></div>
             <span>${subLabel||'— عام —'}</span>
-            <button class="btn" style="margin-right:auto;padding:3px 10px;font-size:10px;background:rgba(255,255,255,.2);color:#fff;border-radius:6px;border:1px solid rgba(255,255,255,.3);"
-              onclick="openAddSessWithKey('__','__','${lvE}','${dpE}','${spE}','${seE}','${gE}')">
-              + إضافة حصة
-            </button>
           </div>`
         :'';
 
