@@ -553,8 +553,6 @@ table.tt td.ec:hover::after{color:var(--teal);}
 .spec-block-header h3{font-size:13.5px;font-weight:800;font-family:'Tajawal',sans-serif;flex:1;}
 .spec-block-header .sb-meta{font-size:10.5px;opacity:.85;}
 
-/* GROUP SUB-TABLE */
-.grp-block{margin-bottom:20px;}
 .grp-block-header{
   display:flex;align-items:center;gap:10px;
   padding:8px 14px;border-radius:9px 9px 0 0;
@@ -565,6 +563,14 @@ table.tt td.ec:hover::after{color:var(--teal);}
 .grp-block-header .grp-dot{
   width:10px;height:10px;border-radius:50%;background:rgba(255,255,255,.6);
 }
+.grp-pdf-btn{
+  margin-right:auto;padding:3px 10px;font-size:10px;font-weight:700;
+  background:rgba(255,255,255,.2);color:#fff;border-radius:6px;
+  border:1px solid rgba(255,255,255,.4);cursor:pointer;
+  transition:all .2s;font-family:'Cairo',sans-serif;
+  display:flex;align-items:center;gap:4px;
+}
+.grp-pdf-btn:hover{background:rgba(255,255,255,.35);}
 /* الألوان الدوارة لرؤوس الأفواج */
 .gh-0{background:linear-gradient(90deg,#1e40af,#3b82f6);color:#fff;}
 .gh-1{background:linear-gradient(90deg,#065f46,#10b981);color:#fff;}
@@ -3492,6 +3498,10 @@ function renderTT(){
         ?`<div class="grp-block-header ${colorCls}">
             <div class="grp-dot"></div>
             <span>${subLabel||'— عام —'}</span>
+            <button class="grp-pdf-btn"
+              onclick="exportGroupPDF('${lvE}','${dpE}','${spE}','${seE}','${gE}')">
+              📄 PDF
+            </button>
           </div>`
         :'';
 
@@ -4354,6 +4364,109 @@ function buildExcel(sessions,exams,fname){
 }
 
 // -- PRINT -----------------------------------------
+async function exportGroupPDF(lv,dp,spec,sec,grp){
+  const btnSelector=`.grp-pdf-btn`;
+  // عنوان المجموعة
+  const grpLabel=[sec&&'🗂️ '+sec,grp&&'👥 '+grp].filter(Boolean).join(' ') || '—';
+  const period=S.activeTT?.period?S.periods[S.activeTT.period-1]||'':'';
+
+  try{
+    // تحميل مؤقت
+    toast('⏳ جاري تصدير PDF للفوج...');
+
+    // حصص هذا الفوج فقط
+    const ss=S.sessions.filter(s=>
+      s.y===S.ay&&s.lv===lv&&s.dp===dp&&
+      (s.spec||'')===spec&&(s.section||'')===sec&&(s.group||'')===grp&&
+      (!S.activeTT?.period||s.sem==S.activeTT.period)
+    );
+    const mp={};
+    ss.forEach(s=>{
+      if(!mp[s.day])mp[s.day]={};
+      if(!mp[s.day][s.slot])mp[s.day][s.slot]=[];
+      mp[s.day][s.slot].push(s);
+    });
+
+    const css=`
+      *{box-sizing:border-box;font-family:'Cairo',Arial,sans-serif;}
+      body{direction:rtl;margin:0;padding:10px;background:#fff;color:#111;}
+      .pdf-header{text-align:center;margin-bottom:10px;border-bottom:2px solid #0f1f3d;padding-bottom:8px;}
+      .pdf-header h1{font-size:13pt;color:#0f1f3d;margin:0 0 3px;}
+      .pdf-header p{font-size:8.5pt;color:#555;margin:2px 0;}
+      table{width:100%;border-collapse:collapse;font-size:8pt;}
+      th{background:#0f1f3d;color:#c9a84c;padding:6px 4px;text-align:center;border:1px solid #888;
+        -webkit-print-color-adjust:exact;print-color-adjust:exact;}
+      td{border:1px solid #ccc;padding:3px;vertical-align:top;min-height:45px;}
+      .day-cell{background:#f0f4f8;font-weight:700;text-align:center;font-size:8.5pt;width:52px;color:#0f1f3d;}
+      .sc-p{border-radius:4px;padding:3px 5px;margin:2px 0;line-height:1.35;}
+      .sc-p strong{display:block;font-size:8pt;font-weight:800;}
+      .sc-p span{font-size:7.5pt;color:#444;}
+      .tlc{background:#dbeafe;}.tlc-remote{background:#e0f2fe;}
+      .ttd{background:#dcfce7;}.ttp{background:#fed7aa;}.ttd-remote{background:#fce7f3;}
+    `;
+
+    let rows='';
+    DAYS.forEach(day=>{
+      rows+=`<tr><td class="day-cell">${day}</td>`;
+      SLOTS.forEach(slot=>{
+        const cells=(mp[day]&&mp[day][slot])||[];
+        rows+=`<td>`;
+        cells.forEach(s=>{
+          rows+=`<div class="sc-p ${s.type}">
+            <strong>${s.subj}</strong>
+            <span>${[s.tch,s.rm,TL[s.type]||''].filter(Boolean).join(' · ')}</span>
+          </div>`;
+        });
+        rows+=`</td>`;
+      });
+      rows+=`</tr>`;
+    });
+
+    const iframe=document.createElement('iframe');
+    iframe.style.cssText='position:fixed;left:-9999px;top:-9999px;width:1100px;background:#fff;border:none;';
+    document.body.appendChild(iframe);
+    const doc=iframe.contentDocument||iframe.contentWindow.document;
+    doc.open();
+    doc.write(`<!DOCTYPE html><html dir="rtl"><head><meta charset="UTF-8">
+      <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;800&display=swap" rel="stylesheet">
+      <style>${css}</style></head><body>
+      <div class="pdf-header">
+        <h1>${S.settings?.university||'جامعة عمار ثليجي الأغواط'}</h1>
+        <p>${S.settings?.faculty||'كلية العلوم الاقتصادية'} — ${spec||dp}</p>
+        <p>${lv}${period?' | '+period:''} | ${grpLabel}</p>
+        <p style="font-size:7.5pt;color:#888;">السنة الدراسية: ${S.ay}</p>
+      </div>
+      <table>
+        <thead><tr>
+          <th style="width:52px;">اليوم</th>
+          ${SLOTS.map(sl=>`<th>${SL[sl].replace(' - ','<br>')}</th>`).join('')}
+        </tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+      </body></html>`);
+    doc.close();
+    await new Promise(r=>setTimeout(r,1200));
+
+    const canvas=await html2canvas(iframe.contentDocument.body,{
+      scale:2,useCORS:true,backgroundColor:'#ffffff',width:1100,windowWidth:1100
+    });
+    document.body.removeChild(iframe);
+
+    const{jsPDF}=window.jspdf;
+    const pdf=new jsPDF({orientation:'landscape',unit:'mm',format:'a4'});
+    const pW=pdf.internal.pageSize.getWidth();
+    const imgH=canvas.height*(pW/canvas.width);
+    pdf.addImage(canvas.toDataURL('image/jpeg',0.93),'JPEG',0,0,pW,Math.min(imgH,pdf.internal.pageSize.getHeight()));
+
+    const fname=`جدول_${(spec||dp).replace(/\s/g,'_')}_${(sec||'').replace(/\s/g,'_')}_${(grp||'').replace(/\s/g,'_')}_${S.ay.replace('/','_')}.pdf`;
+    pdf.save(fname);
+    toast('✅ تم تصدير PDF: '+fname);
+  } catch(e){
+    console.error(e);
+    toast('❌ خطأ: '+e.message);
+  }
+}
+
 async function exportPDF(){
   const btn=document.getElementById('btn-pdf');
   if(btn){btn.disabled=true;btn.textContent='⏳ جاري التصدير...';}
