@@ -4390,9 +4390,26 @@ async function exportGroupPDF(lv,dp,spec,sec,grp){
     const css=`
       *{box-sizing:border-box;font-family:'Cairo',Arial,sans-serif;}
       body{direction:rtl;margin:0;padding:10px;background:#fff;color:#111;}
-      .pdf-header{text-align:center;margin-bottom:10px;border-bottom:2px solid #0f1f3d;padding-bottom:8px;}
-      .pdf-header h1{font-size:13pt;color:#0f1f3d;margin:0 0 3px;}
-      .pdf-header p{font-size:8.5pt;color:#555;margin:2px 0;}
+      .pdf-header{
+        display:flex;align-items:flex-start;justify-content:space-between;
+        border:2px solid #0f1f3d;border-radius:8px;padding:8px 12px;
+        margin-bottom:10px;gap:8px;
+      }
+      /* يمين: قسم + سنة + سداسي */
+      .h-right{text-align:right;min-width:180px;}
+      .h-right .h-dept{font-size:10pt;font-weight:800;color:#0f1f3d;margin-bottom:3px;}
+      .h-right .h-meta{font-size:8.5pt;color:#333;line-height:1.6;}
+      /* وسط: وزارة + جامعة + كلية */
+      .h-center{text-align:center;flex:1;}
+      .h-center .h-min{font-size:7.5pt;color:#555;margin-bottom:2px;}
+      .h-center .h-univ{font-size:11pt;font-weight:800;color:#0f1f3d;}
+      .h-center .h-fac{font-size:8.5pt;color:#333;margin-top:2px;}
+      .h-center .h-sep{width:60%;height:2px;background:#0f1f3d;margin:5px auto;}
+      /* يسار: تخصص + لوغو */
+      .h-left{text-align:left;min-width:120px;display:flex;flex-direction:column;align-items:center;gap:5px;}
+      .h-left .h-logo{width:60px;height:60px;object-fit:contain;}
+      .h-left .h-spec{font-size:8.5pt;font-weight:700;color:#0f1f3d;text-align:center;}
+      /* الجدول */
       table{width:100%;border-collapse:collapse;font-size:8pt;}
       th{background:#0f1f3d;color:#c9a84c;padding:6px 4px;text-align:center;border:1px solid #888;
         -webkit-print-color-adjust:exact;print-color-adjust:exact;}
@@ -4404,6 +4421,36 @@ async function exportGroupPDF(lv,dp,spec,sec,grp){
       .tlc{background:#dbeafe;}.tlc-remote{background:#e0f2fe;}
       .ttd{background:#dcfce7;}.ttp{background:#fed7aa;}.ttd-remote{background:#fce7f3;}
     `;
+
+    const logoHtml=S.settings?.logo
+      ?`<img class="h-logo" src="${S.settings.logo}">`
+      :`<div style="width:60px;height:60px;border:1.5px dashed #ccc;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:22px;">🎓</div>`;
+    const headerHtml=`
+      <div class="pdf-header">
+        <!-- يمين -->
+        <div class="h-right">
+          <div class="h-dept">${dp}</div>
+          <div class="h-meta">
+            السنة الدراسية: ${S.ay}<br>
+            ${period?'الفترة: '+period:''}
+          </div>
+        </div>
+        <!-- وسط -->
+        <div class="h-center">
+          <div class="h-min">${S.settings?.ministry||'وزارة التعليم العالي والبحث العلمي'}</div>
+          <div class="h-sep"></div>
+          <div class="h-univ">${S.settings?.university||'جامعة عمار ثليجي الأغواط'}</div>
+          <div class="h-fac">${S.settings?.faculty||'كلية العلوم الاقتصادية والتجارية وعلوم التسيير'}</div>
+        </div>
+        <!-- يسار -->
+        <div class="h-left">
+          ${logoHtml}
+          <div class="h-spec">${spec||'—'}</div>
+        </div>
+      </div>
+      <div style="text-align:center;font-size:9pt;font-weight:800;color:#0f1f3d;margin-bottom:6px;">
+        جدول التوقيت الأسبوعي — ${lv} | ${grpLabel}
+      </div>`;
 
     let rows='';
     DAYS.forEach(day=>{
@@ -4430,12 +4477,7 @@ async function exportGroupPDF(lv,dp,spec,sec,grp){
     doc.write(`<!DOCTYPE html><html dir="rtl"><head><meta charset="UTF-8">
       <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;800&display=swap" rel="stylesheet">
       <style>${css}</style></head><body>
-      <div class="pdf-header">
-        <h1>${S.settings?.university||'جامعة عمار ثليجي الأغواط'}</h1>
-        <p>${S.settings?.faculty||'كلية العلوم الاقتصادية'} — ${spec||dp}</p>
-        <p>${lv}${period?' | '+period:''} | ${grpLabel}</p>
-        <p style="font-size:7.5pt;color:#888;">السنة الدراسية: ${S.ay}</p>
-      </div>
+      ${headerHtml}
       <table>
         <thead><tr>
           <th style="width:52px;">اليوم</th>
@@ -4510,26 +4552,58 @@ async function exportPDF(){
 
     if(!keys.length){toast('⚠️ لا توجد بيانات للتصدير');return;}
 
-    // CSS خاص بالـ PDF
     const css=`
       *{box-sizing:border-box;font-family:'Cairo',Arial,sans-serif;}
       body{direction:rtl;margin:0;padding:10px;background:#fff;color:#111;}
-      .pdf-header{text-align:center;margin-bottom:10px;border-bottom:2px solid #0f1f3d;padding-bottom:8px;}
-      .pdf-header h1{font-size:13pt;color:#0f1f3d;margin:0 0 3px;}
-      .pdf-header p{font-size:8pt;color:#555;margin:0;}
-      .grp-title{background:#0f1f3d;color:#c9a84c;padding:5px 10px;font-size:9pt;font-weight:700;margin:8px 0 3px;border-radius:5px;}
+      .pdf-header{
+        display:flex;align-items:flex-start;justify-content:space-between;
+        border:2px solid #0f1f3d;border-radius:8px;padding:8px 12px;
+        margin-bottom:10px;gap:8px;
+      }
+      .h-right{text-align:right;min-width:180px;}
+      .h-right .h-dept{font-size:10pt;font-weight:800;color:#0f1f3d;margin-bottom:3px;}
+      .h-right .h-meta{font-size:8.5pt;color:#333;line-height:1.6;}
+      .h-center{text-align:center;flex:1;}
+      .h-center .h-min{font-size:7.5pt;color:#555;margin-bottom:2px;}
+      .h-center .h-univ{font-size:11pt;font-weight:800;color:#0f1f3d;}
+      .h-center .h-fac{font-size:8.5pt;color:#333;margin-top:2px;}
+      .h-center .h-sep{width:60%;height:2px;background:#0f1f3d;margin:5px auto;}
+      .h-left{text-align:left;min-width:120px;display:flex;flex-direction:column;align-items:center;gap:5px;}
+      .h-left .h-logo{width:60px;height:60px;object-fit:contain;}
+      .h-left .h-spec{font-size:8.5pt;font-weight:700;color:#0f1f3d;text-align:center;}
+      .grp-title{background:#0f1f3d;color:#c9a84c;padding:5px 10px;font-size:9pt;font-weight:700;margin:8px 0 3px;border-radius:5px;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
       table{width:100%;border-collapse:collapse;margin-bottom:10px;font-size:7.5pt;}
       th{background:#0f1f3d;color:#c9a84c;padding:5px 3px;text-align:center;border:1px solid #999;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
       td{border:1px solid #ccc;padding:2px;vertical-align:top;min-height:40px;}
       .day-cell{background:#f0f4f8;font-weight:700;text-align:center;font-size:8pt;width:52px;color:#0f1f3d;}
       .sc-p{border-radius:4px;padding:3px 4px;margin:1px 0;line-height:1.3;font-size:7pt;}
       .sc-p strong{display:block;font-size:7.5pt;}
-      .tlc{background:#dbeafe;}
-      .tlc-remote{background:#e0f2fe;}
-      .ttd{background:#dcfce7;}
-      .ttp{background:#fed7aa;}
-      .ttd-remote{background:#fce7f3;}
+      .tlc{background:#dbeafe;}.tlc-remote{background:#e0f2fe;}
+      .ttd{background:#dcfce7;}.ttp{background:#fed7aa;}.ttd-remote{background:#fce7f3;}
     `;
+    const logoHtml=S.settings?.logo
+      ?`<img class="h-logo" src="${S.settings.logo}">`
+      :`<div style="width:60px;height:60px;border:1.5px dashed #ccc;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:22px;">🎓</div>`;
+    const mainHeader=`
+      <div class="pdf-header">
+        <div class="h-right">
+          <div class="h-dept">${att.dp||''}</div>
+          <div class="h-meta">
+            السنة الدراسية: ${S.ay}<br>
+            ${period?'الفترة: '+period:''}
+          </div>
+        </div>
+        <div class="h-center">
+          <div class="h-min">${S.settings?.ministry||'وزارة التعليم العالي والبحث العلمي'}</div>
+          <div class="h-sep"></div>
+          <div class="h-univ">${S.settings?.university||'جامعة عمار ثليجي الأغواط'}</div>
+          <div class="h-fac">${S.settings?.faculty||'كلية العلوم الاقتصادية والتجارية وعلوم التسيير'}</div>
+        </div>
+        <div class="h-left">
+          ${logoHtml}
+          <div class="h-spec">${att.spec||''}</div>
+        </div>
+      </div>`;
 
     // بناء جدول HTML لكل مجموعة
     let tablesHtml='';
@@ -4566,10 +4640,7 @@ async function exportPDF(){
     doc.write(`<!DOCTYPE html><html dir="rtl"><head><meta charset="UTF-8">
       <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;800&display=swap" rel="stylesheet">
       <style>${css}</style></head><body>
-      <div class="pdf-header">
-        <h1>${S.settings?.university||'جامعة عمار ثليجي الأغواط'} — ${S.settings?.faculty||'كلية العلوم الاقتصادية'}</h1>
-        <p>جدول التوقيت الأسبوعي — ${S.ay}${period?' | '+period:''}${title?' | '+title:''}</p>
-      </div>
+      ${mainHeader}
       ${tablesHtml}
       </body></html>`);
     doc.close();
