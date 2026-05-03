@@ -1024,6 +1024,11 @@ table.occ-matrix td.cell-occ:hover{background:#fee2e2;filter:brightness(.97);}
       <button class="btn bg" onclick="saveSettings()" style="width:100%;justify-content:center;padding:12px;font-size:14px;">
         💾 حفظ الإعدادات
       </button>
+      <div style="margin-top:12px;">
+        <button class="btn" onclick="openSlotsMgr()" style="width:100%;justify-content:center;padding:11px;font-size:13px;background:#7c3aed;color:#fff;">
+          ⏰ ضبط التوقيت
+        </button>
+      </div>
 
       <!-- معاينة الترويسة -->
       <div id="settings-preview" style="display:none;margin-top:20px;border:1.5px solid #e0e8f5;border-radius:10px;padding:14px;background:#fafbfd;">
@@ -1701,6 +1706,42 @@ table.occ-matrix td.cell-occ:hover{background:#fee2e2;filter:brightness(.97);}
   </div>
 </div>
 
+<!-- MODAL: ضبط التوقيت -->
+<div class="mo" id="mSlotsMgr">
+  <div class="mb" style="width:500px;">
+    <div class="mt">⏰ ضبط التوقيت</div>
+
+    <!-- قائمة الحصص الحالية -->
+    <div id="slots-list" style="margin-bottom:14px;"></div>
+
+    <!-- إضافة حصة جديدة -->
+    <div style="background:#f8fafc;border:1.5px solid #e0e8f5;border-radius:10px;padding:14px;">
+      <div style="font-size:12px;font-weight:700;color:var(--navy);margin-bottom:10px;">➕ إضافة حصة</div>
+      <div class="fg" style="margin-bottom:10px;">
+        <label class="fl">اسم الحصة</label>
+        <input class="fi" id="slot-name" placeholder="مثال: الحصة الأولى...">
+      </div>
+      <div class="frow2">
+        <div class="fg">
+          <label class="fl">من</label>
+          <input class="fi" id="slot-from" type="time" value="08:00">
+        </div>
+        <div class="fg">
+          <label class="fl">إلى</label>
+          <input class="fi" id="slot-to" type="time" value="09:30">
+        </div>
+      </div>
+      <button class="btn bg" onclick="addSlot()" style="margin-top:10px;width:100%;justify-content:center;">
+        ✅ حفظ الحصة
+      </button>
+    </div>
+
+    <div class="ma" style="margin-top:14px;">
+      <button class="btn" style="background:var(--gray-light);color:var(--text-mid);" onclick="closeM('mSlotsMgr')">إغلاق</button>
+    </div>
+  </div>
+</div>
+
 <!-- MODAL: اختيار شكل PDF -->
 <div class="mo" id="mPDFChoice">
   <div class="mb" style="width:480px;">
@@ -2246,6 +2287,13 @@ function defState(){
     activeTT:null,
     registeredTTs:[],
     settings:{ministry:'',university:'جامعة عمار ثليجي الأغواط',faculty:'كلية العلوم الاقتصادية والتجارية وعلوم التسيير',logo:''},
+    slots:[
+      {name:'الحصة الأولى',  from:'08:00',to:'09:30'},
+      {name:'الحصة الثانية', from:'09:30',to:'11:00'},
+      {name:'الحصة الثالثة', from:'11:15',to:'12:45'},
+      {name:'الحصة الرابعة', from:'13:30',to:'15:00'},
+      {name:'الحصة الخامسة', from:'15:00',to:'16:30'}
+    ],
     teachers:DEFAULT_TEACHERS(),rooms,sessions:[],exams:[],archive:[],
     ay:'2025/2026',al:'سنة أولى ليسانس',ad:'قسم السنة أولى جذع مشترك',round:1
   };
@@ -2264,6 +2312,13 @@ function load(){
   if(!S.sections||!S.sections.length)S.sections=['الفصيلة1','الفصيلة2','الفصيلة3'];
   if(!S.registeredTTs)               S.registeredTTs=[];
   if(!S.settings)                    S.settings={ministry:'',university:'',faculty:'',logo:''};
+  if(!S.slots||!S.slots.length)      S.slots=[
+    {name:'الحصة الأولى',  from:'08:00',to:'09:30'},
+    {name:'الحصة الثانية', from:'09:30',to:'11:00'},
+    {name:'الحصة الثالثة', from:'11:15',to:'12:45'},
+    {name:'الحصة الرابعة', from:'13:30',to:'15:00'},
+    {name:'الحصة الخامسة', from:'15:00',to:'16:30'}
+  ];
   if(!S.sessionTypes||!S.sessionTypes.length) S.sessionTypes=[
     {id:'tlc',       label:'محاضرة',              code:'CM',  icon:'📖'},
     {id:'tlc-remote',label:'محاضرة عن بعد',       code:'CM-E',icon:'🖥️'},
@@ -5387,6 +5442,64 @@ function editGrp(i){
   S.groups[i]=n;save();renderGrpGrid();toast('✅ تم التعديل');
 }
 
+// -- SLOTS MANAGER ---------------------------------
+function openSlotsMgr(){
+  renderSlotsList();
+  openM('mSlotsMgr');
+}
+function renderSlotsList(){
+  const el=document.getElementById('slots-list');
+  if(!el)return;
+  if(!S.slots.length){
+    el.innerHTML='<div style="color:var(--gray);text-align:center;padding:12px;font-size:12px;">لا توجد حصص — أضف من الأسفل</div>';
+    return;
+  }
+  el.innerHTML=S.slots.map((sl,i)=>`
+    <div style="display:flex;align-items:center;gap:8px;padding:8px 12px;
+      background:#fff;border:1.5px solid #e0e8f5;border-radius:9px;margin-bottom:7px;">
+      <span style="font-size:11px;font-weight:700;color:var(--navy);flex:1;">${sl.name}</span>
+      <span style="font-size:11px;color:var(--teal);font-weight:700;background:#f0faf9;
+        padding:3px 10px;border-radius:20px;">${sl.from} — ${sl.to}</span>
+      <button onclick="rmSlot(${i})" style="background:none;border:none;cursor:pointer;
+        color:var(--danger);font-size:14px;padding:0 4px;">✕</button>
+    </div>`).join('');
+}
+function addSlot(){
+  const name=document.getElementById('slot-name').value.trim();
+  const from=document.getElementById('slot-from').value;
+  const to  =document.getElementById('slot-to').value;
+  if(!name){toast('⚠️ أدخل اسم الحصة');return;}
+  if(!from||!to){toast('⚠️ حدد وقت البداية والنهاية');return;}
+  if(from>=to){toast('⚠️ وقت البداية يجب أن يكون قبل النهاية');return;}
+  S.slots.push({name,from,to});
+  document.getElementById('slot-name').value='';
+  // نُحدِّث ثوابت SLOTS و SL ليعكس التغيير
+  rebuildSlots();
+  save();renderSlotsList();renderTT();
+  toast('✅ أضيفت الحصة: '+name);
+}
+function rmSlot(i){
+  S.slots.splice(i,1);
+  rebuildSlots();
+  save();renderSlotsList();renderTT();
+  toast('🗑️ تم الحذف');
+}
+function rebuildSlots(){
+  // تحديث SLOTS وSL من S.slots
+  SLOTS.length=0;
+  Object.keys(SL).forEach(k=>delete SL[k]);
+  S.slots.forEach(sl=>{
+    const key=`${sl.from}-${sl.to}`;
+    SLOTS.push(key);
+    SL[key]=`${sl.from} - ${sl.to}`;
+  });
+  // تحديث منسدلة الفترة في modal الحصة
+  const mSlot=document.getElementById('ms-slot');
+  if(mSlot){
+    mSlot.innerHTML=SLOTS.map(sl=>`<option value="${sl}">${SL[sl]}</option>`).join('');
+  }
+}
+
 // -- SETTINGS --------------------------------------
 function loadSettingsPage(){
   const st=S.settings||{};
@@ -5466,6 +5579,7 @@ function saveSettings(){
 
 // -- INIT ------------------------------------------
 load();
+rebuildSlots(); // تطبيق الفترات الزمنية المحفوظة
 renderAll();
 // تطبيق الإعدادات المحفوظة
 if(S.settings?.university){
