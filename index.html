@@ -4597,8 +4597,8 @@ async function exportGroupPDFClassic(lv,dp,spec,sec,grp){
           <div class="h-meta">
             السنة الدراسية: ${S.ay}<br>
             ${period?'الفترة: '+period:''}
-            ${sec?'<br>الفصيلة: '+sec:''}
-            ${grp?'<br>الفوج: '+grp:''}
+            ${sec?'<br><span dir="rtl">الفصيلة: '+sec+'</span>':''}
+            ${grp?'<br><span dir="rtl">الفوج: '+grp+'</span>':''}
           </div>
         </div>
         <div class="h-center">
@@ -4716,8 +4716,8 @@ async function exportGroupPDF(lv,dp,spec,sec,grp){
           <div class="h-meta">
             السنة الدراسية: ${S.ay}<br>
             ${period?'الفترة: '+period+'<br>':''}
-            ${sec?'الفصيلة: '+sec+'<br>':''}
-            ${grp?'الفوج: '+grp:''}
+            ${sec?'<span dir="rtl">الفصيلة: '+sec+'</span><br>':''}
+            ${grp?'<span dir="rtl">الفوج: '+grp+'</span>':''}
           </div>
         </div>
         <!-- وسط -->
