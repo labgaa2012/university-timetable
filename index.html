@@ -4140,31 +4140,33 @@ function renderExams(){
   const wrap=document.getElementById('exam-table-wrap');
   if(!wrap){updStats();return;}
 
-  // أفواج مسجّلة لهذا التخصص/الفصيلة
+  // أفواج الامتحان = نفس أفواج جدول التوقيت الأسبوعي للتخصص/الفصيلة
   const regGroups=S.registeredTTs.filter(t=>
     (!f.lv||t.lv===f.lv)&&(!f.dp||t.dp===f.dp)&&
     (!f.spec||t.spec===f.spec)&&(!f.sec||t.section===f.sec)&&t.group
   );
   let groups=[...new Set(regGroups.map(t=>t.group))].sort((a,b)=>S.groups.indexOf(a)-S.groups.indexOf(b));
 
-  // إذا لم توجد مجموعات مسجّلة، نأخذها من بيانات الامتحانات الموجودة
+  // إذا لم توجد registeredTTs → خذ من الحصص الموجودة في جدول التوقيت
+  if(!groups.length&&(f.lv||f.spec)){
+    const fromSess=new Set(
+      S.sessions.filter(s=>s.y===S.ay&&(!f.lv||s.lv===f.lv)&&(!f.dp||s.dp===f.dp)&&(!f.spec||s.spec===f.spec)&&(!f.sec||s.section===f.sec)&&s.group)
+        .map(s=>s.group)
+    );
+    groups=[...fromSess].sort((a,b)=>S.groups.indexOf(a)-S.groups.indexOf(b));
+  }
+  // fallback أخير: من بيانات الامتحانات الموجودة
   if(!groups.length){
     const fromExams=new Set();
     S.exams.filter(e=>e.round==S.round&&e.y===S.ay&&(!f.lv||e.lv===f.lv)&&(!f.spec||e.spec===f.spec))
       .forEach(e=>{if(e.rooms)Object.keys(e.rooms).forEach(g=>fromExams.add(g));});
     groups=[...fromExams].sort((a,b)=>S.groups.indexOf(a)-S.groups.indexOf(b));
   }
-
-  // إضافة أفواج مؤقتة من examExtraGroups
+  // إضافة أفواج مؤقتة
   if(!S.examExtraGroups)S.examExtraGroups={};
   const extraKey=`${f.lv}|${f.dp}|${f.spec}|${f.sec}`;
-  const extra=S.examExtraGroups[extraKey]||[];
-  extra.forEach(g=>{if(!groups.includes(g))groups.push(g);});
-
-  // إذا لا توجد أفواج بعد → استخدم أفواج S.groups الأولى كافتراضي
-  if(!groups.length&&(f.lv||f.spec)){
-    groups=S.groups.slice(0,3);
-  }
+  (S.examExtraGroups[extraKey]||[]).forEach(g=>{if(!groups.includes(g))groups.push(g);});
+  if(!groups.length&&(f.lv||f.spec))groups=S.groups.slice(0,3);
 
   const exams=S.exams.filter(e=>
     e.round==f.round&&e.y===S.ay&&
@@ -4231,14 +4233,19 @@ function renderExams(){
           </select>
         </td>
         <td class="exam-subj-cell">
-          <input class="exam-edit-input" style="font-weight:800;font-size:13px;text-align:right;"
-            value="${ex.subj||''}" placeholder="المقياس..."
-            onchange="updateExam('${ex.id}','subj',this.value)">
+          <select class="exam-edit-input" style="font-weight:800;font-size:12px;width:100%;"
+            onchange="onExamSubjChange('${ex.id}',this.value)">
+            <option value="">-- اختر المقياس --</option>
+            ${S.subjects.filter(s=>(!f.lv||!s.level||s.level===f.lv)&&(!f.dp||!s.dept||s.dept===f.dp)&&(!f.spec||!s.spec||s.spec===f.spec)&&(!f.period||s.sem==f.period)).map(s=>`<option value="${s.name}"${s.name===ex.subj?' selected':''}>${s.name}</option>`).join('')}
+            ${ex.subj&&!S.subjects.find(s=>s.name===ex.subj)?`<option value="${ex.subj}" selected>${ex.subj}</option>`:''}
+          </select>
           <div style="margin-top:4px;">
-            <input class="exam-edit-input" style="font-size:11px;color:#555;text-align:right;"
-              value="${ex.tch||''}" placeholder="الأستاذ..."
-              onchange="updateExam('${ex.id}','tch',this.value)" list="etl-${ex.id}">
-            <datalist id="etl-${ex.id}">${S.teachers.map(t=>`<option value="${t.name}">`).join('')}</datalist>
+            <select class="exam-edit-input" style="font-size:11px;color:#555;width:100%;"
+              onchange="updateExam('${ex.id}','tch',this.value)">
+              <option value="">-- الأستاذ --</option>
+              ${getSubjTeachers(ex.subj,ex.lv,ex.dp,ex.spec).map(t=>`<option value="${t}"${t===ex.tch?' selected':''}>${t}</option>`).join('')}
+              ${ex.tch&&!getSubjTeachers(ex.subj,ex.lv,ex.dp,ex.spec).includes(ex.tch)?`<option value="${ex.tch}" selected>${ex.tch}</option>`:''}
+            </select>
           </div>
         </td>`;
 
@@ -4310,6 +4317,29 @@ function updateExamRoom(id,grp,room,extraKey){
       if(disp)disp.textContent=room||'—';
     }
   });
+}
+
+// الأساتذة الذين درّسوا هذا المقياس في جدول التوقيت
+function getSubjTeachers(subj,lv,dp,spec){
+  if(!subj)return[];
+  const teachers=new Set(
+    S.sessions.filter(s=>s.y===S.ay&&s.subj===subj&&
+      (!lv||s.lv===lv)&&(!dp||s.dp===dp)&&(!spec||s.spec===spec))
+      .map(s=>s.tch).filter(Boolean)
+  );
+  // fallback: كل أساتذة القسم
+  if(!teachers.size&&dp){
+    S.teachers.filter(t=>t.dept===dp).forEach(t=>teachers.add(t.name));
+  }
+  return[...teachers];
+}
+function onExamSubjChange(id,subj){
+  const ex=S.exams.find(e=>e.id===id);if(!ex)return;
+  ex.subj=subj;
+  // تعيين الأستاذ تلقائياً إذا كان أستاذ واحد فقط
+  const teachers=getSubjTeachers(subj,ex.lv,ex.dp,ex.spec);
+  if(teachers.length===1)ex.tch=teachers[0];
+  save();renderExams();
 }
 
 function addExamRow(){
