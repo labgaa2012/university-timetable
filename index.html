@@ -563,6 +563,44 @@ table.tt td.ec:hover::after{color:var(--teal);}
 .grp-block-header .grp-dot{
   width:10px;height:10px;border-radius:50%;background:rgba(255,255,255,.6);
 }
+/* EXAM TABLE */
+.exam-table{width:100%;border-collapse:collapse;font-size:12px;}
+.exam-table th{
+  background:var(--navy);color:var(--gold-light);padding:8px 6px;
+  text-align:center;border:2px solid #334;font-size:12px;
+  -webkit-print-color-adjust:exact;print-color-adjust:exact;
+}
+.exam-table td{border:2px solid #999;padding:6px;vertical-align:middle;text-align:center;}
+.exam-table .grp-room-cell{
+  font-size:18px;font-weight:800;line-height:1.2;color:var(--navy);
+  min-width:80px;padding:8px 6px;
+}
+.exam-row-odd{background:#fffef0;}
+.exam-row-even{background:#f0fff4;}
+.exam-subj-cell{background:#fefce8;text-align:right;padding:6px 10px !important;}
+.exam-day-cell{font-weight:700;font-size:12px;color:var(--navy);}
+.exam-edit-input{
+  width:100%;border:1.5px solid transparent;border-radius:5px;
+  padding:3px 6px;text-align:center;font-family:'Cairo',sans-serif;
+  font-size:12px;background:transparent;outline:none;direction:rtl;
+}
+.exam-edit-input:focus{border-color:var(--teal);background:#f0faf9;}
+.exam-date-input{
+  width:100%;border:1px solid #d0dae8;border-radius:5px;
+  padding:2px 4px;font-size:11px;background:#fff;outline:none;
+}
+.exam-room-input{
+  width:100%;border:1.5px solid transparent;border-radius:5px;
+  padding:4px;text-align:center;font-family:'Cairo',sans-serif;
+  font-size:15px;font-weight:800;background:transparent;outline:none;
+}
+.exam-room-input:focus{border-color:var(--navy);background:#f0f4ff;}
+
+/* ROOM COLORS */
+.rc-0{background:#dbeafe;}.rc-1{background:#dcfce7;}.rc-2{background:#fed7aa;}
+.rc-3{background:#fce7f3;}.rc-4{background:#ede9fe;}.rc-5{background:#fef9c3;}
+.rc-6{background:#e0f2fe;}.rc-7{background:#fef3c7;}
+
 /* CONFLICT SYSTEM */
 .conflict-banner{
   border-radius:10px;margin-bottom:12px;overflow:hidden;
@@ -1257,20 +1295,44 @@ table.occ-matrix td.cell-occ:hover{background:#fee2e2;filter:brightness(.97);}
             <button class="vt active" onclick="setRound(1,this)">الدور الأول</button>
             <button class="vt" onclick="setRound(2,this)">الدور الثاني</button>
           </div>
-          <button class="btn bg" onclick="openAddExam()">➕ إضافة</button>
-          <button class="btn bn" onclick="expExamsExcel()">📊 تصدير</button>
-          <button class="btn bi" onclick="trigImp('imp-exams')">📥 استيراد</button>
-          <button class="btn btpl" onclick="dlTemplate('exams')">📋 قالب</button>
-          <button class="btn bp" onclick="window.print()">🖨️ طباعة</button>
+          <button class="btn bg" onclick="addExamRow()">➕ إضافة امتحان</button>
+          <button class="btn" onclick="exportExamPDF()" style="background:#7c3aed;color:#fff;">📄 PDF</button>
+          <button class="btn bn" onclick="expExamsExcel()">📊 Excel</button>
         </div>
       </div>
-      <table class="et">
-        <thead><tr>
-          <th>المادة</th><th>المستوى</th><th>القسم</th>
-          <th>التاريخ</th><th>الوقت</th><th>القاعة</th><th>الأستاذ</th><th></th>
-        </tr></thead>
-        <tbody id="exTbody"></tbody>
-      </table>
+
+      <!-- فلتر -->
+      <div class="filter-bar" style="margin-bottom:12px;">
+        <div class="fg">
+          <label class="fl">الفترة</label>
+          <select class="fs" id="ex-period" onchange="renderExams()">
+            <option value="">كل الفترات</option>
+          </select>
+        </div>
+        <div class="fg">
+          <label class="fl">المستوى</label>
+          <select class="fs" id="ex-lv" onchange="onExLvChange()"></select>
+        </div>
+        <div class="fg">
+          <label class="fl">القسم</label>
+          <select class="fs" id="ex-dp" onchange="onExDpChange()"></select>
+        </div>
+        <div class="fg">
+          <label class="fl">التخصص</label>
+          <select class="fs" id="ex-spec" onchange="renderExams()">
+            <option value="">كل التخصصات</option>
+          </select>
+        </div>
+        <div class="fg">
+          <label class="fl">الفصيلة</label>
+          <select class="fs" id="ex-sec" onchange="renderExams()">
+            <option value="">كل الفصائل</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- الجدول -->
+      <div id="exam-table-wrap" style="overflow-x:auto;"></div>
     </div>
   </div>
 
@@ -4042,70 +4104,153 @@ function delSess(id){
 }
 
 // -- EXAMS -----------------------------------------
+// -- EXAMS (new system) ----------------------------
+const EXAM_SLOTS=['08:00-10:00','10:30-12:30','14:00-16:00','16:30-18:30'];
+
+function syncExamFilters(){
+  const pSel=document.getElementById('ex-period');
+  if(pSel&&pSel.options.length<=1){pSel.innerHTML='<option value="">كل الفترات</option>'+S.periods.map((p,i)=>`<option value="${i+1}">${p}</option>`).join('');}
+  const lvSel=document.getElementById('ex-lv');
+  if(lvSel&&lvSel.options.length===0)lvSel.innerHTML=S.levels.map(l=>`<option>${l}</option>`).join('');
+  const dpSel=document.getElementById('ex-dp');
+  if(dpSel&&dpSel.options.length===0)dpSel.innerHTML=S.depts.map(d=>`<option>${d}</option>`).join('');
+  syncExamSpec();
+  const secSel=document.getElementById('ex-sec');
+  if(secSel&&secSel.options.length<=1)secSel.innerHTML='<option value="">كل الفصائل</option>'+S.sections.map(s=>`<option value="${s}">${s}</option>`).join('');
+}
+function onExLvChange(){const sp=document.getElementById('ex-spec');if(sp)sp.value='';syncExamSpec();renderExams();}
+function onExDpChange(){const sp=document.getElementById('ex-spec');if(sp)sp.value='';syncExamSpec();renderExams();}
+function syncExamSpec(){
+  const lv=document.getElementById('ex-lv')?.value||'';const dp=document.getElementById('ex-dp')?.value||'';
+  const specs=S.specs.filter(sp=>(!lv||sp.lv===lv)&&(!dp||sp.dp===dp));
+  const el=document.getElementById('ex-spec');if(!el)return;
+  const cur=el.value;
+  el.innerHTML='<option value="">كل التخصصات</option>'+specs.map(sp=>`<option value="${sp.name}">${sp.name}</option>`).join('');
+  if(cur&&[...el.options].some(o=>o.value===cur))el.value=cur;
+}
+function getExamFilters(){
+  return{round:S.round||1,period:document.getElementById('ex-period')?.value||'',
+    lv:document.getElementById('ex-lv')?.value||'',dp:document.getElementById('ex-dp')?.value||'',
+    spec:document.getElementById('ex-spec')?.value||'',sec:document.getElementById('ex-sec')?.value||''};
+}
+function renderExams(){
+  syncExamFilters();
+  const f=getExamFilters();
+  const wrap=document.getElementById('exam-table-wrap');
+  if(!wrap){updStats();return;}
+  const regGroups=S.registeredTTs.filter(t=>(!f.lv||t.lv===f.lv)&&(!f.dp||t.dp===f.dp)&&(!f.spec||t.spec===f.spec)&&(!f.sec||t.section===f.sec)&&t.group);
+  const groups=[...new Set(regGroups.map(t=>t.group))].sort((a,b)=>S.groups.indexOf(a)-S.groups.indexOf(b));
+  const exams=S.exams.filter(e=>e.round==f.round&&e.y===S.ay&&(!f.period||e.sem==f.period)&&(!f.lv||e.lv===f.lv)&&(!f.dp||e.dp===f.dp)&&(!f.spec||e.spec===f.spec)&&(!f.sec||e.section===f.sec)).sort((a,b)=>a.date?.localeCompare(b.date||'')||0);
+  if(!f.lv&&!f.spec&&!exams.length){wrap.innerHTML=`<div class="tt-empty-state"><div class="es-icon">📝</div><h3>اختر التخصص والمستوى</h3><p>أو أضف امتحاناً جديداً</p></div>`;updStats();return;}
+  let h=`<table class="exam-table"><thead><tr>
+    <th style="width:110px;">اليوم / التاريخ</th>
+    <th style="width:95px;">التوقيت</th>
+    <th>المقياس / الأستاذ</th>
+    ${groups.map((g,i)=>`<th class="rc-${i%8}" style="min-width:90px;">👥 ${g}</th>`).join('')}
+    <th style="width:50px;"></th>
+  </tr></thead><tbody>`;
+  if(!exams.length){h+=`<tr><td colspan="${4+groups.length}" style="padding:30px;text-align:center;color:var(--gray);">لا توجد امتحانات — اضغط "إضافة امتحان"</td></tr>`;}
+  else exams.forEach((ex,i)=>{
+    const rowCls=i%2?'exam-row-even':'exam-row-odd';
+    h+=`<tr class="${rowCls}">
+      <td class="exam-day-cell"><div style="font-weight:700;">${ex.day||''}</div>
+        <input class="exam-date-input" type="date" value="${ex.date||''}" onchange="updateExam('${ex.id}','date',this.value)"></td>
+      <td><select class="exam-edit-input" onchange="updateExam('${ex.id}','slot',this.value)">${EXAM_SLOTS.map(s=>`<option${s===ex.slot?' selected':''}>${s}</option>`).join('')}</select></td>
+      <td class="exam-subj-cell">
+        <input class="exam-edit-input" style="font-weight:800;font-size:13px;text-align:right;" value="${ex.subj||''}" placeholder="المقياس..." onchange="updateExam('${ex.id}','subj',this.value)">
+        <div style="margin-top:4px;"><input class="exam-edit-input" style="font-size:11px;color:#555;text-align:right;" value="${ex.tch||''}" placeholder="الأستاذ..." onchange="updateExam('${ex.id}','tch',this.value)" list="etl-${ex.id}">
+        <datalist id="etl-${ex.id}">${S.teachers.map(t=>`<option value="${t.name}">`).join('')}</datalist></div>
+      </td>
+      ${groups.map((g,gi)=>`<td class="grp-room-cell rc-${gi%8}">
+        <input class="exam-room-input" style="background:transparent;" value="${ex.rooms?.[g]||''}" placeholder="القاعة" onchange="updateExamRoom('${ex.id}','${g.replace(/'/g,"\\'")}',this.value)">
+      </td>`).join('')}
+      <td><button onclick="delExam('${ex.id}')" style="background:none;border:none;cursor:pointer;color:var(--danger);font-size:16px;">🗑️</button></td>
+    </tr>`;
+  });
+  h+=`</tbody></table>`;
+  wrap.innerHTML=h;updStats();
+}
+function addExamRow(){
+  const f=getExamFilters();
+  if(!f.lv&&!f.spec){toast('⚠️ اختر المستوى والتخصص من الفلتر أولاً');return;}
+  S.exams.push({id:uid(),y:S.ay,round:S.round||1,lv:f.lv,dp:f.dp,spec:f.spec,section:f.sec,sem:parseInt(f.period)||1,subj:'',tch:'',day:'السبت',date:'',slot:EXAM_SLOTS[0],rooms:{}});
+  save();renderExams();
+}
+function updateExam(id,field,value){
+  const ex=S.exams.find(e=>e.id===id);if(!ex)return;
+  ex[field]=value;
+  if(field==='date'&&value){const d=new Date(value);const dn=['الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'];ex.day=dn[d.getDay()]||'';}
+  save();if(field==='date')renderExams();
+}
+function updateExamRoom(id,grp,room){
+  const ex=S.exams.find(e=>e.id===id);if(!ex)return;
+  if(!ex.rooms)ex.rooms={};ex.rooms[grp]=room;save();
+}
+function delExam(id){S.exams=S.exams.filter(e=>e.id!==id);save();renderExams();toast('🗑️ تم الحذف');}
+
+async function exportExamPDF(){
+  const f=getExamFilters();
+  const exams=S.exams.filter(e=>e.round==S.round&&e.y===S.ay&&(!f.period||e.sem==f.period)&&(!f.lv||e.lv===f.lv)&&(!f.dp||e.dp===f.dp)&&(!f.spec||e.spec===f.spec)&&(!f.sec||e.section===f.sec)).sort((a,b)=>a.date?.localeCompare(b.date||'')||0);
+  if(!exams.length){toast('⚠️ لا توجد امتحانات للتصدير');return;}
+  toast('⏳ جاري تصدير PDF...');
+  const regGroups=S.registeredTTs.filter(t=>(!f.lv||t.lv===f.lv)&&(!f.dp||t.dp===f.dp)&&(!f.spec||t.spec===f.spec)&&(!f.sec||t.section===f.sec)&&t.group);
+  const groups=[...new Set(regGroups.map(t=>t.group))].sort((a,b)=>S.groups.indexOf(a)-S.groups.indexOf(b));
+  const RB=['#dbeafe','#dcfce7','#fed7aa','#fce7f3','#ede9fe','#fef9c3','#e0f2fe','#fef3c7'];
+  const logoHtml=S.settings?.logo?`<img src="${S.settings.logo}" style="width:60px;height:60px;object-fit:contain;">`:'<span style="font-size:36px;">🎓</span>';
+  const period=f.period?S.periods[parseInt(f.period)-1]||'':'';
+  let rows='';
+  exams.forEach((ex,i)=>{rows+=`<tr style="background:${i%2?'#f0fff4':'#fffef0'}">
+    <td style="padding:8px;font-weight:700;border:1.5px solid #999;"><div>${ex.day||''}</div><div style="font-size:10pt;color:#555;">${ex.date||''}</div></td>
+    <td style="padding:8px;border:1.5px solid #999;font-weight:700;">${ex.slot||''}</td>
+    <td style="padding:8px;border:1.5px solid #999;text-align:right;background:#fefce8;">
+      <div style="font-size:11pt;font-weight:800;color:#0f1f3d;">${ex.subj||''}</div>
+      <div style="font-size:9.5pt;color:#555;margin-top:3px;">${ex.tch||''}</div>
+    </td>
+    ${groups.map((g,gi)=>`<td style="padding:8px;border:1.5px solid #999;background:${RB[gi%RB.length]};font-size:14pt;font-weight:800;text-align:center;color:#0f1f3d;">${ex.rooms?.[g]||'—'}</td>`).join('')}
+  </tr>`;});
+  const css=`*{box-sizing:border-box;}body{font-family:'Cairo',Arial,sans-serif;direction:rtl;margin:0;padding:8px;background:#fff;}
+    .pdf-header{display:flex;align-items:flex-start;justify-content:space-between;border:2px solid #0f1f3d;border-radius:8px;padding:8px 12px;margin-bottom:8px;gap:8px;}
+    .h-right{text-align:right;min-width:180px;}.h-right .h-dept{font-size:10pt;font-weight:800;color:#0f1f3d;margin-bottom:3px;}.h-right .h-meta{font-size:8.5pt;color:#333;line-height:1.7;}
+    .h-center{text-align:center;flex:1;}.h-center .h-min{font-size:7.5pt;color:#555;margin-bottom:2px;}.h-center .h-univ{font-size:11pt;font-weight:800;color:#0f1f3d;}.h-center .h-fac{font-size:8.5pt;color:#333;margin-top:2px;}.h-center .h-sep{width:60%;height:2px;background:#0f1f3d;margin:5px auto;}
+    .h-left{min-width:100px;display:flex;flex-direction:column;align-items:center;gap:5px;}
+    table{width:100%;border-collapse:collapse;font-size:9pt;}th{background:#0f1f3d;color:#c9a84c;padding:7px;text-align:center;border:1.5px solid #333;-webkit-print-color-adjust:exact;print-color-adjust:exact;}`;
+  try{
+    const iframe=document.createElement('iframe');
+    iframe.style.cssText='position:fixed;left:-9999px;top:-9999px;width:1200px;background:#fff;border:none;';
+    document.body.appendChild(iframe);
+    const doc=iframe.contentDocument||iframe.contentWindow.document;
+    doc.open();
+    doc.write(`<!DOCTYPE html><html dir="rtl"><head><meta charset="UTF-8">
+      <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;800;900&display=swap" rel="stylesheet">
+      <style>${css}</style></head><body>
+      <div class="pdf-header">
+        <div class="h-right"><div class="h-dept">${f.dp||''}</div><div class="h-meta">السنة: ${S.ay}<br>${period?'الفترة: '+period+'<br>':''}${f.sec?'<span style="unicode-bidi:bidi-override;direction:rtl;">الفصيلة: '+f.sec+'</span><br>':''}الدور: ${S.round===2?'الثاني':'الأول'}</div></div>
+        <div class="h-center"><div class="h-min">${S.settings?.ministry||'وزارة التعليم العالي والبحث العلمي'}</div><div class="h-sep"></div><div class="h-univ">${S.settings?.university||'جامعة عمار ثليجي الأغواط'}</div><div class="h-fac">${S.settings?.faculty||'كلية العلوم الاقتصادية والتجارية وعلوم التسيير'}</div></div>
+        <div class="h-left">${logoHtml}<div style="font-size:8.5pt;font-weight:700;color:#0f1f3d;text-align:center;">${f.spec||f.lv||''}</div></div>
+      </div>
+      <div style="text-align:center;font-size:10pt;font-weight:800;color:#0f1f3d;margin-bottom:6px;">جدول امتحانات — ${f.spec||f.lv||''}</div>
+      <table><thead><tr>
+        <th style="width:110px;">اليوم / التاريخ</th><th style="width:100px;">التوقيت</th><th>المقياس / الأستاذ</th>
+        ${groups.map((g,gi)=>`<th style="background:${RB[gi%RB.length]};color:#0f1f3d;min-width:80px;">👥 ${g}</th>`).join('')}
+      </tr></thead><tbody>${rows}</tbody></table></body></html>`);
+    doc.close();await new Promise(r=>setTimeout(r,1400));
+    const canvas=await html2canvas(iframe.contentDocument.body,{scale:2,useCORS:true,backgroundColor:'#ffffff',width:1200,windowWidth:1200});
+    document.body.removeChild(iframe);
+    const{jsPDF}=window.jspdf;const pdf=new jsPDF({orientation:'landscape',unit:'mm',format:'a4'});
+    const pW=pdf.internal.pageSize.getWidth();const imgH=canvas.height*(pW/canvas.width);
+    pdf.addImage(canvas.toDataURL('image/jpeg',0.93),'JPEG',0,0,pW,Math.min(imgH,pdf.internal.pageSize.getHeight()));
+    pdf.save(`امتحانات_${(f.spec||f.lv||'').replace(/\s/g,'_')}_${S.ay.replace('/','_')}.pdf`);
+    toast('✅ تم تصدير PDF');
+  }catch(e){console.error(e);toast('❌ خطأ: '+e.message);}
+}
+
 function setRound(r,btn){
   S.round=r;save();
   document.querySelectorAll('#pg-exams .vt').forEach(b=>b.classList.remove('active'));
-  btn.classList.add('active');renderExams();
+  if(btn)btn.classList.add('active');renderExams();
 }
-function renderExams(){
-  const ex=S.exams.filter(e=>e.y===S.ay&&e.round==S.round).sort((a,b)=>a.date>b.date?1:-1);
-  const tb=document.getElementById('exTbody');
-  if(!ex.length){tb.innerHTML=`<tr><td colspan="8" style="text-align:center;padding:18px;color:var(--gray);font-size:12px;">لا توجد امتحانات - اضغط "إضافة"</td></tr>`;updStats();return;}
-  tb.innerHTML=ex.map(e=>`<tr>
-    <td><strong>${e.subj}</strong></td>
-    <td>${e.lv}</td><td>${e.dp}</td>
-    <td>${e.date||'-'}</td>
-    <td>${e.start} - ${e.end}</td>
-    <td>${e.rm}</td><td>${e.tch}</td>
-    <td style="white-space:nowrap;">
-      <button class="btn bp bsm" onclick="openEditExam('${e.id}')">✏️</button>
-      <button class="btn bd bsm" onclick="delExam('${e.id}')">🗑️</button>
-    </td>
-  </tr>`).join('');
-  updStats();
-}
-function openAddExam(){
-  document.getElementById('esExamId').value='';
-  document.getElementById('mExamTitle').textContent='➕ إضافة امتحان';
-  ['me-subj','me-date'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
-  document.getElementById('me-round').value=S.round;
-  openM('mExam');
-}
-function openEditExam(id){
-  const e=S.exams.find(x=>x.id===id);if(!e)return;
-  document.getElementById('esExamId').value=id;
-  document.getElementById('mExamTitle').textContent='✏️ تعديل امتحان';
-  document.getElementById('me-subj').value=e.subj;
-  document.getElementById('me-lv').value=e.lv;
-  document.getElementById('me-dp').value=e.dp;
-  document.getElementById('me-date').value=e.date;
-  document.getElementById('me-round').value=e.round;
-  document.getElementById('me-start').value=e.start;
-  document.getElementById('me-end').value=e.end;
-  document.getElementById('me-tch').value=e.tch;
-  document.getElementById('me-rm').value=e.rm;
-  openM('mExam');
-}
-function saveExam(){
-  const id=document.getElementById('esExamId').value;
-  const subj=getExamSubj();
-  if(!subj){toast('⚠️ اختر أو أدخل اسم المقياس');return;}
-  const data={
-    id:id||uid(),y:S.ay,
-    lv:document.getElementById('me-lv').value,
-    dp:document.getElementById('me-dp').value,
-    subj,date:document.getElementById('me-date').value,
-    round:parseInt(document.getElementById('me-round').value),
-    start:document.getElementById('me-start').value,
-    end:document.getElementById('me-end').value,
-    tch:document.getElementById('me-tch').value,
-    rm:document.getElementById('me-rm').value
-  };
-  if(id){const i=S.exams.findIndex(e=>e.id===id);if(i>-1)S.exams[i]=data;}
-  else S.exams.push(data);
-  save();renderExams();closeM('mExam');toast(id?'✅ تم التعديل':'✅ تمت الإضافة');
-}
-function delExam(id){if(!confirm('حذف؟'))return;S.exams=S.exams.filter(e=>e.id!==id);save();renderExams();toast('🗑️ تم الحذف');}
+
+// All new exam functions defined above
 
 // -- ROOMS OCCUPANCY MATRIX ------------------------
 let rmView='week'; // 'week' | 'day'
