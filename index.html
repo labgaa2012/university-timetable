@@ -563,6 +563,13 @@ table.tt td.ec:hover::after{color:var(--teal);}
 .grp-block-header .grp-dot{
   width:10px;height:10px;border-radius:50%;background:rgba(255,255,255,.6);
 }
+/* PDF CHOICE CARDS */
+.pdf-choice-card{border:2px solid #e0e8f5;border-radius:12px;padding:12px;cursor:pointer;transition:all .2s;background:#fff;}
+.pdf-choice-card:hover{border-color:var(--teal);box-shadow:0 4px 16px rgba(13,138,125,.15);transform:translateY(-2px);}
+.pdc-preview{background:#f8fafc;border-radius:8px;padding:10px;margin-bottom:10px;min-height:110px;}
+.pdc-label{font-size:13px;font-weight:800;color:var(--navy);font-family:'Tajawal',sans-serif;margin-bottom:3px;}
+.pdc-sub{font-size:10.5px;color:var(--gray);}
+
 .grp-pdf-btn{
   margin-right:auto;padding:3px 10px;font-size:10px;font-weight:700;
   background:rgba(255,255,255,.2);color:#fff;border-radius:6px;
@@ -1690,6 +1697,63 @@ table.occ-matrix td.cell-occ:hover{background:#fee2e2;filter:brightness(.97);}
     <div class="ma">
       <button class="btn" onclick="confirmInstallTT()" style="background:#7c3aed;color:#fff;flex:1;justify-content:center;">⚡ تنصيب</button>
       <button class="btn" style="background:var(--gray-light);color:var(--text-mid);" onclick="closeM('mInstallTT')">إلغاء</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: اختيار شكل PDF -->
+<div class="mo" id="mPDFChoice">
+  <div class="mb" style="width:480px;">
+    <div class="mt">📄 اختر شكل التصدير</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:4px;">
+      <!-- الخيار 1: الشكل الحالي -->
+      <div class="pdf-choice-card" onclick="pickPDF(1)" id="pdc-1">
+        <div class="pdc-preview">
+          <div style="display:flex;gap:3px;flex-direction:column;">
+            <div style="display:flex;gap:2px;">
+              <div style="width:28px;background:#0f1f3d;border-radius:2px;height:10px;"></div>
+              ${[1,2,3,4,5].map(()=>`<div style="flex:1;background:#dbeafe;border-radius:2px;height:10px;"></div>`).join('')}
+            </div>
+            ${[1,2,3,4,5,6].map(i=>`
+            <div style="display:flex;gap:2px;">
+              <div style="width:28px;background:#e2e8f0;border-radius:2px;height:14px;font-size:5px;display:flex;align-items:center;justify-content:center;color:#334;">يوم${i}</div>
+              <div style="flex:1;background:${i%3===0?'#dcfce7':i%3===1?'#dbeafe':'transparent'};border-radius:2px;height:14px;border:1px solid #e2e8f0;"></div>
+              <div style="flex:1;background:transparent;border-radius:2px;height:14px;border:1px solid #e2e8f0;"></div>
+              <div style="flex:1;background:${i%2===0?'#fed7aa':'transparent'};border-radius:2px;height:14px;border:1px solid #e2e8f0;"></div>
+              <div style="flex:1;background:transparent;border-radius:2px;height:14px;border:1px solid #e2e8f0;"></div>
+              <div style="flex:1;background:${i===2?'#dbeafe':'transparent'};border-radius:2px;height:14px;border:1px solid #e2e8f0;"></div>
+            </div>`).join('')}
+          </div>
+        </div>
+        <div class="pdc-label">الشكل الحالي</div>
+        <div class="pdc-sub">الأيام عمودياً · الفترات أفقياً</div>
+      </div>
+      <!-- الخيار 2: الشكل الكلاسيكي -->
+      <div class="pdf-choice-card" onclick="pickPDF(2)" id="pdc-2">
+        <div class="pdc-preview">
+          <div style="display:flex;gap:3px;flex-direction:column;">
+            <div style="display:flex;gap:2px;">
+              <div style="width:22px;background:#0f1f3d;border-radius:2px;height:10px;"></div>
+              ${[1,2,3,4,5,6].map(i=>`<div style="flex:1;background:#c9a84c;border-radius:2px;height:10px;font-size:4px;display:flex;align-items:center;justify-content:center;color:#fff;">ف${i}</div>`).join('')}
+            </div>
+            ${['أحد','اثن','ثلا','أرب','خمس'].map(d=>`
+            <div style="display:flex;gap:2px;">
+              <div style="width:22px;background:#f0f4f8;border-radius:2px;height:14px;font-size:5px;display:flex;align-items:center;justify-content:center;color:#0f1f3d;">${d}</div>
+              <div style="flex:1;background:#fef9c3;border-radius:2px;height:14px;border:1px solid #e2e8f0;"></div>
+              <div style="flex:1;background:transparent;border-radius:2px;height:14px;border:1px solid #e2e8f0;"></div>
+              <div style="flex:1;background:#dcfce7;border-radius:2px;height:14px;border:1px solid #e2e8f0;"></div>
+              <div style="flex:1;background:transparent;border-radius:2px;height:14px;border:1px solid #e2e8f0;"></div>
+              <div style="flex:1;background:#fef9c3;border-radius:2px;height:14px;border:1px solid #e2e8f0;"></div>
+              <div style="flex:1;background:transparent;border-radius:2px;height:14px;border:1px solid #e2e8f0;"></div>
+            </div>`).join('')}
+          </div>
+        </div>
+        <div class="pdc-label">الشكل الكلاسيكي</div>
+        <div class="pdc-sub">الفترات أعمدة · الأيام صفوف</div>
+      </div>
+    </div>
+    <div class="ma" style="margin-top:14px;">
+      <button class="btn" style="background:var(--gray-light);color:var(--text-mid);" onclick="closeM('mPDFChoice')">إلغاء</button>
     </div>
   </div>
 </div>
@@ -3499,7 +3563,7 @@ function renderTT(){
             <div class="grp-dot"></div>
             <span>${subLabel||'— عام —'}</span>
             <button class="grp-pdf-btn"
-              onclick="exportGroupPDF('${lvE}','${dpE}','${spE}','${seE}','${gE}')">
+              onclick="openPDFChoice('${lvE}','${dpE}','${spE}','${seE}','${gE}')">
               📄 PDF
             </button>
           </div>`
@@ -4364,6 +4428,156 @@ function buildExcel(sessions,exams,fname){
 }
 
 // -- PRINT -----------------------------------------
+// -- PDF CHOICE ------------------------------------
+let _pdfChoiceKey={};
+function openPDFChoice(lv,dp,spec,sec,grp){
+  _pdfChoiceKey={lv,dp,spec,sec,grp};
+  openM('mPDFChoice');
+}
+function pickPDF(choice){
+  closeM('mPDFChoice');
+  const{lv,dp,spec,sec,grp}=_pdfChoiceKey;
+  if(choice===1) exportGroupPDF(lv,dp,spec,sec,grp);
+  else           exportGroupPDFClassic(lv,dp,spec,sec,grp);
+}
+
+// -- CLASSIC PDF (فترات أعمدة / أيام صفوف) --------
+async function exportGroupPDFClassic(lv,dp,spec,sec,grp){
+  try{
+    toast('⏳ جاري تصدير PDF الكلاسيكي...');
+    const period=S.activeTT?.period?S.periods[S.activeTT.period-1]||'':'';
+    const grpLabel=[sec&&sec,grp&&grp].filter(Boolean).join(' — ') || '—';
+
+    const ss=S.sessions.filter(s=>
+      s.y===S.ay&&s.lv===lv&&s.dp===dp&&
+      (s.spec||'')===spec&&(s.section||'')===sec&&(s.group||'')===grp&&
+      (!S.activeTT?.period||s.sem==S.activeTT.period)
+    );
+    const mp={};
+    ss.forEach(s=>{
+      if(!mp[s.day])mp[s.day]={};
+      if(!mp[s.day][s.slot])mp[s.day][s.slot]=[];
+      mp[s.day][s.slot].push(s);
+    });
+
+    // ألوان الأنواع
+    const TC2={tlc:'#fffff0',ttd:'#f0fff0','tlc-remote':'#e0f7ff','ttd-remote':'#ffe0f7',ttp:'#fff3e0',tot:'#f3e5f5'};
+
+    const logoHtml=S.settings?.logo
+      ?`<img src="${S.settings.logo}" style="width:70px;height:70px;object-fit:contain;">`
+      :`<span style="font-size:40px;">🎓</span>`;
+
+    let rows='';
+    DAYS.forEach(day=>{
+      rows+=`<tr><td class="day-c">${day}</td>`;
+      SLOTS.forEach(slot=>{
+        const cells=(mp[day]&&mp[day][slot])||[];
+        const bg=cells.length?TC2[cells[0].type]||'#fff':'#fff';
+        rows+=`<td style="background:${bg};">`;
+        cells.forEach(s=>{
+          rows+=`<div class="cell-inner">
+            <div class="ci-subj">${s.subj}</div>
+            <div class="ci-info">${s.tch||''}</div>
+            <div class="ci-info">${s.rm||''}</div>
+            <div class="ci-type">${TL[s.type]||''}</div>
+          </div>`;
+        });
+        if(!cells.length)rows+=`<div style="text-align:center;color:#ccc;font-size:10pt;">—</div>`;
+        rows+=`</td>`;
+      });
+      rows+=`</tr>`;
+    });
+
+    // عناوين الفترات: نُحوِّل من 08:00-09:30 إلى 08h00-09h30
+    const fmtSlot=sl=>sl.replace(':','h').replace('-',' - ').replace(':','h');
+
+    const css=`
+    *{box-sizing:border-box;}
+    body{font-family:'Cairo',Arial,sans-serif;direction:rtl;margin:0;padding:8px;background:#fff;}
+    .top-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;gap:6px;}
+    .th-right{text-align:right;flex:1;}
+    .th-right h1{font-size:14pt;font-weight:900;color:#0f1f3d;margin:0 0 2px;}
+    .th-right h2{font-size:10pt;color:#333;margin:0;}
+    .th-center{text-align:center;flex:1;}
+    .th-center .fac{font-size:10pt;font-weight:700;color:#0f1f3d;}
+    .th-center .sem{font-size:8.5pt;color:#555;margin-top:3px;}
+    .th-left{text-align:left;display:flex;flex-direction:column;align-items:center;gap:3px;min-width:90px;}
+    .th-left .dept{font-size:8.5pt;font-weight:700;color:#0f1f3d;}
+    .divider{border-bottom:2px solid #0f1f3d;margin:5px 0;}
+    table{width:100%;border-collapse:collapse;font-size:8pt;}
+    th{background:#0f1f3d;color:#c9a84c;padding:5px 3px;text-align:center;
+      border:1.5px solid #555;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+    td{border:1.5px solid #999;padding:4px;vertical-align:top;min-height:50px;}
+    .day-c{background:#f0f4f8;font-weight:800;text-align:center;font-size:9pt;
+      color:#0f1f3d;width:50px;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+    .cell-inner{text-align:center;line-height:1.5;}
+    .ci-subj{font-weight:700;font-size:8pt;color:#0f1f3d;}
+    .ci-info{font-size:7.5pt;color:#333;}
+    .ci-type{font-size:7pt;color:#666;font-style:italic;}
+    .corner{background:#0f1f3d;color:#c9a84c;font-size:7pt;font-weight:700;
+      -webkit-print-color-adjust:exact;print-color-adjust:exact;}
+    `;
+
+    const iframe=document.createElement('iframe');
+    iframe.style.cssText='position:fixed;left:-9999px;top:-9999px;width:1200px;background:#fff;border:none;';
+    document.body.appendChild(iframe);
+    const doc=iframe.contentDocument||iframe.contentWindow.document;
+    doc.open();
+    doc.write(`<!DOCTYPE html><html dir="rtl"><head><meta charset="UTF-8">
+      <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;800;900&display=swap" rel="stylesheet">
+      <style>${css}</style></head><body>
+      <!-- ترويسة ثلاثية الأعمدة -->
+      <div class="top-header">
+        <div class="th-right">
+          <h1>${S.settings?.university||'جامعة عمار ثليجي - الأغواط'}</h1>
+          <h2>جدول التوقيت ${lv?'لـ'+lv:''}</h2>
+        </div>
+        <div class="th-center">
+          <div class="fac">${S.settings?.faculty||'كلية العلوم الاقتصادية و التجارية و علوم التسيير'}</div>
+          <div class="sem">
+            ${period?'الفصل: '+period+' &nbsp;|&nbsp; ':''} الفصيلة: ${sec||'—'} و الفوج: ${grp||'—'}<br>
+            السنة الجامعية: ${S.ay}
+          </div>
+        </div>
+        <div class="th-left">
+          ${logoHtml}
+          <div class="dept">${dp}</div>
+          ${spec?`<div style="font-size:7.5pt;color:#555;text-align:center;">${spec}</div>`:''}
+        </div>
+      </div>
+      <div class="divider"></div>
+      <!-- الجدول: الفترات أعمدة، الأيام صفوف -->
+      <table>
+        <thead><tr>
+          <th class="corner">التوقيت<br>الأيام</th>
+          ${SLOTS.map(sl=>`<th>${fmtSlot(SL[sl])}</th>`).join('')}
+        </tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+      </body></html>`);
+    doc.close();
+    await new Promise(r=>setTimeout(r,1400));
+
+    const canvas=await html2canvas(iframe.contentDocument.body,{
+      scale:2,useCORS:true,backgroundColor:'#ffffff',width:1200,windowWidth:1200
+    });
+    document.body.removeChild(iframe);
+
+    const{jsPDF}=window.jspdf;
+    const pdf=new jsPDF({orientation:'landscape',unit:'mm',format:'a4'});
+    const pW=pdf.internal.pageSize.getWidth();
+    const imgH=canvas.height*(pW/canvas.width);
+    pdf.addImage(canvas.toDataURL('image/jpeg',0.95),'JPEG',0,0,pW,
+      Math.min(imgH,pdf.internal.pageSize.getHeight()));
+
+    const fname=`جدول_كلاسيكي_${(spec||dp).replace(/\s/g,'_')}_${(grp||'').replace(/\s/g,'_')}_${S.ay.replace('/','_')}.pdf`;
+    pdf.save(fname);
+    toast('✅ تم تصدير PDF الكلاسيكي');
+  } catch(e){
+    console.error(e);toast('❌ خطأ: '+e.message);
+  }
+}
+
 async function exportGroupPDF(lv,dp,spec,sec,grp){
   const btnSelector=`.grp-pdf-btn`;
   // عنوان المجموعة
