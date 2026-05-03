@@ -4299,6 +4299,22 @@ function updateExamRoom(id,grp,room,extraKey){
   });
 }
 
+function addExamRow(){
+  const f=getExamFilters();
+  if(!f.lv&&!f.spec){toast('⚠️ اختر المستوى والتخصص من الفلتر أولاً');return;}
+  const lastExam=S.exams.filter(e=>e.round==S.round&&e.y===S.ay&&(!f.spec||e.spec===f.spec)).slice(-1)[0];
+  const rooms=lastExam?.rooms?{...lastExam.rooms}:{};
+  S.exams.push({id:uid(),y:S.ay,round:S.round||1,lv:f.lv,dp:f.dp,spec:f.spec,section:f.sec,sem:parseInt(f.period)||1,subj:'',tch:'',day:'السبت',date:'',slot:EXAM_SLOTS[0],rooms});
+  save();renderExams();
+}
+function updateExam(id,field,value){
+  const ex=S.exams.find(e=>e.id===id);if(!ex)return;
+  ex[field]=value;
+  if(field==='date'&&value){const d=new Date(value);const dn=['الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'];ex.day=dn[d.getDay()]||'';}
+  save();if(field==='date')renderExams();
+}
+function delExam(id){S.exams=S.exams.filter(e=>e.id!==id);save();renderExams();toast('🗑️ تم الحذف');}
+
 async function exportExamPDF(){
   const f=getExamFilters();
   const exams=S.exams.filter(e=>e.round==S.round&&e.y===S.ay&&(!f.period||e.sem==f.period)&&(!f.lv||e.lv===f.lv)&&(!f.dp||e.dp===f.dp)&&(!f.spec||e.spec===f.spec)&&(!f.sec||e.section===f.sec)).sort((a,b)=>a.date?.localeCompare(b.date||'')||0);
