@@ -4512,8 +4512,8 @@ async function exportGroupPDFClassic(lv,dp,spec,sec,grp){
       color:#0f1f3d;width:50px;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
     .cell-inner{text-align:center;line-height:1.5;}
     .ci-subj{font-weight:700;font-size:8pt;color:#0f1f3d;}
-    .ci-info{font-size:7.5pt;color:#333;}
-    .ci-type{font-size:7pt;color:#666;font-style:italic;}
+    .ci-info{font-size:8pt;color:#333;}
+    .ci-type{font-size:8pt;color:#555;font-style:italic;}
     .corner{background:#0f1f3d;color:#c9a84c;font-size:7pt;font-weight:700;
       -webkit-print-color-adjust:exact;print-color-adjust:exact;}
     `;
@@ -4629,9 +4629,9 @@ async function exportGroupPDF(lv,dp,spec,sec,grp){
         -webkit-print-color-adjust:exact;print-color-adjust:exact;}
       td{border:1px solid #ccc;padding:3px;vertical-align:top;min-height:45px;}
       .day-cell{background:#f0f4f8;font-weight:700;text-align:center;font-size:8.5pt;width:52px;color:#0f1f3d;}
-      .sc-p{border-radius:4px;padding:3px 5px;margin:2px 0;line-height:1.35;}
+      .sc-p{border-radius:4px;padding:3px 5px;margin:2px 0;line-height:1.4;}
       .sc-p strong{display:block;font-size:8pt;font-weight:800;}
-      .sc-p span{font-size:7.5pt;color:#444;}
+      .sc-p span{font-size:8pt;color:#333;}
       .tlc{background:#dbeafe;}.tlc-remote{background:#e0f2fe;}
       .ttd{background:#dcfce7;}.ttp{background:#fed7aa;}.ttd-remote{background:#fce7f3;}
     `;
@@ -4790,8 +4790,9 @@ async function exportPDF(){
       th{background:#0f1f3d;color:#c9a84c;padding:5px 3px;text-align:center;border:1px solid #999;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
       td{border:1px solid #ccc;padding:2px;vertical-align:top;min-height:40px;}
       .day-cell{background:#f0f4f8;font-weight:700;text-align:center;font-size:8pt;width:52px;color:#0f1f3d;}
-      .sc-p{border-radius:4px;padding:3px 4px;margin:1px 0;line-height:1.3;font-size:7pt;}
-      .sc-p strong{display:block;font-size:7.5pt;}
+      .sc-p{border-radius:4px;padding:3px 4px;margin:1px 0;line-height:1.4;font-size:7.5pt;}
+      .sc-p strong{display:block;font-size:7.5pt;font-weight:800;}
+      .sc-p span{font-size:7.5pt;color:#333;}
       .tlc{background:#dbeafe;}.tlc-remote{background:#e0f2fe;}
       .ttd{background:#dcfce7;}.ttp{background:#fed7aa;}.ttd-remote{background:#fce7f3;}
     `;
@@ -4836,7 +4837,7 @@ async function exportPDF(){
           const cells=(mp[day]&&mp[day][slot])||[];
           tablesHtml+=`<td>`;
           cells.forEach(s=>{
-            tablesHtml+=`<div class="sc-p ${s.type}"><strong>${s.subj}</strong>${s.tch?'<span> '+s.tch+'</span>':''}${s.rm?' · '+s.rm:''}</div>`;
+            tablesHtml+=`<div class="sc-p ${s.type}"><strong>${s.subj}</strong><span>${[s.tch,s.rm,TL[s.type]||''].filter(Boolean).join(' · ')}</span></div>`;
           });
           tablesHtml+=`</td>`;
         });
