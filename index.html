@@ -4310,8 +4310,38 @@ function addExamRow(){
 function updateExam(id,field,value){
   const ex=S.exams.find(e=>e.id===id);if(!ex)return;
   ex[field]=value;
-  if(field==='date'&&value){const d=new Date(value);const dn=['الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'];ex.day=dn[d.getDay()]||'';}
-  save();if(field==='date')renderExams();
+  if(field==='date'&&value){
+    const dn=['الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'];
+    ex.day=dn[new Date(value).getDay()]||'';
+
+    // ترتيب تلقائي للامتحانات التالية بالتسلسل
+    const f=getExamFilters();
+    const allExams=S.exams.filter(e=>
+      e.round==S.round&&e.y===S.ay&&
+      (!f.lv||e.lv===f.lv)&&(!f.dp||e.dp===f.dp)&&
+      (!f.spec||e.spec===f.spec)&&(!f.sec||e.section===f.sec)
+    ).sort((a,b)=>a.date?.localeCompare(b.date||'')||0);
+
+    // إيجاد موضع الامتحان الحالي في القائمة المرتبة
+    const idx=allExams.findIndex(e=>e.id===id);
+    if(idx>=0){
+      // إعادة تسلسل التواريخ من هذا الامتحان للأمام
+      let curDate=new Date(value);
+      for(let i=idx+1;i<allExams.length;i++){
+        // تقدم يوم واحد
+        curDate.setDate(curDate.getDate()+1);
+        // تخطي الجمعة
+        if(curDate.getDay()===5)curDate.setDate(curDate.getDate()+1);
+        const y=curDate.getFullYear();
+        const m=String(curDate.getMonth()+1).padStart(2,'0');
+        const d=String(curDate.getDate()).padStart(2,'0');
+        allExams[i].date=`${y}-${m}-${d}`;
+        allExams[i].day=dn[curDate.getDay()]||'';
+      }
+    }
+    save();renderExams();return;
+  }
+  save();
 }
 function delExam(id){S.exams=S.exams.filter(e=>e.id!==id);save();renderExams();toast('🗑️ تم الحذف');}
 
