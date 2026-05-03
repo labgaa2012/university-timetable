@@ -1046,8 +1046,14 @@ table.occ-matrix td.cell-occ:hover{background:#fee2e2;filter:brightness(.97);}
 
       <!-- شريط الفلتر -->
       <div class="filter-bar" style="margin-bottom:14px;">
+        <div class="fg" style="min-width:160px;">
+          <label class="fl">القسم</label>
+          <select class="fs" id="tch-tt-dept" onchange="renderTchTT()">
+            <option value="">كل الأقسام</option>
+          </select>
+        </div>
         <div class="fg" style="flex:2;min-width:200px;">
-          <label class="fl">🔍 اسم الأستاذ</label>
+          <label class="fl">👨‍🏫 اسم الأستاذ</label>
           <select class="fs" id="tch-tt-sel" onchange="renderTchTT()">
             <option value="">-- اختر أستاذاً --</option>
           </select>
@@ -4284,48 +4290,47 @@ function findFree(){
 // -- OVERTIME ENGINE -------------------------------
 const QUORUM=9; // ساعات معادلة / أسبوع
 
-function calcTeacherOvertime(tchName){
-  const sessions=S.sessions.filter(s=>s.y===S.ay&&s.tch===tchName);
+function calcTeacherOvertime(tchName,yearFilter,periodFilter){
+  const year=yearFilter||S.ay;
+  let sessions=S.sessions.filter(s=>s.tch===tchName&&s.y===year);
+  if(periodFilter)sessions=sessions.filter(s=>s.sem==periodFilter);
   const tchObj=S.teachers.find(t=>t.name===tchName)||{kind:'permanent'};
 
-  // -- المحاضرات: نُزيل التكرار عبر الأفواج (نفس اليوم+الفترة+المادة = حصة واحدة) --
-  const lecSessions=sessions.filter(s=>s.type==='tlc'||s.type==='tlc-remote');
-  const tdTpSessions=sessions.filter(s=>
-    s.type==='ttd'||s.type==='ttp'||
-    s.type==='ttd-remote'||
-    (s.type!=='tlc'&&s.type!=='tlc-remote')
-  );
+  const lectures=sessions.filter(s=>s.type==='tlc'||s.type==='tlc-remote');
+  const others  =sessions.filter(s=>s.type!=='tlc'&&s.type!=='tlc-remote');
 
-  // مفتاح التميّز للمحاضرة: يوم + فترة + مادة (بغض النظر عن الفوج)
-  const uniqueLecKeys=new Set(lecSessions.map(s=>`${s.day}|${s.slot}|${s.subj}`));
+  // محاضرات فريدة: نفس (يوم+فترة+مادة+نوع+فصيلة) = جلسة واحدة عبر الأفواج
+  const uniqueLecMap={};
+  lectures.forEach(s=>{
+    const key=`${s.day}|${s.slot}|${(s.subj||'').trim()}|${s.type}|${s.section||''}`;
+    if(!uniqueLecMap[key])uniqueLecMap[key]=s;
+  });
+  const uniqueLecs=Object.values(uniqueLecMap);
 
-  // كل مفتاح فريد = محاضرة فريدة
-  // نأخذ أول حصة لكل مفتاح لمعرفة firstLec
-  let firstLecCount=0,repLecCount=0;
-  uniqueLecKeys.forEach(key=>{
-    const [day,slot,subj]=key.split('|');
-    const sample=lecSessions.find(s=>s.day===day&&s.slot===slot&&s.subj===subj);
-    if(sample?.firstLec===0) repLecCount++;
-    else firstLecCount++;
+  // أول ظهور لكل مادة/نوع = ×2.25، التكرارات = ×1.5
+  const lecBySubjType={};
+  uniqueLecs.forEach(s=>{
+    const k=`${(s.subj||'').trim()}|${s.type}`;
+    lecBySubjType[k]=(lecBySubjType[k]||0)+1;
+  });
+  let eqLec=0,firstLecCount=0,repLecCount=0;
+  Object.values(lecBySubjType).forEach(cnt=>{
+    firstLecCount++;eqLec+=2.25;
+    if(cnt>1){repLecCount+=cnt-1;eqLec+=(cnt-1)*1.5;}
   });
 
-  // -- TD/TP: كل فوج له حصة مستقلة تُحسب منفردة --
-  const tdTpCount=tdTpSessions.length;
-
-  // Equivalent hours
-  const eqFirstLec = firstLecCount * 2.25;
-  const eqRepLec   = repLecCount   * 1.5;
-  const eqTdTp     = tdTpCount     * 1.5;
-  const totalEq    = eqFirstLec + eqRepLec + eqTdTp;
-
-  const quorum=(tchObj.kind==='permanent')?QUORUM:0;
-  const overtime=Math.max(0, totalEq - quorum);
+  const eqOther=others.length*1.5;
+  const totalActual=(uniqueLecs.length+others.length)*1.5;
+  const totalEq=eqLec+eqOther;
+  const isExternal=tchObj.kind==='temporary'||tchObj.kind==='associate';
+  const quorum=isExternal?0:QUORUM;
+  const overtime=isExternal?totalEq:Math.max(0,totalEq-quorum);
 
   return{
-    name:tchName, kind:tchObj.kind, sessions:sessions.length,
-    firstLecCount, repLecCount, tdTpCount, otherCount:0,
-    eqFirstLec, eqRepLec, eqTdTp, eqOther:0, totalEq,
-    quorum, overtime
+    name:tchName,kind:tchObj.kind,rank:tchObj.rank,dept:tchObj.dept,post:tchObj.post,
+    sessions:sessions.length,uniqueLecs:uniqueLecs.length,tdTpCount:others.length,
+    firstLecCount,repLecCount,
+    eqLec,eqOther,totalActual,totalEq,quorum,overtime
   };
 }
 
@@ -5708,11 +5713,19 @@ function dismissConflict(key){
 
 // -- TEACHER TIMETABLE ---------------------------
 function renderTchTT(){
-  // Sync selects
+  // -- Sync selects always --
+  const deptSel=document.getElementById('tch-tt-dept');
+  if(deptSel&&deptSel.options.length<=1){
+    deptSel.innerHTML='<option value="">كل الأقسام</option>'
+      +S.depts.map(d=>`<option value="${d}">${d.replace('قسم ','')}</option>`).join('');
+  }
+  const deptFilter=document.getElementById('tch-tt-dept')?.value||'';
   const tSel=document.getElementById('tch-tt-sel');
-  if(tSel&&tSel.options.length<=1){
+  if(tSel){
+    const cur=tSel.value;
+    const filtered=deptFilter?S.teachers.filter(t=>t.dept===deptFilter):S.teachers;
     tSel.innerHTML='<option value="">-- اختر أستاذاً --</option>'
-      +S.teachers.map(t=>`<option value="${t.name}">${t.name}</option>`).join('');
+      +filtered.map(t=>`<option value="${t.name}"${t.name===cur?' selected':''}>${t.name}</option>`).join('');
   }
   const pSel=document.getElementById('tch-tt-period');
   if(pSel&&pSel.options.length<=1){
@@ -5728,54 +5741,97 @@ function renderTchTT(){
   const period=document.getElementById('tch-tt-period')?.value||'';
   const year=document.getElementById('tch-tt-year')?.value||S.ay;
   const container=document.getElementById('tch-tt-container');
-  const stats=document.getElementById('tch-tt-stats');
+  const statsEl=document.getElementById('tch-tt-stats');
 
   if(!tchName){
-    if(container)container.innerHTML=`<div class="tt-empty-state">
-      <div class="es-icon">👨‍🏫</div>
-      <h3>اختر أستاذاً من القائمة</h3>
-      <p>سيظهر جدوله الأسبوعي الكامل عبر جميع الأفواج</p>
-    </div>`;
-    if(stats)stats.style.display='none';
+    if(statsEl)statsEl.style.display='none';
+    // عرض جدول ملخص كل الأساتذة
+    if(container){
+      const allStats=S.teachers.map(t=>calcTeacherOvertime(t.name,year,period||''));
+      const total=allStats.reduce((a,s)=>({
+        totalActual:a.totalActual+s.totalActual,
+        totalEq:a.totalEq+s.totalEq,
+        overtime:a.overtime+s.overtime
+      }),{totalActual:0,totalEq:0,overtime:0});
+
+      container.innerHTML=`
+        <div style="margin-bottom:12px;background:linear-gradient(90deg,#7c3aed,#6d28d9);border-radius:11px;
+          padding:12px 18px;color:#fff;display:flex;gap:20px;align-items:center;flex-wrap:wrap;">
+          <span style="font-weight:800;font-size:13px;">📊 ملخص كل الأساتذة</span>
+          <span style="font-size:11px;opacity:.85;">${S.ay}${period?` · ${S.periods[parseInt(period)-1]||''}`:''}</span>
+          <div style="margin-right:auto;display:flex;gap:18px;">
+            <div style="text-align:center;"><div style="font-size:16px;font-weight:800;">${total.totalActual.toFixed(1)}</div><div style="font-size:9px;opacity:.8;">ساعة فعلية</div></div>
+            <div style="text-align:center;"><div style="font-size:16px;font-weight:800;">${total.totalEq.toFixed(1)}</div><div style="font-size:9px;opacity:.8;">ساعة معادلة</div></div>
+            <div style="text-align:center;"><div style="font-size:16px;font-weight:800;color:#fcd34d;">${total.overtime.toFixed(1)}</div><div style="font-size:9px;opacity:.8;">ساعات إضافية</div></div>
+          </div>
+        </div>
+        <div style="overflow-x:auto;">
+        <table style="width:100%;border-collapse:collapse;font-size:12px;">
+          <thead>
+            <tr style="background:var(--navy);color:var(--gold-light);">
+              <th style="padding:8px 10px;text-align:right;border:1px solid #334;">#</th>
+              <th style="padding:8px 10px;text-align:right;border:1px solid #334;">الاسم</th>
+              <th style="padding:8px 10px;border:1px solid #334;">الرتبة</th>
+              <th style="padding:8px 10px;border:1px solid #334;">القسم</th>
+              <th style="padding:8px 10px;border:1px solid #334;">المحاضرات</th>
+              <th style="padding:8px 10px;border:1px solid #334;">TD/TP</th>
+              <th style="padding:8px 10px;border:1px solid #334;">ساعة فعلية</th>
+              <th style="padding:8px 10px;border:1px solid #334;">ساعة معادلة</th>
+              <th style="padding:8px 10px;border:1px solid #334;">النصاب</th>
+              <th style="padding:8px 10px;border:1px solid #334;">ساعات إضافية</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${allStats.map((s,i)=>`<tr style="background:${i%2?'#f9fafb':'#fff'};cursor:pointer;"
+              onclick="document.getElementById('tch-tt-sel').value='${s.name.replace(/'/g,"\\'")}';renderTchTT()">
+              <td style="padding:7px 10px;border:1px solid #e0e8f5;color:var(--gray);">${i+1}</td>
+              <td style="padding:7px 10px;border:1px solid #e0e8f5;font-weight:700;color:var(--navy);">${s.name}</td>
+              <td style="padding:7px 10px;border:1px solid #e0e8f5;font-size:11px;">${RANKS[s.rank]?.short||s.rank||'—'}</td>
+              <td style="padding:7px 10px;border:1px solid #e0e8f5;font-size:11px;">${(s.dept||'').replace('قسم ','')}</td>
+              <td style="padding:7px 10px;border:1px solid #e0e8f5;text-align:center;">${s.uniqueLecs}</td>
+              <td style="padding:7px 10px;border:1px solid #e0e8f5;text-align:center;">${s.tdTpCount}</td>
+              <td style="padding:7px 10px;border:1px solid #e0e8f5;text-align:center;">${s.totalActual.toFixed(1)}</td>
+              <td style="padding:7px 10px;border:1px solid #e0e8f5;text-align:center;font-weight:700;">${s.totalEq.toFixed(1)}</td>
+              <td style="padding:7px 10px;border:1px solid #e0e8f5;text-align:center;">${s.quorum}</td>
+              <td style="padding:7px 10px;border:1px solid #e0e8f5;text-align:center;font-weight:800;
+                color:${s.overtime>0?'#7c3aed':'#16a34a'};">${s.overtime.toFixed(1)}</td>
+            </tr>`).join('')}
+          </tbody>
+        </table></div>`;
+    }
     return;
   }
 
-  // جمع حصص الأستاذ
+  // -- جدول أستاذ محدد --
   let ss=S.sessions.filter(s=>s.tch===tchName&&s.y===year);
   if(period)ss=ss.filter(s=>s.sem==period);
-
-  // -- إحصائيات --
-  const ot=calcTeacherOvertime(tchName);
+  const ot=calcTeacherOvertime(tchName,year,period||'');
   const tchObj=S.teachers.find(t=>t.name===tchName)||{};
-  if(stats){
-    stats.style.display='flex';
-    stats.innerHTML=`
-      <span style="font-size:18px;">👨‍🏫</span>
+
+  if(statsEl){
+    statsEl.style.display='flex';
+    statsEl.innerHTML=`
+      <span style="font-size:20px;">👨‍🏫</span>
       <div>
         <div style="font-size:13px;font-weight:800;">${tchName}</div>
-        <div style="font-size:10px;opacity:.8;">${RANKS[tchObj.rank]?.label||''} · ${tchObj.dept||''}</div>
+        <div style="font-size:10px;opacity:.8;">${RANKS[tchObj.rank]?.label||''} · ${(tchObj.dept||'').replace('قسم ','')}</div>
+        ${tchObj.post?`<div style="font-size:9.5px;opacity:.7;">${POST_LABELS[tchObj.post]||''}</div>`:''}
       </div>
-      <div style="margin-right:auto;display:flex;gap:16px;flex-wrap:wrap;">
-        <div style="text-align:center;">
-          <div style="font-size:18px;font-weight:800;">${ss.length}</div>
-          <div style="font-size:10px;opacity:.8;">إجمالي الحصص</div>
-        </div>
-        <div style="text-align:center;">
-          <div style="font-size:18px;font-weight:800;">${ot.totalEq.toFixed(1)}</div>
-          <div style="font-size:10px;opacity:.8;">ساعة معادلة</div>
-        </div>
-        <div style="text-align:center;">
-          <div style="font-size:18px;font-weight:800;color:${ot.overtime>0?'#fcd34d':'#86efac'};">${ot.overtime.toFixed(1)}</div>
-          <div style="font-size:10px;opacity:.8;">ساعات إضافية</div>
-        </div>
-        <div style="text-align:center;">
-          <div style="font-size:18px;font-weight:800;">${ot.quorum}</div>
-          <div style="font-size:10px;opacity:.8;">النصاب</div>
-        </div>
+      <div style="margin-right:auto;display:flex;gap:14px;flex-wrap:wrap;">
+        ${[
+          ['📚 محاضرات فريدة',ot.uniqueLecs],
+          ['✏️ TD/TP',ot.tdTpCount],
+          ['⏱ ساعة فعلية',ot.totalActual.toFixed(1)],
+          ['≡ ساعة معادلة',ot.totalEq.toFixed(1)],
+          ['📋 النصاب',ot.quorum],
+          ['⭐ إضافية',ot.overtime.toFixed(1)]
+        ].map(([lbl,val])=>`<div style="text-align:center;">
+          <div style="font-size:17px;font-weight:800;">${val}</div>
+          <div style="font-size:9px;opacity:.8;">${lbl}</div>
+        </div>`).join('')}
       </div>`;
   }
 
-  // -- بناء الجدول (أيام صفوف / فترات أعمدة) --
   const mp={};
   ss.forEach(s=>{
     if(!mp[s.day])mp[s.day]={};
@@ -5783,41 +5839,74 @@ function renderTchTT(){
     mp[s.day][s.slot].push(s);
   });
 
-  if(!ss.length&&!period){
-    container.innerHTML=`<div style="text-align:center;padding:40px;color:var(--gray);">
-      <div style="font-size:36px;margin-bottom:10px;">📭</div>
-      <div style="font-weight:700;">لا توجد حصص مسجّلة لهذا الأستاذ في ${year}</div>
-    </div>`;
-    return;
-  }
-
+  // -- الجدول: الفترات أعمدة / الأيام صفوف (كالمرجع) --
   let html=`<div class="ttw"><table class="tt">
     <thead><tr>
       <th style="min-width:80px;position:sticky;right:0;z-index:4;">اليوم</th>
-      ${SLOTS.map(sl=>`<th style="min-width:150px;">${SL[sl].replace(' - ','<br>')}</th>`).join('')}
+      ${SLOTS.map(sl=>`<th style="min-width:155px;">${SL[sl].replace(' - ','<br>')}</th>`).join('')}
     </tr></thead><tbody>`;
 
   DAYS.forEach(day=>{
     html+=`<tr><td class="tc" style="position:sticky;right:0;z-index:3;background:var(--gray-light);">${day}</td>`;
     SLOTS.forEach(slot=>{
       const cells=(mp[day]&&mp[day][slot])||[];
-      html+=`<td style="padding:4px;vertical-align:top;min-height:55px;">`;
+      const bg=cells.length?(TC[cells[0].type]||'#fff'):'transparent';
+      html+=`<td style="padding:4px;vertical-align:top;min-height:60px;background:${bg}30;">`;
+      if(!cells.length){html+=`<div style="text-align:center;color:#ccc;padding-top:18px;font-size:11px;">—</div>`;}
       cells.forEach(s=>{
-        // بناء label المجموعة
-        const grp=[s.spec,s.section,s.group].filter(Boolean).join(' / ');
-        html+=`<div class="sc ${s.type}" style="margin-bottom:3px;">
+        const grpParts=[s.section,s.group].filter(Boolean);
+        const specPart=s.spec?`<div style="font-size:10px;color:#666;font-weight:600;">${s.spec.slice(0,20)}</div>`:'';
+        html+=`<div class="sc ${s.type}" style="margin-bottom:3px;border-radius:8px;">
           <div class="ss">${s.subj}</div>
-          <div class="si" style="font-size:10px;">🏫 ${s.rm||'—'}</div>
-          ${grp?`<div class="si" style="font-size:9.5px;opacity:.85;">👥 ${grp}</div>`:''}
+          <div class="si">🏫 ${s.rm||'—'}</div>
+          ${grpParts.length?`<div class="si">👥 ${grpParts.join(' — ')}</div>`:''}
+          ${specPart}
           <div class="si" style="font-size:9px;opacity:.65;">${TL[s.type]||''}</div>
         </div>`;
       });
-      if(!cells.length)html+=`<div style="text-align:center;color:#ccc;font-size:10px;padding-top:16px;">—</div>`;
       html+=`</td>`;
     });
     html+=`</tr>`;
   });
   html+=`</tbody></table></div>`;
+
+  // -- تفاصيل الحساب --
+  html+=`<div style="margin-top:14px;background:#f8fafc;border:1.5px solid #e0e8f5;border-radius:10px;padding:14px;">
+    <div style="font-size:12px;font-weight:700;color:var(--navy);margin-bottom:8px;">📊 تفاصيل حساب الساعات</div>
+    <table style="width:100%;font-size:11.5px;border-collapse:collapse;">
+      <tr style="background:#f0f4ff;">
+        <td style="padding:5px 10px;border:1px solid #e0e8f5;font-weight:700;">محاضرات أولى (×2.25)</td>
+        <td style="padding:5px 10px;border:1px solid #e0e8f5;text-align:center;">${ot.firstLecCount}</td>
+        <td style="padding:5px 10px;border:1px solid #e0e8f5;text-align:center;font-weight:700;">${(ot.firstLecCount*2.25).toFixed(2)} ساعة</td>
+      </tr>
+      <tr>
+        <td style="padding:5px 10px;border:1px solid #e0e8f5;font-weight:700;">محاضرات مكررة (×1.5)</td>
+        <td style="padding:5px 10px;border:1px solid #e0e8f5;text-align:center;">${ot.repLecCount}</td>
+        <td style="padding:5px 10px;border:1px solid #e0e8f5;text-align:center;font-weight:700;">${(ot.repLecCount*1.5).toFixed(2)} ساعة</td>
+      </tr>
+      <tr style="background:#f0f4ff;">
+        <td style="padding:5px 10px;border:1px solid #e0e8f5;font-weight:700;">TD / TP / أعمال (×1.5)</td>
+        <td style="padding:5px 10px;border:1px solid #e0e8f5;text-align:center;">${ot.tdTpCount}</td>
+        <td style="padding:5px 10px;border:1px solid #e0e8f5;text-align:center;font-weight:700;">${ot.eqOther.toFixed(2)} ساعة</td>
+      </tr>
+      <tr style="background:var(--navy);color:var(--gold-light);">
+        <td style="padding:7px 10px;font-weight:800;">إجمالي الساعات المعادلة</td>
+        <td style="padding:7px 10px;text-align:center;">—</td>
+        <td style="padding:7px 10px;text-align:center;font-weight:800;font-size:13px;">${ot.totalEq.toFixed(2)} ساعة</td>
+      </tr>
+      <tr style="background:${ot.overtime>0?'#faf5ff':'#f0fdf4'};">
+        <td style="padding:7px 10px;font-weight:800;color:${ot.overtime>0?'#7c3aed':'#16a34a'};">
+          ${ot.overtime>0?'⭐ ساعات إضافية':'✅ ضمن النصاب'}
+          (النصاب: ${ot.quorum} ساعة)
+        </td>
+        <td style="padding:7px 10px;text-align:center;">—</td>
+        <td style="padding:7px 10px;text-align:center;font-weight:800;font-size:13px;color:${ot.overtime>0?'#7c3aed':'#16a34a'};">
+          ${ot.overtime.toFixed(2)} ساعة
+        </td>
+      </tr>
+    </table>
+  </div>`;
+
   container.innerHTML=html;
 }
 
