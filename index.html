@@ -601,6 +601,23 @@ table.tt td.ec:hover::after{color:var(--teal);}
 .rc-3{background:#fce7f3;}.rc-4{background:#ede9fe;}.rc-5{background:#fef9c3;}
 .rc-6{background:#e0f2fe;}.rc-7{background:#fef3c7;}
 
+/* DASHBOARD */
+.db-kpi-card{background:#fff;border-radius:14px;padding:18px 16px;border:2px solid #e0e8f5;box-shadow:0 2px 8px rgba(15,31,61,.06);}
+.db-kpi-card .kpi-val{font-size:26px;font-weight:900;font-family:'Tajawal',sans-serif;line-height:1;}
+.db-kpi-card .kpi-lbl{font-size:11px;color:var(--gray);margin-top:5px;}
+.db-kpi-card .kpi-icon{font-size:28px;margin-bottom:6px;}
+.db-section-title{font-size:13.5px;font-weight:800;color:var(--navy);font-family:'Tajawal',sans-serif;padding:8px 14px;background:linear-gradient(90deg,#f0f4ff,transparent);border-right:4px solid var(--navy);border-radius:0 8px 8px 0;margin-bottom:12px;}
+.db-table{width:100%;border-collapse:collapse;font-size:12px;}
+.db-table th{background:var(--navy);color:var(--gold-light);padding:7px 10px;text-align:right;border:1px solid #334;font-size:11.5px;}
+.db-table td{padding:6px 10px;border:1px solid #e0e8f5;vertical-align:middle;}
+.db-table tr:nth-child(even) td{background:#f8fafc;}
+.db-table tr:hover td{background:#f0f6ff;}
+.db-bar{height:8px;border-radius:4px;background:#e0e8f5;overflow:hidden;min-width:80px;}
+.db-bar-fill{height:100%;border-radius:4px;background:linear-gradient(90deg,var(--teal),#0ea5e9);transition:width .5s;}
+.db-bar-fill.warn{background:linear-gradient(90deg,#f59e0b,#ef4444);}
+.overload-badge{padding:2px 8px;border-radius:10px;font-size:10.5px;font-weight:700;}
+.ob-ok{background:#dcfce7;color:#166534;}.ob-warn{background:#fef9c3;color:#92400e;}.ob-over{background:#fee2e2;color:#991b1b;}
+
 /* CONFLICT SYSTEM */
 .conflict-banner{
   border-radius:10px;margin-bottom:12px;overflow:hidden;
@@ -1045,6 +1062,16 @@ table.occ-matrix td.cell-occ:hover{background:#fee2e2;filter:brightness(.97);}
       <span class="snb-arrow">←</span>
     </div>
   </button>
+  <!-- NAV BUTTON: Dashboard تحليلي -->
+  <button class="sb-nav-btn" id="snb-dashboard" onclick="showMgmtPg('dashboard')"
+    style="background:linear-gradient(90deg,rgba(16,185,129,.1),transparent);border-top:2px solid #10b981;">
+    <div class="snb-left">
+      <div class="ai" style="background:linear-gradient(135deg,#059669,#10b981);">📊</div>
+      <span style="font-weight:800;color:var(--navy);">Dashboard تحليلي</span>
+    </div>
+    <span class="snb-arrow" style="color:#10b981;">←</span>
+  </button>
+
   <!-- NAV BUTTON: جدول الأستاذ -->
   <button class="sb-nav-btn" id="snb-tchtimetable" onclick="showMgmtPg('tchtimetable')"
     style="border-top:2px solid var(--gold);margin-top:4px;">
@@ -1069,6 +1096,50 @@ table.occ-matrix td.cell-occ:hover{background:#fee2e2;filter:brightness(.97);}
     <div class="stat s2"><div class="sval" id="st2">0</div><div class="slbl">الأساتذة</div></div>
     <div class="stat s3"><div class="sval" id="st3">0</div><div class="slbl">الحصص المجدولة</div></div>
     <div class="stat s4"><div class="sval" id="st4">0</div><div class="slbl">الامتحانات</div></div>
+  </div>
+
+  <!-- ══ DASHBOARD PAGE ══ -->
+  <div class="pg" id="pg-dashboard">
+    <div class="mc">
+      <div class="mgmt-header">
+        <div class="mct"><div class="mcti">📊</div>Dashboard تحليلي</div>
+        <div class="frow">
+          <select class="fs" id="db-year" onchange="renderDashboard()" style="min-width:110px;font-weight:700;"></select>
+          <select class="fs" id="db-period" onchange="renderDashboard()">
+            <option value="">كل الفترات</option>
+          </select>
+          <button class="btn" onclick="renderDashboard()" style="background:#059669;color:#fff;">🔄 تحديث</button>
+        </div>
+      </div>
+      <!-- KPI cards -->
+      <div id="db-kpi" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;margin-bottom:20px;"></div>
+      <!-- Charts & Tables -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;" id="db-grid">
+        <!-- عدد الساعات لكل أستاذ -->
+        <div style="grid-column:1/-1;">
+          <div class="db-section-title">📚 عدد الساعات لكل أستاذ</div>
+          <div style="margin-bottom:10px;display:flex;gap:8px;flex-wrap:wrap;">
+            <select class="fs" id="db-tch-dept" onchange="renderDashboard()" style="max-width:200px;">
+              <option value="">كل الأقسام</option>
+            </select>
+            <label style="display:flex;align-items:center;gap:5px;font-size:12px;cursor:pointer;">
+              <input type="checkbox" id="db-overload-only" onchange="renderDashboard()"> عرض المثقّلين فقط
+            </label>
+          </div>
+          <div id="db-tch-table"></div>
+        </div>
+        <!-- نسبة استغلال القاعات -->
+        <div>
+          <div class="db-section-title">🏫 نسبة استغلال القاعات</div>
+          <div id="db-rooms-table"></div>
+        </div>
+        <!-- Overload Detection -->
+        <div>
+          <div class="db-section-title">⚠️ Overload Detection</div>
+          <div id="db-overload-table"></div>
+        </div>
+      </div>
+    </div>
   </div>
 
   <!-- ══ TEACHER TIMETABLE PAGE ══ -->
@@ -2558,6 +2629,7 @@ function showMgmtPg(id){
   if(btn)btn.classList.add('active-pg');
   if(id==='settings')loadSettingsPage();
   if(id==='tchtimetable')renderTchTT();
+  if(id==='dashboard')renderDashboard();
   if(id==='teachers')renderTchGrid();
   if(id==='rooms-manage')renderRmGrid();
   if(id==='specs')renderSpGrid();
@@ -6050,6 +6122,171 @@ function dismissConflict(key){
   localStorage.setItem('acceptedConflicts',JSON.stringify([..._acceptedConflicts]));
   renderConflictBanner();renderTT();
   toast('✅ تم تجاهل هذا التعارض');
+}
+
+// -- DASHBOARD -------------------------------------
+function renderDashboard(){
+  // Sync selects
+  const ySel=document.getElementById('db-year');
+  if(ySel&&ySel.options.length===0)ySel.innerHTML=S.years.map(y=>`<option value="${y}"${y===S.ay?' selected':''}>${y}</option>`).join('');
+  const pSel=document.getElementById('db-period');
+  if(pSel&&pSel.options.length<=1)pSel.innerHTML='<option value="">كل الفترات</option>'+S.periods.map((p,i)=>`<option value="${i+1}">${p}</option>`).join('');
+  const dSel=document.getElementById('db-tch-dept');
+  if(dSel&&dSel.options.length<=1)dSel.innerHTML='<option value="">كل الأقسام</option>'+S.depts.map(d=>`<option value="${d}">${d.replace('قسم ','')}</option>`).join('');
+
+  const year=ySel?.value||S.ay;
+  const period=document.getElementById('db-period')?.value||'';
+  const deptF=document.getElementById('db-tch-dept')?.value||'';
+  const overloadOnly=document.getElementById('db-overload-only')?.checked||false;
+
+  let sessions=S.sessions.filter(s=>s.y===year);
+  if(period)sessions=sessions.filter(s=>s.sem==period);
+
+  // ---- KPI ----
+  const totalSess=sessions.length;
+  const uniqueTeachers=new Set(sessions.map(s=>s.tch).filter(Boolean)).size;
+  const uniqueRooms=new Set(sessions.map(s=>s.rm).filter(Boolean)).size;
+  const totalSlots=DAYS.length*SLOTS.length;
+  const overloadList=S.teachers.filter(t=>{
+    const ot=calcTeacherOvertime(t.name,year,period||'');
+    return ot.overtime>0;
+  });
+
+  document.getElementById('db-kpi').innerHTML=[
+    {icon:'📚',val:totalSess,lbl:'إجمالي الحصص',color:'#0f1f3d'},
+    {icon:'👨‍🏫',val:uniqueTeachers,lbl:'أستاذ نشط',color:'#0d8a7d'},
+    {icon:'🏫',val:uniqueRooms,lbl:'قاعة مستخدمة',color:'#7c3aed'},
+    {icon:'⚠️',val:overloadList.length,lbl:'أستاذ مثقّل',color:'#ef4444'}
+  ].map(k=>`<div class="db-kpi-card">
+    <div class="kpi-icon">${k.icon}</div>
+    <div class="kpi-val" style="color:${k.color};">${k.val}</div>
+    <div class="kpi-lbl">${k.lbl}</div>
+  </div>`).join('');
+
+  // ---- جدول الساعات لكل أستاذ ----
+  let tchData=S.teachers
+    .filter(t=>!deptF||t.dept===deptF)
+    .map(t=>({t,ot:calcTeacherOvertime(t.name,year,period||'')}))
+    .filter(d=>!overloadOnly||d.ot.overtime>0)
+    .sort((a,b)=>b.ot.totalEq-a.ot.totalEq);
+
+  const maxEq=Math.max(...tchData.map(d=>d.ot.totalEq),1);
+
+  document.getElementById('db-tch-table').innerHTML=`
+    <table class="db-table">
+      <thead><tr>
+        <th>الأستاذ</th><th>الرتبة</th><th>القسم</th>
+        <th style="text-align:center;">محاضرات</th>
+        <th style="text-align:center;">TD/TP</th>
+        <th style="text-align:center;">ساعة معادلة</th>
+        <th style="text-align:center;">النصاب</th>
+        <th style="min-width:120px;">التحميل</th>
+        <th style="text-align:center;">الحالة</th>
+      </tr></thead>
+      <tbody>
+        ${tchData.map(({t,ot})=>{
+          const pct=Math.min(100,ot.quorum?ot.totalEq/ot.quorum*100:100);
+          const isOver=ot.overtime>0;
+          const isWarn=ot.totalEq>ot.quorum*0.85&&!isOver;
+          const badge=isOver?`<span class="overload-badge ob-over">⚠️ +${ot.overtime.toFixed(1)}h</span>`
+            :isWarn?`<span class="overload-badge ob-warn">⚡ ${ot.totalEq.toFixed(1)}h</span>`
+            :`<span class="overload-badge ob-ok">✅ ضمن النصاب</span>`;
+          const barCls=isOver||isWarn?'warn':'';
+          return `<tr>
+            <td style="font-weight:700;color:var(--navy);cursor:pointer;"
+              onclick="document.getElementById('tch-tt-sel').value='${t.name.replace(/'/g,"\\'")}';showMgmtPg('tchtimetable')">
+              ${t.name}</td>
+            <td style="font-size:10.5px;">${RANKS[t.rank]?.short||t.rank||'—'}</td>
+            <td style="font-size:10.5px;">${(t.dept||'').replace('قسم ','')}</td>
+            <td style="text-align:center;">${ot.uniqueLecs}</td>
+            <td style="text-align:center;">${ot.tdTpCount}</td>
+            <td style="text-align:center;font-weight:700;">${ot.totalEq.toFixed(1)}</td>
+            <td style="text-align:center;">${ot.quorum}</td>
+            <td>
+              <div class="db-bar">
+                <div class="db-bar-fill ${barCls}" style="width:${Math.min(pct,100)}%;"></div>
+              </div>
+              <div style="font-size:10px;color:var(--gray);margin-top:2px;">${pct.toFixed(0)}%</div>
+            </td>
+            <td>${badge}</td>
+          </tr>`;
+        }).join('')}
+      </tbody>
+    </table>`;
+
+  // ---- نسبة استغلال القاعات ----
+  const roomStats={};
+  sessions.forEach(s=>{
+    if(!s.rm)return;
+    if(!roomStats[s.rm])roomStats[s.rm]={count:0,types:{}};
+    roomStats[s.rm].count++;
+    roomStats[s.rm].types[s.type]=(roomStats[s.rm].types[s.type]||0)+1;
+  });
+  const maxOcc=Math.max(...Object.values(roomStats).map(r=>r.count),1);
+  const sortedRooms=Object.entries(roomStats).sort((a,b)=>b[1].count-a[1].count);
+  document.getElementById('db-rooms-table').innerHTML=`
+    <table class="db-table">
+      <thead><tr>
+        <th>القاعة</th>
+        <th style="text-align:center;">الحصص</th>
+        <th style="text-align:center;">نسبة الإشغال</th>
+        <th>التوزيع</th>
+      </tr></thead>
+      <tbody>
+        ${sortedRooms.map(([rm,d])=>{
+          const pct=(d.count/totalSlots*100).toFixed(1);
+          const pctBar=Math.min(d.count/maxOcc*100,100);
+          const isAmph=AMPHI.includes(rm);
+          return `<tr>
+            <td style="font-weight:700;">${isAmph?'🎭 ':'🚪 '}${rm}</td>
+            <td style="text-align:center;font-weight:700;">${d.count}</td>
+            <td style="text-align:center;">${pct}%</td>
+            <td>
+              <div class="db-bar">
+                <div class="db-bar-fill${pctBar>80?' warn':''}" style="width:${pctBar}%;"></div>
+              </div>
+            </td>
+          </tr>`;
+        }).join('')}
+        ${!sortedRooms.length?`<tr><td colspan="4" style="text-align:center;color:var(--gray);padding:20px;">لا توجد بيانات</td></tr>`:''}
+      </tbody>
+    </table>`;
+
+  // ---- Overload Detection ----
+  const overData=S.teachers
+    .map(t=>({t,ot:calcTeacherOvertime(t.name,year,period||'')}))
+    .filter(d=>d.ot.overtime>0||d.ot.totalEq>0)
+    .sort((a,b)=>b.ot.overtime-a.ot.overtime)
+    .slice(0,20);
+
+  document.getElementById('db-overload-table').innerHTML=`
+    <table class="db-table">
+      <thead><tr>
+        <th>الأستاذ</th>
+        <th style="text-align:center;">ساعة معادلة</th>
+        <th style="text-align:center;">النصاب</th>
+        <th style="text-align:center;">الزيادة</th>
+        <th>الوضع</th>
+      </tr></thead>
+      <tbody>
+        ${overData.map(({t,ot})=>{
+          const cls=ot.overtime>6?'ob-over':ot.overtime>0?'ob-warn':'ob-ok';
+          const lbl=ot.overtime>6?'عبء ثقيل':ot.overtime>0?'عبء إضافي':'ضمن النصاب';
+          return `<tr>
+            <td style="font-weight:700;cursor:pointer;color:var(--navy);"
+              onclick="document.getElementById('tch-tt-sel').value='${t.name.replace(/'/g,"\\'")}';showMgmtPg('tchtimetable')">
+              ${t.name}</td>
+            <td style="text-align:center;font-weight:700;">${ot.totalEq.toFixed(1)}</td>
+            <td style="text-align:center;">${ot.quorum}</td>
+            <td style="text-align:center;font-weight:800;color:${ot.overtime>0?'#ef4444':'#16a34a'};">
+              ${ot.overtime>0?'+':''}${ot.overtime.toFixed(1)}h
+            </td>
+            <td><span class="overload-badge ${cls}">${lbl}</span></td>
+          </tr>`;
+        }).join('')}
+        ${!overData.length?`<tr><td colspan="5" style="text-align:center;color:var(--gray);padding:20px;">لا توجد بيانات</td></tr>`:''}
+      </tbody>
+    </table>`;
 }
 
 // -- TEACHER TIMETABLE ---------------------------
