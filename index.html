@@ -2481,6 +2481,7 @@ function load(){
   if(!S.groups||!S.groups.length)   S.groups=['الفوج1','الفوج2','الفوج3','الفوج4','الفوج5','الفوج6','الفوج7','الفوج8'];
   if(!S.sections||!S.sections.length)S.sections=['الفصيلة1','الفصيلة2','الفصيلة3'];
   if(!S.registeredTTs)               S.registeredTTs=[];
+  if(!S.examExtraGroups)             S.examExtraGroups={};
   if(!S.settings)                    S.settings={ministry:'',university:'',faculty:'',logo:''};
   if(!S.slots||!S.slots.length)      S.slots=[
     {name:'الحصة الأولى',  from:'08:00',to:'09:30'},
@@ -4138,55 +4139,165 @@ function renderExams(){
   const f=getExamFilters();
   const wrap=document.getElementById('exam-table-wrap');
   if(!wrap){updStats();return;}
-  const regGroups=S.registeredTTs.filter(t=>(!f.lv||t.lv===f.lv)&&(!f.dp||t.dp===f.dp)&&(!f.spec||t.spec===f.spec)&&(!f.sec||t.section===f.sec)&&t.group);
-  const groups=[...new Set(regGroups.map(t=>t.group))].sort((a,b)=>S.groups.indexOf(a)-S.groups.indexOf(b));
-  const exams=S.exams.filter(e=>e.round==f.round&&e.y===S.ay&&(!f.period||e.sem==f.period)&&(!f.lv||e.lv===f.lv)&&(!f.dp||e.dp===f.dp)&&(!f.spec||e.spec===f.spec)&&(!f.sec||e.section===f.sec)).sort((a,b)=>a.date?.localeCompare(b.date||'')||0);
-  if(!f.lv&&!f.spec&&!exams.length){wrap.innerHTML=`<div class="tt-empty-state"><div class="es-icon">📝</div><h3>اختر التخصص والمستوى</h3><p>أو أضف امتحاناً جديداً</p></div>`;updStats();return;}
+
+  // أفواج مسجّلة لهذا التخصص/الفصيلة
+  const regGroups=S.registeredTTs.filter(t=>
+    (!f.lv||t.lv===f.lv)&&(!f.dp||t.dp===f.dp)&&
+    (!f.spec||t.spec===f.spec)&&(!f.sec||t.section===f.sec)&&t.group
+  );
+  let groups=[...new Set(regGroups.map(t=>t.group))].sort((a,b)=>S.groups.indexOf(a)-S.groups.indexOf(b));
+
+  // إضافة أفواج مؤقتة من examExtraGroups
+  if(!S.examExtraGroups)S.examExtraGroups={};
+  const extraKey=`${f.lv}|${f.dp}|${f.spec}|${f.sec}`;
+  const extra=S.examExtraGroups[extraKey]||[];
+  extra.forEach(g=>{if(!groups.includes(g))groups.push(g);});
+
+  const exams=S.exams.filter(e=>
+    e.round==f.round&&e.y===S.ay&&
+    (!f.period||e.sem==f.period)&&
+    (!f.lv||e.lv===f.lv)&&(!f.dp||e.dp===f.dp)&&
+    (!f.spec||e.spec===f.spec)&&(!f.sec||e.section===f.sec)
+  ).sort((a,b)=>a.date?.localeCompare(b.date||'')||0);
+
+  if(!f.lv&&!f.spec&&!exams.length){
+    wrap.innerHTML=`<div class="tt-empty-state"><div class="es-icon">📝</div><h3>اختر التخصص والمستوى</h3><p>أو أضف امتحاناً جديداً</p></div>`;
+    updStats();return;
+  }
+
+  // -- بناء الجدول --
+  // رأس الجدول: أعمدة الأفواج + زر إضافة فوج
+  const addGrpOpts=S.groups.filter(g=>!groups.includes(g)).map(g=>`<option value="${g}">${g}</option>`).join('');
+
   let h=`<table class="exam-table"><thead><tr>
     <th style="width:110px;">اليوم / التاريخ</th>
     <th style="width:95px;">التوقيت</th>
-    <th>المقياس / الأستاذ</th>
-    ${groups.map((g,i)=>`<th class="rc-${i%8}" style="min-width:90px;">👥 ${g}</th>`).join('')}
-    <th style="width:50px;"></th>
-  </tr></thead><tbody>`;
-  if(!exams.length){h+=`<tr><td colspan="${4+groups.length}" style="padding:30px;text-align:center;color:var(--gray);">لا توجد امتحانات — اضغط "إضافة امتحان"</td></tr>`;}
-  else exams.forEach((ex,i)=>{
-    const rowCls=i%2?'exam-row-even':'exam-row-odd';
-    h+=`<tr class="${rowCls}">
-      <td class="exam-day-cell"><div style="font-weight:700;">${ex.day||''}</div>
-        <input class="exam-date-input" type="date" value="${ex.date||''}" onchange="updateExam('${ex.id}','date',this.value)"></td>
-      <td><select class="exam-edit-input" onchange="updateExam('${ex.id}','slot',this.value)">${EXAM_SLOTS.map(s=>`<option${s===ex.slot?' selected':''}>${s}</option>`).join('')}</select></td>
-      <td class="exam-subj-cell">
-        <input class="exam-edit-input" style="font-weight:800;font-size:13px;text-align:right;" value="${ex.subj||''}" placeholder="المقياس..." onchange="updateExam('${ex.id}','subj',this.value)">
-        <div style="margin-top:4px;"><input class="exam-edit-input" style="font-size:11px;color:#555;text-align:right;" value="${ex.tch||''}" placeholder="الأستاذ..." onchange="updateExam('${ex.id}','tch',this.value)" list="etl-${ex.id}">
-        <datalist id="etl-${ex.id}">${S.teachers.map(t=>`<option value="${t.name}">`).join('')}</datalist></div>
-      </td>
-      ${groups.map((g,gi)=>`<td class="grp-room-cell rc-${gi%8}">
-        <input class="exam-room-input" style="background:transparent;" value="${ex.rooms?.[g]||''}" placeholder="القاعة" onchange="updateExamRoom('${ex.id}','${g.replace(/'/g,"\\'")}',this.value)">
-      </td>`).join('')}
-      <td><button onclick="delExam('${ex.id}')" style="background:none;border:none;cursor:pointer;color:var(--danger);font-size:16px;">🗑️</button></td>
-    </tr>`;
+    <th>المقياس / الأستاذ</th>`;
+
+  // خلية لكل فوج مع زر حذف
+  groups.forEach((g,gi)=>{
+    const canRemove=groups.length>1;
+    h+=`<th class="rc-${gi%8}" style="min-width:100px;position:relative;">
+      👥 ${g}
+      ${canRemove?`<button onclick="removeExamGroup('${g.replace(/'/g,"\\'")}','${extraKey.replace(/'/g,"\\'")}',event)"
+        style="position:absolute;top:2px;left:2px;background:rgba(239,68,68,.15);border:none;
+          border-radius:4px;cursor:pointer;color:#dc2626;font-size:10px;padding:1px 5px;line-height:1.4;">✕</button>`:''}
+    </th>`;
   });
+
+  // زر إضافة فوج
+  h+=`<th style="width:90px;background:rgba(255,255,255,.1);">
+    <select id="exam-add-grp-sel" class="fs" style="font-size:10px;padding:3px;background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.3);border-radius:5px;width:100%;">
+      <option value="">+ فوج</option>${addGrpOpts}
+    </select>
+    <button onclick="addExamGroup('${extraKey.replace(/'/g,"\\'")}',event)"
+      style="margin-top:3px;width:100%;background:rgba(255,255,255,.2);color:#fff;border:1px solid rgba(255,255,255,.3);
+        border-radius:5px;cursor:pointer;font-size:10px;padding:2px 5px;font-family:'Cairo',sans-serif;">
+      إضافة
+    </button>
+  </th>
+  <th style="width:50px;"></th>
+</tr></thead><tbody>`;
+
+  if(!exams.length){
+    h+=`<tr><td colspan="${5+groups.length}" style="padding:30px;text-align:center;color:var(--gray);">
+      لا توجد امتحانات — اضغط "إضافة امتحان"
+    </td></tr>`;
+  } else {
+    exams.forEach((ex,i)=>{
+      const rowCls=i%2?'exam-row-even':'exam-row-odd';
+      h+=`<tr class="${rowCls}">
+        <td class="exam-day-cell">
+          <div style="font-weight:700;color:var(--navy);">${ex.day||'—'}</div>
+          <input class="exam-date-input" type="date" value="${ex.date||''}"
+            onchange="updateExam('${ex.id}','date',this.value)">
+        </td>
+        <td>
+          <select class="exam-edit-input" onchange="updateExam('${ex.id}','slot',this.value)">
+            ${EXAM_SLOTS.map(s=>`<option${s===ex.slot?' selected':''}>${s}</option>`).join('')}
+          </select>
+        </td>
+        <td class="exam-subj-cell">
+          <input class="exam-edit-input" style="font-weight:800;font-size:13px;text-align:right;"
+            value="${ex.subj||''}" placeholder="المقياس..."
+            onchange="updateExam('${ex.id}','subj',this.value)">
+          <div style="margin-top:4px;">
+            <input class="exam-edit-input" style="font-size:11px;color:#555;text-align:right;"
+              value="${ex.tch||''}" placeholder="الأستاذ..."
+              onchange="updateExam('${ex.id}','tch',this.value)" list="etl-${ex.id}">
+            <datalist id="etl-${ex.id}">${S.teachers.map(t=>`<option value="${t.name}">`).join('')}</datalist>
+          </div>
+        </td>`;
+
+      // -- خلايا القاعة: rowspan لأول صف فقط --
+      if(i===0){
+        groups.forEach((g,gi)=>{
+          const room=ex.rooms?.[g]||'';
+          h+=`<td class="grp-room-cell rc-${gi%8}" rowspan="${exams.length}"
+            style="vertical-align:middle;font-size:18px;font-weight:800;text-align:center;min-width:90px;">
+            <div style="font-size:18pt;font-weight:900;color:var(--navy);margin-bottom:6px;white-space:pre-line;">
+              ${room||'—'}
+            </div>
+            <input class="exam-room-input" style="background:rgba(255,255,255,.6);font-size:11px;font-weight:700;"
+              value="${room}" placeholder="القاعة..."
+              onchange="updateExamRoom('${ex.id}','${g.replace(/'/g,"\\'")}',this.value,'${extraKey.replace(/'/g,"\\'")}')">
+          </td>`;
+        });
+      }
+
+      h+=`<td><button onclick="delExam('${ex.id}')"
+        style="background:none;border:none;cursor:pointer;color:var(--danger);font-size:16px;">🗑️</button></td>
+      </tr>`;
+    });
+  }
   h+=`</tbody></table>`;
-  wrap.innerHTML=h;updStats();
+  wrap.innerHTML=h;
+  updStats();
 }
-function addExamRow(){
+
+function addExamGroup(extraKey,event){
+  event&&event.stopPropagation&&event.stopPropagation();
+  const sel=document.getElementById('exam-add-grp-sel');
+  const grp=sel?.value||'';
+  if(!grp){toast('⚠️ اختر فوجاً من القائمة');return;}
+  if(!S.examExtraGroups)S.examExtraGroups={};
+  if(!S.examExtraGroups[extraKey])S.examExtraGroups[extraKey]=[];
+  if(!S.examExtraGroups[extraKey].includes(grp)){
+    S.examExtraGroups[extraKey].push(grp);
+    save();renderExams();toast('✅ أضيف الفوج: '+grp);
+  }
+}
+function removeExamGroup(grp,extraKey,event){
+  event&&event.stopPropagation&&event.stopPropagation();
+  if(!S.examExtraGroups)return;
+  S.examExtraGroups[extraKey]=(S.examExtraGroups[extraKey]||[]).filter(g=>g!==grp);
+  // حذف القاعات لهذا الفوج من كل الامتحانات
+  S.exams.forEach(ex=>{if(ex.rooms&&ex.rooms[grp])delete ex.rooms[grp];});
+  save();renderExams();toast('🗑️ حُذف الفوج: '+grp);
+}
+
+// updateExamRoom يحدّث قاعة الفوج في كل الامتحانات المطابقة
+function updateExamRoom(id,grp,room,extraKey){
   const f=getExamFilters();
-  if(!f.lv&&!f.spec){toast('⚠️ اختر المستوى والتخصص من الفلتر أولاً');return;}
-  S.exams.push({id:uid(),y:S.ay,round:S.round||1,lv:f.lv,dp:f.dp,spec:f.spec,section:f.sec,sem:parseInt(f.period)||1,subj:'',tch:'',day:'السبت',date:'',slot:EXAM_SLOTS[0],rooms:{}});
-  save();renderExams();
+  // تحديث القاعة لكل الامتحانات في نفس الفصيلة/التخصص (القاعة ثابتة لكل الامتحانات)
+  S.exams.forEach(ex=>{
+    if(ex.round==S.round&&ex.y===S.ay&&
+      (!f.lv||ex.lv===f.lv)&&(!f.dp||ex.dp===f.dp)&&
+      (!f.spec||ex.spec===f.spec)&&(!f.sec||ex.section===f.sec)){
+      if(!ex.rooms)ex.rooms={};
+      ex.rooms[grp]=room;
+    }
+  });
+  save();
+  // تحديث العرض بدون إعادة رسم كامل
+  document.querySelectorAll(`.exam-room-input`).forEach(inp=>{
+    if(inp.getAttribute('onchange')&&inp.getAttribute('onchange').includes(`'${grp}'`)){
+      inp.value=room;
+      const disp=inp.previousElementSibling;
+      if(disp)disp.textContent=room||'—';
+    }
+  });
 }
-function updateExam(id,field,value){
-  const ex=S.exams.find(e=>e.id===id);if(!ex)return;
-  ex[field]=value;
-  if(field==='date'&&value){const d=new Date(value);const dn=['الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'];ex.day=dn[d.getDay()]||'';}
-  save();if(field==='date')renderExams();
-}
-function updateExamRoom(id,grp,room){
-  const ex=S.exams.find(e=>e.id===id);if(!ex)return;
-  if(!ex.rooms)ex.rooms={};ex.rooms[grp]=room;save();
-}
-function delExam(id){S.exams=S.exams.filter(e=>e.id!==id);save();renderExams();toast('🗑️ تم الحذف');}
 
 async function exportExamPDF(){
   const f=getExamFilters();
