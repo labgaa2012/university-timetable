@@ -1148,6 +1148,7 @@ table.occ-matrix td.cell-occ:hover{background:#fee2e2;filter:brightness(.97);}
       <div class="mgmt-header">
         <div class="mct"><div class="mcti">📋</div>جدول توقيت الأستاذ</div>
         <div class="frow">
+          <button class="btn" onclick="exportTchCertificate()" style="background:#059669;color:#fff;">📜 شهادة تدريس</button>
           <button class="btn" onclick="exportTchPDF()" style="background:#7c3aed;color:#fff;">📄 تصدير PDF</button>
           <button class="btn bp bsm" onclick="showPg('timetable',document.querySelector('.nav-tab'))">← العودة</button>
         </div>
@@ -1239,10 +1240,19 @@ table.occ-matrix td.cell-occ:hover{background:#fee2e2;filter:brightness(.97);}
       <button class="btn bg" onclick="saveSettings()" style="width:100%;justify-content:center;padding:12px;font-size:14px;">
         💾 حفظ الإعدادات
       </button>
-      <div style="margin-top:12px;">
-        <button class="btn" onclick="openSlotsMgr()" style="width:100%;justify-content:center;padding:11px;font-size:13px;background:#7c3aed;color:#fff;">
+      <div style="margin-top:12px;display:flex;gap:8px;">
+        <button class="btn" onclick="openSlotsMgr()" style="flex:1;justify-content:center;padding:11px;font-size:13px;background:#7c3aed;color:#fff;">
           ⏰ ضبط التوقيت
         </button>
+      </div>
+      <div style="margin-top:10px;display:flex;gap:8px;">
+        <button class="btn" onclick="exportJSON()" style="flex:1;justify-content:center;padding:10px;font-size:12px;background:#059669;color:#fff;">
+          💾 تصدير نسخة احتياطية (JSON)
+        </button>
+        <button class="btn" onclick="document.getElementById('imp-backup-json').click()" style="flex:1;justify-content:center;padding:10px;font-size:12px;background:#0d8a7d;color:#fff;">
+          📥 استيراد نسخة احتياطية
+        </button>
+        <input type="file" id="imp-backup-json" accept=".json" style="display:none" onchange="importJSON(this.files[0]);this.value='';">
       </div>
 
       <!-- معاينة الترويسة -->
@@ -1342,6 +1352,7 @@ table.occ-matrix td.cell-occ:hover{background:#fee2e2;filter:brightness(.97);}
           <select class="fs" id="tt-year-sel" onchange="onTTYearChange(this.value)"
             style="font-weight:700;min-width:120px;"></select>
           <button class="btn" onclick="openInstallTT()" style="background:#7c3aed;color:#fff;">⚡ تنصيب جداول</button>
+          <button class="btn" onclick="openCopyGroup()" style="background:#0d8a7d;color:#fff;">📋 نسخ جدول فوج</button>
           <button class="btn bn" onclick="expExcel()">📊 تصدير</button>
           <button class="btn bi" onclick="trigImp('imp-sessions')">📥 استيراد</button>
           <button class="btn btpl" onclick="dlTemplate('sessions')">📋 قالب</button>
@@ -1746,6 +1757,8 @@ table.occ-matrix td.cell-occ:hover{background:#fee2e2;filter:brightness(.97);}
           </select>
         </div>
         <button class="btn bg" onclick="addTeacher()" style="white-space:nowrap;align-self:flex-end;">➕ إضافة</button>
+        <button class="btn bi" onclick="document.getElementById('imp-tch-xlsx').click()" style="align-self:flex-end;">📥 Excel</button>
+        <input type="file" id="imp-tch-xlsx" accept=".xlsx,.xls" style="display:none" onchange="importTeachersExcel(this.files[0]);this.value='';">
       </div>
 
       <!-- -- FILTER BAR -- -->
@@ -1949,6 +1962,40 @@ table.occ-matrix td.cell-occ:hover{background:#fee2e2;filter:brightness(.97);}
     <div class="ma">
       <button class="btn" onclick="confirmInstallTT()" style="background:#7c3aed;color:#fff;flex:1;justify-content:center;">⚡ تنصيب</button>
       <button class="btn" style="background:var(--gray-light);color:var(--text-mid);" onclick="closeM('mInstallTT')">إلغاء</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: نسخ جدول فوج -->
+<div class="mo" id="mCopyGroup">
+  <div class="mb" style="width:460px;">
+    <div class="mt">📋 نسخ جدول فوج لآخر</div>
+    <div style="background:#f0fdf4;border:1.5px solid #86efac;border-radius:9px;padding:10px 14px;font-size:11.5px;color:#166534;margin-bottom:14px;">
+      تُنسخ جميع الحصص (TD/TP) من الفوج المصدر للفوج الهدف. المحاضرات لا تُنسخ (مشتركة بين الأفواج).
+    </div>
+    <div class="frow2">
+      <div class="fg">
+        <label class="fl">الفصيلة</label>
+        <select class="fs" id="cg-section"></select>
+      </div>
+      <div class="fg">
+        <label class="fl">الفوج المصدر (من)</label>
+        <select class="fs" id="cg-from"></select>
+      </div>
+    </div>
+    <div class="fg">
+      <label class="fl">الفوج الهدف (إلى)</label>
+      <select class="fs" id="cg-to"></select>
+    </div>
+    <div class="fg">
+      <label style="display:flex;align-items:center;gap:8px;font-size:12px;cursor:pointer;">
+        <input type="checkbox" id="cg-overwrite"> استبدال الحصص الموجودة في الفوج الهدف
+      </label>
+    </div>
+    <div id="cg-preview" style="background:var(--gray-light);border-radius:8px;padding:10px;font-size:11.5px;color:var(--text-mid);margin-top:4px;"></div>
+    <div class="ma">
+      <button class="btn bg" onclick="confirmCopyGroup()" style="flex:1;justify-content:center;">📋 نسخ الجدول</button>
+      <button class="btn" style="background:var(--gray-light);color:var(--text-mid);" onclick="closeM('mCopyGroup')">إلغاء</button>
     </div>
   </div>
 </div>
@@ -2747,8 +2794,18 @@ function addLevelManual(){
   S.levels.push(n);S.al=n;document.getElementById('lvIn').value='';
   save();renderLvGrid();toast('✅ أضيف: '+n);
 }
-function rmLv(i){if(!confirm('حذف '+S.levels[i]+'؟'))return;S.levels.splice(i,1);save();renderAll();toast('🗑️ تم الحذف');}
-function expLevelsExcel(){
+function rmLv(i){
+  const lv=S.levels[i];
+  const count=S.sessions.filter(s=>s.lv===lv&&s.y===S.ay).length;
+  const msg=count?`⚠️ يوجد ${count} حصة مرتبطة بـ "${lv}"!\nسيتم حذف المستوى فقط والحصص تبقى يتيمة.\n\nتأكيد الحذف؟`:`حذف المستوى "${lv}"؟`;
+  if(!confirm(msg))return;S.levels.splice(i,1);save();renderAll();toast('🗑️ تم الحذف');
+}
+function rmDpt(i){
+  const dp=S.depts[i];
+  const count=S.sessions.filter(s=>s.dp===dp&&s.y===S.ay).length;
+  const msg=count?`⚠️ يوجد ${count} حصة في "${dp}"!\nسيتم حذف القسم فقط والحصص تبقى يتيمة.\n\nتأكيد الحذف؟`:`حذف القسم "${dp}"؟`;
+  if(!confirm(msg))return;S.depts.splice(i,1);save();renderAll();toast('🗑️ تم الحذف');
+}function expLevelsExcel(){
   const wb=XLSX.utils.book_new();
   const data=[['المستوى','عدد الحصص ('+S.ay+')','الحالة']];
   S.levels.forEach(l=>data.push([l,S.sessions.filter(s=>s.lv===l&&s.y===S.ay).length,l===S.al?'نشط':'']));
@@ -2796,7 +2853,6 @@ function addDeptManual(){
   S.depts.push(n);S.ad=n;document.getElementById('dptIn').value='';
   save();renderDptGrid();toast('✅ أضيف: '+n);
 }
-function rmDpt(i){if(!confirm('حذف '+S.depts[i]+'؟'))return;S.depts.splice(i,1);save();renderAll();toast('🗑️ تم الحذف');}
 function expDeptsExcel(){
   const wb=XLSX.utils.book_new();
   const data=[['القسم','عدد الأساتذة','عدد الحصص ('+S.ay+')','الحالة']];
@@ -3332,7 +3388,12 @@ function addSpecInline(){
   document.getElementById('spIn').value='';
   save();renderSpGrid();toast('✅ أضيف التخصص: '+n);
 }
-function rmSp(i){if(!confirm('حذف '+S.specs[i]?.name+'؟'))return;S.specs.splice(i,1);save();renderSpGrid();toast('🗑️ تم الحذف');}
+function rmSp(i){
+  const sp=S.specs[i]?.name;
+  const count=S.sessions.filter(s=>s.spec===sp&&s.y===S.ay).length;
+  const msg=count?`⚠️ يوجد ${count} حصة في تخصص "${sp}"!\nسيتم حذف التخصص فقط والحصص تبقى يتيمة.\n\nتأكيد الحذف؟`:`حذف التخصص "${sp}"؟`;
+  if(!confirm(msg))return;S.specs.splice(i,1);save();renderSpGrid();toast('🗑️ تم الحذف');
+}
 
 // -- EDIT MODAL ------------------------------------
 function openEdit(type,idx,cur){
@@ -4199,6 +4260,284 @@ function delSess(id){
 }
 
 // -- EXAMS -----------------------------------------
+// ══ ⑨ نسخ جدول فوج ══
+function openCopyGroup(){
+  const att=S.activeTT||{};
+  const secSel=document.getElementById('cg-section');
+  if(secSel)secSel.innerHTML=S.sections.map(s=>`<option value="${s}">${s}</option>`).join('');
+  const groups=S.groups;
+  const fromSel=document.getElementById('cg-from');
+  const toSel=document.getElementById('cg-to');
+  if(fromSel)fromSel.innerHTML=groups.map(g=>`<option>${g}</option>`).join('');
+  if(toSel)toSel.innerHTML=groups.map((g,i)=>`<option${i===1?' selected':''}>${g}</option>`).join('');
+  updateCopyPreview();
+  openM('mCopyGroup');
+}
+function updateCopyPreview(){
+  const att=S.activeTT||{};
+  const section=document.getElementById('cg-section')?.value||'';
+  const from=document.getElementById('cg-from')?.value||'';
+  const count=S.sessions.filter(s=>
+    s.y===S.ay&&s.lv===att.lv&&s.dp===att.dp&&s.spec===att.spec&&
+    s.section===section&&s.group===from&&
+    s.type!=='tlc'&&s.type!=='tlc-remote'
+  ).length;
+  const el=document.getElementById('cg-preview');
+  if(el)el.textContent=`سيتم نسخ ${count} حصة (TD/TP) من ${from} إلى الفوج المختار`;
+}
+function confirmCopyGroup(){
+  const att=S.activeTT||{};
+  if(!att.lv){toast('⚠️ حدد جدولاً نشطاً أولاً');return;}
+  const section=document.getElementById('cg-section')?.value||'';
+  const from=document.getElementById('cg-from')?.value||'';
+  const to=document.getElementById('cg-to')?.value||'';
+  const overwrite=document.getElementById('cg-overwrite')?.checked||false;
+  if(from===to){toast('⚠️ الفوج المصدر والهدف متطابقان');return;}
+  const source=S.sessions.filter(s=>
+    s.y===S.ay&&s.lv===att.lv&&s.dp===att.dp&&s.spec===att.spec&&
+    s.section===section&&s.group===from&&
+    s.type!=='tlc'&&s.type!=='tlc-remote'
+  );
+  if(!source.length){toast('⚠️ لا توجد حصص TD/TP في الفوج المصدر');return;}
+  if(overwrite){
+    S.sessions=S.sessions.filter(s=>
+      !(s.y===S.ay&&s.lv===att.lv&&s.dp===att.dp&&s.spec===att.spec&&
+        s.section===section&&s.group===to&&s.type!=='tlc'&&s.type!=='tlc-remote')
+    );
+  }
+  let copied=0;
+  source.forEach(s=>{
+    const exists=S.sessions.find(x=>x.y===S.ay&&x.lv===s.lv&&x.dp===s.dp&&x.spec===s.spec&&x.section===s.section&&x.group===to&&x.day===s.day&&x.slot===s.slot);
+    if(!exists){S.sessions.push({...s,id:uid(),group:to});copied++;}
+  });
+  save();closeM('mCopyGroup');renderTT();
+  toast(`✅ نُسخت ${copied} حصة من ${from} إلى ${to}`);
+}
+
+// ══ ⑮ كشف تعارض الامتحانات ══
+function detectExamConflicts(){
+  const conflicts=[];
+  const exams=S.exams.filter(e=>e.round==S.round&&e.y===S.ay);
+  for(let i=0;i<exams.length;i++){
+    for(let j=i+1;j<exams.length;j++){
+      const e1=exams[i],e2=exams[j];
+      if(!e1.date||!e2.date||e1.date!==e2.date)continue;
+      if(e1.slot!==e2.slot)continue;
+      // نفس الأستاذ في نفس الوقت
+      if(e1.tch&&e2.tch&&e1.tch===e2.tch){
+        conflicts.push({type:'teacher',msg:`⚠️ تعارض أستاذ: ${e1.tch} — ${e1.date} ${e1.slot}`,e1,e2});
+      }
+      // نفس المقياس لنفس التخصص/المستوى مرتين
+      if(e1.spec===e2.spec&&e1.lv===e2.lv&&e1.subj===e2.subj){
+        conflicts.push({type:'dup',msg:`⚠️ تكرار امتحان: ${e1.subj} — ${e1.date}`,e1,e2});
+      }
+    }
+  }
+  return conflicts;
+}
+function renderExamConflictBanner(){
+  const c=detectExamConflicts();
+  const wrap=document.getElementById('exam-table-wrap');
+  if(!wrap)return;
+  const existing=document.getElementById('exam-conflict-banner');
+  if(existing)existing.remove();
+  if(!c.length)return;
+  const banner=document.createElement('div');
+  banner.id='exam-conflict-banner';
+  banner.style.cssText='background:#fef2f2;border:2px solid #ef4444;border-radius:10px;padding:12px 16px;margin-bottom:12px;';
+  banner.innerHTML=`<div style="font-weight:800;color:#991b1b;margin-bottom:8px;">⚠️ تعارضات في جدول الامتحانات (${c.length})</div>`
+    +c.map(x=>`<div style="font-size:12px;color:#333;padding:4px 0;border-bottom:1px solid #fee2e2;">${x.msg}<br>
+      <span style="font-size:11px;color:#666;">📖 ${x.e1.subj||'—'} ↔ 📖 ${x.e2.subj||'—'}</span></div>`).join('');
+  wrap.parentNode.insertBefore(banner,wrap);
+}
+
+// ══ ⑭ شهادة تدريس ══
+async function exportTchCertificate(){
+  const tchName=document.getElementById('tch-tt-sel')?.value||'';
+  if(!tchName){toast('⚠️ اختر أستاذاً أولاً');return;}
+  const period=document.getElementById('tch-tt-period')?.value||'';
+  const year=document.getElementById('tch-tt-year')?.value||S.ay;
+  const periodLabel=period?S.periods[parseInt(period)-1]||'':'كلا السداسيين';
+  const tchObj=S.teachers.find(t=>t.name===tchName)||{};
+  const ot=calcTeacherOvertime(tchName,year,period||'');
+  const logoHtml=S.settings?.logo?`<img src="${S.settings.logo}" style="width:70px;height:70px;object-fit:contain;">`:'<span style="font-size:40px;">🎓</span>';
+  // مقاييس الأستاذ مفصّلة
+  let sessions=S.sessions.filter(s=>s.tch===tchName&&s.y===year);
+  if(period)sessions=sessions.filter(s=>s.sem==period);
+  // تجميع المقاييس الفريدة
+  const subjMap={};
+  sessions.forEach(s=>{
+    const k=`${s.subj||''}|${s.type}|${s.spec||''}|${s.lv||''}`;
+    if(!subjMap[k])subjMap[k]={subj:s.subj,type:s.type,spec:s.spec,lv:s.lv,dp:s.dp,count:0};
+    subjMap[k].count++;
+  });
+  const subjRows=Object.values(subjMap).filter(r=>r.subj);
+  const now=new Date();
+  const dateStr=`${now.getFullYear()}/${String(now.getMonth()+1).padStart(2,'0')}/${String(now.getDate()).padStart(2,'0')}`;
+  toast('⏳ جاري إنشاء الشهادة...');
+  try{
+    const iframe=document.createElement('iframe');
+    iframe.style.cssText='position:fixed;left:-9999px;top:-9999px;width:900px;background:#fff;border:none;';
+    document.body.appendChild(iframe);
+    const doc=iframe.contentDocument||iframe.contentWindow.document;
+    doc.open();
+    doc.write(`<!DOCTYPE html><html dir="rtl"><head><meta charset="UTF-8">
+      <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;800;900&display=swap" rel="stylesheet">
+      <style>
+        *{box-sizing:border-box;}
+        body{font-family:'Cairo',Arial,sans-serif;direction:rtl;margin:0;padding:20px;background:#fff;color:#111;}
+        .cert-border{border:4px double var(--navy,#0f1f3d);border-radius:12px;padding:24px;position:relative;}
+        .cert-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;padding-bottom:14px;border-bottom:2px solid #0f1f3d;}
+        .cert-title{text-align:center;margin-bottom:20px;}
+        .cert-title h1{font-size:20pt;font-weight:900;color:#0f1f3d;margin:0;}
+        .cert-title p{font-size:11pt;color:#555;margin:6px 0 0;}
+        .cert-body{font-size:12pt;line-height:2.2;margin-bottom:20px;}
+        .cert-body strong{color:#0f1f3d;}
+        table{width:100%;border-collapse:collapse;font-size:10.5pt;margin:12px 0;}
+        th{background:#0f1f3d;color:#c9a84c;padding:7px 10px;text-align:right;border:1px solid #334;}
+        td{padding:6px 10px;border:1px solid #ccc;}tr:nth-child(even) td{background:#f8f8f8;}
+        .cert-footer{display:flex;justify-content:space-between;margin-top:30px;padding-top:14px;border-top:1px solid #ccc;}
+        .sig-box{text-align:center;min-width:160px;}
+        .sig-line{border-bottom:1.5px solid #333;margin:40px 10px 6px;}</style>
+      </head><body>
+      <div class="cert-border">
+        <div class="cert-header">
+          <div style="text-align:right;">
+            <div style="font-weight:800;font-size:12pt;color:#0f1f3d;">${S.settings?.ministry||'وزارة التعليم العالي والبحث العلمي'}</div>
+            <div style="font-size:11pt;">${S.settings?.university||'جامعة عمار ثليجي الأغواط'}</div>
+            <div style="font-size:10pt;color:#555;">${S.settings?.faculty||'كلية العلوم الاقتصادية والتجارية وعلوم التسيير'}</div>
+          </div>
+          <div>${logoHtml}</div>
+          <div style="text-align:left;font-size:10pt;color:#555;">
+            <div>التاريخ: ${dateStr}</div>
+            <div>السنة الجامعية: ${year}</div>
+          </div>
+        </div>
+        <div class="cert-title">
+          <h1>شهادة تدريس</h1>
+          <p>تُسلَّم للأستاذ المعني لإثبات عبء التدريس</p>
+        </div>
+        <div class="cert-body">
+          تُشهد ${S.settings?.faculty||'الكلية'} أن الأستاذ(ة):
+          <strong>${tchName}</strong><br>
+          الرتبة: <strong>${RANKS[tchObj.rank]?.label||'—'}</strong><br>
+          القسم: <strong>${tchObj.dept||'—'}</strong>
+          ${tchObj.post?`<br>المنصب: <strong>${POST_LABELS[tchObj.post]||''}</strong>`:''}
+          <br>يُدرِّس خلال السنة الجامعية <strong>${year}</strong> — الفترة: <strong>${periodLabel}</strong>
+          المقاييس التالية:
+        </div>
+        <table>
+          <thead><tr>
+            <th>#</th><th>المقياس</th><th>نوع الدرس</th><th>التخصص / المستوى</th><th>عدد الحصص</th>
+          </tr></thead>
+          <tbody>
+            ${subjRows.map((r,i)=>`<tr>
+              <td>${i+1}</td>
+              <td style="font-weight:700;">${r.subj}</td>
+              <td>${TL[r.type]||r.type}</td>
+              <td style="font-size:10pt;">${r.spec||''} — ${r.lv||''}</td>
+              <td style="text-align:center;">${r.count}</td>
+            </tr>`).join('')}
+          </tbody>
+        </table>
+        <div class="cert-body" style="background:#f8f8f8;border-radius:8px;padding:12px;font-size:11pt;">
+          <strong>ملخص الساعات:</strong><br>
+          الساعات الفعلية: <strong>${ot.totalActual.toFixed(2)} ساعة</strong> &nbsp;|&nbsp;
+          الساعات المعادلة: <strong>${ot.totalEq.toFixed(2)} ساعة</strong> &nbsp;|&nbsp;
+          النصاب الأسبوعي: <strong>${ot.quorum} ساعة</strong><br>
+          ${ot.overtime>0?`<span style="color:#dc2626;">الساعات الإضافية: <strong>${ot.overtime.toFixed(2)} ساعة</strong></span>`:'<span style="color:#16a34a;">ضمن النصاب القانوني</span>'}
+        </div>
+        <div class="cert-footer">
+          <div class="sig-box">
+            <div class="sig-line"></div>
+            <div style="font-size:10pt;">رئيس القسم</div>
+          </div>
+          <div class="sig-box">
+            <div class="sig-line"></div>
+            <div style="font-size:10pt;">العميد</div>
+          </div>
+          <div class="sig-box">
+            <div class="sig-line"></div>
+            <div style="font-size:10pt;">الختم الرسمي</div>
+          </div>
+        </div>
+      </div></body></html>`);
+    doc.close();
+    await new Promise(r=>setTimeout(r,1400));
+    const canvas=await html2canvas(iframe.contentDocument.body,{scale:2,useCORS:true,backgroundColor:'#ffffff',width:900,windowWidth:900});
+    document.body.removeChild(iframe);
+    const{jsPDF}=window.jspdf;
+    const pdf=new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
+    const pW=pdf.internal.pageSize.getWidth();
+    const imgH=canvas.height*(pW/canvas.width);
+    pdf.addImage(canvas.toDataURL('image/jpeg',0.95),'JPEG',0,0,pW,Math.min(imgH,pdf.internal.pageSize.getHeight()));
+    pdf.save(`شهادة_تدريس_${tchName.replace(/\s/g,'_')}_${year.replace('/','_')}.pdf`);
+    toast('✅ تم إنشاء شهادة التدريس');
+  }catch(e){console.error(e);toast('❌ خطأ: '+e.message);}
+}
+
+// ══ ⑰ استيراد الأساتذة من Excel ══
+function importTeachersExcel(file){
+  if(!file)return;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    try{
+      const wb=XLSX.read(e.target.result,{type:'binary'});
+      const ws=wb.Sheets[wb.SheetNames[0]];
+      const rows=XLSX.utils.sheet_to_json(ws,{header:1}).slice(1);
+      let added=0,skipped=0;
+      rows.forEach(row=>{
+        const name=(row[0]||'').toString().trim();
+        if(!name){skipped++;return;}
+        if(S.teachers.find(t=>t.name===name)){skipped++;return;}
+        const rankRaw=(row[1]||'').toString().trim().toLowerCase();
+        const rank=rankRaw.includes('أ.ت.ع')||rankRaw.includes('prof')?'prof'
+          :rankRaw.includes('مح.أ')||rankRaw.includes('mca')?'mca'
+          :rankRaw.includes('مح.ب')||rankRaw.includes('mcb')?'mcb'
+          :rankRaw.includes('مس.أ')||rankRaw.includes('maa')?'maa'
+          :rankRaw.includes('مس.ب')||rankRaw.includes('mab')?'mab'
+          :rankRaw.includes('مشارك')||rankRaw.includes('sha')?'sha'
+          :rankRaw.includes('مؤقت')||rankRaw.includes('tmp')?'tmp':'mca';
+        const dept=(row[2]||'').toString().trim();
+        const kindRaw=(row[3]||'').toString().trim();
+        const kind=kindRaw.includes('مؤقت')||kindRaw.includes('tmp')?'temporary'
+          :kindRaw.includes('مشارك')||kindRaw.includes('associate')?'associate':'permanent';
+        S.teachers.push({name,rank,dept,kind,post:''});
+        added++;
+      });
+      save();renderTchGrid();
+      toast(`✅ استُورد ${added} أستاذ، تخطّي ${skipped}`);
+    }catch(err){toast('❌ خطأ في قراءة الملف: '+err.message);}
+  };
+  reader.readAsBinaryString(file);
+}
+
+// ══ ⑱ تصدير/استيراد JSON للنسخ الاحتياطي ══
+function exportJSON(){
+  const data=JSON.stringify(S,null,2);
+  const blob=new Blob([data],{type:'application/json'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  const date=new Date();
+  a.download=`backup_${S.ay.replace('/','_')}_${date.getFullYear()}${String(date.getMonth()+1).padStart(2,'0')}${String(date.getDate()).padStart(2,'0')}.json`;
+  a.click();
+  toast('✅ تم تصدير النسخة الاحتياطية');
+}
+function importJSON(file){
+  if(!file)return;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    try{
+      const data=JSON.parse(e.target.result);
+      if(!data.ay||!data.teachers){toast('❌ ملف غير صحيح');return;}
+      if(!confirm(`استيراد بيانات السنة ${data.ay}؟ سيتم استبدال البيانات الحالية.`))return;
+      Object.assign(S,data);save();renderAll();renderTT();
+      toast('✅ تم الاستيراد بنجاح');
+    }catch(err){toast('❌ خطأ في قراءة الملف');}
+  };
+  reader.readAsText(file);
+}
+
 // -- EXAMS (new system) ----------------------------
 const EXAM_SLOTS=['08:00-10:00','10:30-12:30','14:00-16:00','16:30-18:30'];
 
@@ -4372,6 +4711,7 @@ function renderExams(){
   h+=`</tbody></table>`;
   wrap.innerHTML=h;
   updStats();
+  renderExamConflictBanner();
 }
 
 function addExamGroup(extraKey,event){
