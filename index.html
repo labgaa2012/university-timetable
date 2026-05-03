@@ -563,6 +563,54 @@ table.tt td.ec:hover::after{color:var(--teal);}
 .grp-block-header .grp-dot{
   width:10px;height:10px;border-radius:50%;background:rgba(255,255,255,.6);
 }
+/* CONFLICT SYSTEM */
+.conflict-banner{
+  border-radius:10px;margin-bottom:12px;overflow:hidden;
+  border:2px solid #ef4444;
+}
+.conflict-header{
+  display:flex;align-items:center;gap:10px;padding:10px 16px;cursor:pointer;
+  background:#fef2f2;color:#991b1b;user-select:none;
+}
+.conflict-header:hover{background:#fee2e2;}
+.conflict-header .ch-icon{font-size:18px;}
+.conflict-header .ch-title{font-size:13px;font-weight:800;font-family:'Tajawal',sans-serif;flex:1;}
+.conflict-header .ch-count{
+  background:#ef4444;color:#fff;border-radius:20px;
+  padding:2px 10px;font-size:12px;font-weight:700;
+}
+.conflict-header .ch-arrow{font-size:12px;transition:transform .2s;}
+.conflict-header.open .ch-arrow{transform:rotate(-90deg);}
+.conflict-list{background:#fff;max-height:320px;overflow-y:auto;}
+.conflict-item{
+  display:flex;align-items:flex-start;gap:10px;padding:10px 14px;
+  border-bottom:1px solid #fee2e2;
+}
+.conflict-item:last-child{border-bottom:none;}
+.ci-badge{
+  padding:2px 8px;border-radius:20px;font-size:10px;font-weight:800;
+  white-space:nowrap;flex-shrink:0;margin-top:1px;
+}
+.ci-room   {background:#fef3cd;color:#92400e;}
+.ci-teacher{background:#fce7f3;color:#9d174d;}
+.ci-dup    {background:#ede9fe;color:#4c1d95;}
+.ci-msg{font-size:12px;color:#333;flex:1;line-height:1.5;}
+.ci-dismiss{
+  font-size:11px;color:var(--gray);cursor:pointer;white-space:nowrap;
+  padding:2px 6px;border-radius:5px;background:var(--gray-light);
+  border:none;transition:all .2s;flex-shrink:0;
+}
+.ci-dismiss:hover{background:#fee2e2;color:#991b1b;}
+/* تلوين خلايا التعارض في الجدول */
+.sc.conflict-cell{
+  outline:3px solid #ef4444;outline-offset:-2px;
+  animation:conflict-pulse 1.5s ease-in-out infinite;
+}
+@keyframes conflict-pulse{
+  0%,100%{outline-color:#ef4444;}
+  50%{outline-color:#fca5a5;}
+}
+
 /* PDF CHOICE CARDS */
 .pdf-choice-card{border:2px solid #e0e8f5;border-radius:12px;padding:12px;cursor:pointer;transition:all .2s;background:#fff;}
 .pdf-choice-card:hover{border-color:var(--teal);box-shadow:0 4px 16px rgba(13,138,125,.15);transform:translateY(-2px);}
@@ -1185,6 +1233,8 @@ table.occ-matrix td.cell-occ:hover{background:#fee2e2;filter:brightness(.97);}
           <button class="btn bp" onclick="exportPDF()" id="btn-pdf">📄 تصدير PDF</button>
         </div>
       </div>
+      <!-- بانر التعارضات -->
+      <div id="tt-conflict-banner"></div>
       <!-- بانر الجدول النشط -->
       <div id="tt-active-banner-wrap"></div>
       <div class="ttw" id="ttbl-container"></div>
@@ -3546,6 +3596,10 @@ function renderTT(){
     </div>
   </div>`;
 
+  // -- كشف التعارضات --
+  const{conflictIds}=detectConflicts();
+  renderConflictBanner();
+
   // -- تجميع الحصص المطابقة للفلتر --
   const allSess=S.sessions.filter(s=>
     s.y===S.ay &&
@@ -3710,8 +3764,8 @@ function renderTT(){
             ${isEmpty?`onclick="openAddSessWithKey('${dE}','${slE}','${lvE}','${dpE}','${spE}','${seE}','${gE}')"`:''}
           >`;
           cells.forEach(s=>{
-            const sid=s.id;
-            tbl+=`<div class="sc ${s.type}" draggable="true"
+            const isConflict=conflictIds.has(s.id);
+            tbl+=`<div class="sc ${s.type}${isConflict?' conflict-cell':''}" draggable="true"
               ondragstart="if(event.target.closest('button')){event.preventDefault();return;} onDS(event,'${sid}')"
               ondragend="document.querySelectorAll('.sc').forEach(x=>x.classList.remove('dragging'))"
             ><button class="sceb" onclick="event.stopPropagation();openEditSess('${sid}')">✏️</button>
@@ -5509,6 +5563,146 @@ function editGrp(i){
   if(!n||n===S.groups[i])return;
   if(S.groups.includes(n)){toast('⚠️ الاسم موجود بالفعل');return;}
   S.groups[i]=n;save();renderGrpGrid();toast('✅ تم التعديل');
+}
+
+// -- CONFLICT DETECTION ----------------------------
+let _acceptedConflicts=new Set(
+  JSON.parse(localStorage.getItem('acceptedConflicts')||'[]')
+);
+
+function detectConflicts(){
+  const list=[];
+  const conflictIds=new Set();
+  // نستثني الامتحانات
+  const sess=S.sessions.filter(s=>s.y===S.ay);
+
+  // -- 1. تعارض القاعة والأستاذ --
+  for(let i=0;i<sess.length;i++){
+    for(let j=i+1;j<sess.length;j++){
+      const e1=sess[i],e2=sess[j];
+      if(e1.day!==e2.day||e1.slot!==e2.slot)continue;
+
+      // هل هما نفس المحاضرة (مكررة عبر الأفواج)؟
+      const isLec1=e1.type==='tlc'||e1.type==='tlc-remote';
+      const isLec2=e2.type==='tlc'||e2.type==='tlc-remote';
+      const sameLec=isLec1&&isLec2&&
+        e1.subj===e2.subj&&e1.tch===e2.tch&&
+        e1.spec===e2.spec&&e1.section===e2.section&&
+        e1.lv===e2.lv&&e1.dp===e2.dp;
+      if(sameLec)continue; // محاضرة مشتركة طبيعية
+
+      // تعارض القاعة
+      if(e1.rm&&e2.rm&&e1.rm===e2.rm){
+        const key=`room-${[e1.id,e2.id].sort().join('-')}`;
+        if(!_acceptedConflicts.has(key)){
+          list.push({
+            type:'room',key,
+            msg:`تعارض قاعة: ${e1.rm} — ${e1.day} ${SL[e1.slot]||e1.slot}`,
+            detail:`${e1.subj} (${e1.group||e1.section||''}) ↔ ${e2.subj} (${e2.group||e2.section||''})`,
+            ids:[e1.id,e2.id]
+          });
+          conflictIds.add(e1.id);conflictIds.add(e2.id);
+        }
+      }
+
+      // تعارض الأستاذ
+      if(e1.tch&&e2.tch&&e1.tch===e2.tch){
+        const key=`teacher-${[e1.id,e2.id].sort().join('-')}`;
+        if(!_acceptedConflicts.has(key)){
+          list.push({
+            type:'teacher',key,
+            msg:`تعارض أستاذ: ${e1.tch} — ${e1.day} ${SL[e1.slot]||e1.slot}`,
+            detail:`${e1.subj} (${e1.group||e1.spec||''}) ↔ ${e2.subj} (${e2.group||e2.spec||''})`,
+            ids:[e1.id,e2.id]
+          });
+          conflictIds.add(e1.id);conflictIds.add(e2.id);
+        }
+      }
+    }
+  }
+
+  // -- 2. تكرار المقياس لنفس الفوج --
+  const grpMap={};
+  sess.forEach(s=>{
+    const isTDTP=s.type==='ttd'||s.type==='ttp'||s.type==='ttd-remote';
+    // TD/TP: يُسمح بتكرار بأيام مختلفة
+    const k=isTDTP
+      ?`${s.group}-${s.section}-${s.spec}-${s.subj}-${s.type}-${s.day}`
+      :`${s.group}-${s.section}-${s.spec}-${s.subj}-${s.type}`;
+    if(!grpMap[k])grpMap[k]=[];
+    grpMap[k].push(s);
+  });
+  Object.values(grpMap).forEach(group=>{
+    if(group.length>1){
+      const s=group[0];
+      const key=`dup-${group.map(x=>x.id).sort().join('-')}`;
+      if(!_acceptedConflicts.has(key)){
+        list.push({
+          type:'dup',key,
+          msg:`تكرار مقياس: ${s.subj} (${TL[s.type]||s.type})`,
+          detail:`الفوج ${s.group||''} — ${s.section||''} — ${group.length} مرات`,
+          ids:group.map(x=>x.id)
+        });
+        group.forEach(x=>conflictIds.add(x.id));
+      }
+    }
+  });
+
+  return{list,conflictIds};
+}
+
+function renderConflictBanner(){
+  const banner=document.getElementById('tt-conflict-banner');
+  if(!banner)return;
+  const{list,conflictIds}=detectConflicts();
+  // حفظ conflictIds لاستخدامه في renderTT
+  window._conflictIds=conflictIds;
+
+  if(!list.length){banner.innerHTML='';return;}
+
+  const TYPE={
+    room:{label:'قاعة',cls:'ci-room',icon:'🏫'},
+    teacher:{label:'أستاذ',cls:'ci-teacher',icon:'👨‍🏫'},
+    dup:{label:'تكرار',cls:'ci-dup',icon:'📋'}
+  };
+  const isOpen=banner.dataset.open==='1';
+
+  banner.innerHTML=`
+    <div class="conflict-banner">
+      <div class="conflict-header${isOpen?' open':''}" onclick="toggleConflictBanner()">
+        <span class="ch-icon">⚠️</span>
+        <span class="ch-title">تعارضات مكتشفة في الجدول</span>
+        <span class="ch-count">${list.length}</span>
+        <span class="ch-arrow">▼</span>
+      </div>
+      ${isOpen?`<div class="conflict-list">
+        ${list.map(c=>{
+          const t=TYPE[c.type]||{label:c.type,cls:'ci-room',icon:'⚠️'};
+          return `<div class="conflict-item">
+            <span class="ci-badge ${t.cls}">${t.icon} ${t.label}</span>
+            <div class="ci-msg">
+              <strong>${c.msg}</strong><br>
+              <span style="font-size:11px;color:var(--gray);">${c.detail}</span>
+            </div>
+            <button class="ci-dismiss" onclick="dismissConflict('${c.key}')">تجاهل</button>
+          </div>`;
+        }).join('')}
+      </div>`:''}
+    </div>`;
+}
+
+function toggleConflictBanner(){
+  const b=document.getElementById('tt-conflict-banner');
+  if(!b)return;
+  b.dataset.open=b.dataset.open==='1'?'0':'1';
+  renderConflictBanner();
+}
+
+function dismissConflict(key){
+  _acceptedConflicts.add(key);
+  localStorage.setItem('acceptedConflicts',JSON.stringify([..._acceptedConflicts]));
+  renderConflictBanner();renderTT();
+  toast('✅ تم تجاهل هذا التعارض');
 }
 
 // -- TEACHER TIMETABLE ---------------------------
