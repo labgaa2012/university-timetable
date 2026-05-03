@@ -3764,7 +3764,8 @@ function renderTT(){
             ${isEmpty?`onclick="openAddSessWithKey('${dE}','${slE}','${lvE}','${dpE}','${spE}','${seE}','${gE}')"`:''}
           >`;
           cells.forEach(s=>{
-            const isConflict=conflictIds.has(s.id);
+            const sid=s.id;
+            const isConflict=conflictIds.has(sid);
             tbl+=`<div class="sc ${s.type}${isConflict?' conflict-cell':''}" draggable="true"
               ondragstart="if(event.target.closest('button')){event.preventDefault();return;} onDS(event,'${sid}')"
               ondragend="document.querySelectorAll('.sc').forEach(x=>x.classList.remove('dragging'))"
