@@ -1400,6 +1400,12 @@ table.occ-matrix td.cell-occ:hover{background:#fee2e2;filter:brightness(.97);}
             <option value="">كل الفصائل</option>
           </select>
         </div>
+        <div class="fg">
+          <label class="fl">الفوج</label>
+          <select class="fs" id="ex-grp" onchange="renderExams()">
+            <option value="">كل الأفواج</option>
+          </select>
+        </div>
       </div>
 
       <!-- الجدول -->
@@ -3450,6 +3456,10 @@ function confirmInstallTT(){
   const per=period?parseInt(period):'';
 
   // توليد كل مجموعات (فصيلة × فوج) وتسجيلها
+  // حذف التنصيبات القديمة لنفس المجموعة (السنة+مستوى+قسم+تخصص) قبل إعادة التنصيب
+  S.registeredTTs=S.registeredTTs.filter(t=>
+    !((!t.y||t.y===S.ay)&&t.lv===lv&&t.dp===dp&&t.spec===spec)
+  );
   let added=0;
   for(let si=0;si<nsec;si++){
     const secName=S.sections[si]||('الفصيلة'+(si+1));
@@ -3462,7 +3472,7 @@ function confirmInstallTT(){
         (per?t.period===per:true)
       );
       if(!exists){
-        S.registeredTTs.push({period:per,lv,dp,spec,section:secName,group:grpName});
+        S.registeredTTs.push({period:per,lv,dp,spec,section:secName,group:grpName,y:S.ay});
         added++;
       }
     }
@@ -3768,9 +3778,10 @@ function renderTT(){
   allSess.forEach(s=>{
     keySet.add([s.lv,s.dp,s.spec||'',s.section||'',s.group||''].join('|||'));
   });
-  // نضيف الجداول المسجّلة (registeredTTs) المطابقة للفلتر
+  // نضيف الجداول المسجّلة (registeredTTs) المطابقة للفلتر والسنة
   S.registeredTTs.forEach(t=>{
     if(
+      (!t.y||t.y===S.ay)&& // فلتر السنة
       (!curPer||t.period==curPer)&&
       (!curLv||t.lv===curLv)&&
       (!curDp||t.dp===curDp)&&
@@ -4136,18 +4147,29 @@ function saveSess(){
     S.sessions.push(data);
     // النسخ التلقائي للمحاضرات
     if(type==='tlc'||type==='tlc-remote'){
-      const targetGroups=S.groups.filter(g=>g!==grp&&g!=='');
+      // الأفواج المنصَّبة في نفس الفصيلة والتخصص فقط (لا كل S.groups)
+      const regGroups=S.registeredTTs
+        .filter(t=>t.lv===lv&&t.dp===dp&&t.spec===spec&&t.section===section&&t.group&&t.group!==grp)
+        .map(t=>t.group);
+      // إذا لم توجد registeredTTs → أفواج من الحصص الموجودة في نفس الفصيلة
+      const targetGroups=regGroups.length>0
+        ? [...new Set(regGroups)]
+        : [...new Set(S.sessions.filter(s=>s.y===S.ay&&s.lv===lv&&s.dp===dp&&s.spec===spec&&s.section===section&&s.group&&s.group!==grp).map(s=>s.group))];
+
+      // حالة group='' (حصة لكل الأفواج) → لا نسخ مطلوب
       let copied=0;
-      targetGroups.forEach(g=>{
-        const exists=S.sessions.find(s=>
-          s.y===S.ay&&s.lv===lv&&s.dp===dp&&s.spec===spec&&
-          s.section===section&&s.group===g&&s.day===day&&s.slot===slot
-        );
-        if(!exists){S.sessions.push({...data,id:uid(),group:g,firstLec:0});copied++;}
-      });
+      if(grp!==''){
+        targetGroups.forEach(g=>{
+          const exists=S.sessions.find(s=>
+            s.y===S.ay&&s.lv===lv&&s.dp===dp&&s.spec===spec&&
+            s.section===section&&s.group===g&&s.day===day&&s.slot===slot
+          );
+          if(!exists){S.sessions.push({...data,id:uid(),group:g,firstLec:0});copied++;}
+        });
+      }
       if(copied>0){
         save();renderTT();closeM('mSess');
-        toast(`✅ أُضيفت + نُسخت لـ ${copied} فوج آخر`);
+        toast(`✅ أُضيفت + نُسخت لـ ${copied} فوج (نفس الفصيلة)`);
         return;
       }
     }
@@ -4190,6 +4212,8 @@ function syncExamFilters(){
   syncExamSpec();
   const secSel=document.getElementById('ex-sec');
   if(secSel&&secSel.options.length<=1)secSel.innerHTML='<option value="">كل الفصائل</option>'+S.sections.map(s=>`<option value="${s}">${s}</option>`).join('');
+  const grpSel=document.getElementById('ex-grp');
+  if(grpSel&&grpSel.options.length<=1)grpSel.innerHTML='<option value="">كل الأفواج</option>'+S.groups.map(g=>`<option value="${g}">${g}</option>`).join('');
 }
 function onExLvChange(){const sp=document.getElementById('ex-spec');if(sp)sp.value='';syncExamSpec();renderExams();}
 function onExDpChange(){const sp=document.getElementById('ex-spec');if(sp)sp.value='';syncExamSpec();renderExams();}
@@ -4204,7 +4228,8 @@ function syncExamSpec(){
 function getExamFilters(){
   return{round:S.round||1,period:document.getElementById('ex-period')?.value||'',
     lv:document.getElementById('ex-lv')?.value||'',dp:document.getElementById('ex-dp')?.value||'',
-    spec:document.getElementById('ex-spec')?.value||'',sec:document.getElementById('ex-sec')?.value||''};
+    spec:document.getElementById('ex-spec')?.value||'',sec:document.getElementById('ex-sec')?.value||'',
+    grp:document.getElementById('ex-grp')?.value||''};
 }
 function renderExams(){
   syncExamFilters();
@@ -4239,6 +4264,8 @@ function renderExams(){
   const extraKey=`${f.lv}|${f.dp}|${f.spec}|${f.sec}`;
   (S.examExtraGroups[extraKey]||[]).forEach(g=>{if(!groups.includes(g))groups.push(g);});
   if(!groups.length&&(f.lv||f.spec))groups=S.groups.slice(0,3);
+  // فلتر الفوج: إذا اختار المستخدم فوجاً → عرض عموده فقط
+  if(f.grp&&groups.includes(f.grp))groups=[f.grp];
 
   const exams=S.exams.filter(e=>
     e.round==f.round&&e.y===S.ay&&
@@ -4735,9 +4762,15 @@ function calcTeacherOvertime(tchName,yearFilter,periodFilter){
   const eqOther=others.length*1.5;
   const totalActual=(uniqueLecs.length+others.length)*1.5;
   const totalEq=eqLec+eqOther;
-  const isExternal=tchObj.kind==='temporary'||tchObj.kind==='associate';
-  const quorum=isExternal?0:QUORUM;
-  const overtime=isExternal?totalEq:Math.max(0,totalEq-quorum);
+
+  // النصاب حسب الرتبة (القانون الجزائري):
+  // دائم (prof/mca/mcb/maa/mab): 9 ساعات
+  // مشارك (sha): 12 ساعة
+  // مؤقت (tmp): 0 (كل ساعاته إضافية)
+  const isTmp=tchObj.kind==='temporary'||tchObj.rank==='tmp';
+  const isSha=tchObj.kind==='associate'||tchObj.rank==='sha';
+  const quorum=isTmp?0:isSha?12:QUORUM;
+  const overtime=isTmp?totalEq:Math.max(0,totalEq-quorum);
 
   return{
     name:tchName,kind:tchObj.kind,rank:tchObj.rank,dept:tchObj.dept,post:tchObj.post,
@@ -4807,7 +4840,7 @@ function renderOvertime(){
 }
 
 function showOtDetail(tchName){
-  const r=calcTeacherOvertime(tchName);
+  const r=calcTeacherOvertime(tchName,year,period||'');
   const kb=r.kind==='permanent'?'<span class="kb-p">دائم</span>':'<span class="kb-t">مؤقت</span>';
   const otColor=r.overtime>0?'pos':r.overtime===0&&r.quorum>0?'':'zero';
   document.getElementById('mOvTitle').textContent='⏰ تفاصيل ساعات: '+tchName;
@@ -6496,7 +6529,7 @@ async function exportTchPDF(){
   const year=document.getElementById('tch-tt-year')?.value||S.ay;
   const periodLabel=period?S.periods[parseInt(period)-1]||'':'';
   const tchObj=S.teachers.find(t=>t.name===tchName)||{};
-  const ot=calcTeacherOvertime(tchName);
+  const ot=calcTeacherOvertime(tchName,year,period||'');
   toast('⏳ جاري تصدير PDF...');
   try{
     let ss=S.sessions.filter(s=>s.tch===tchName&&s.y===year);
@@ -6656,7 +6689,7 @@ function rmSlot(i){
   toast('🗑️ تم الحذف');
 }
 function rebuildSlots(){
-  // تحديث SLOTS وSL من S.slots
+  // إعادة بناء SLOTS و SL من S.slots
   SLOTS.length=0;
   Object.keys(SL).forEach(k=>delete SL[k]);
   S.slots.forEach(sl=>{
@@ -6664,11 +6697,9 @@ function rebuildSlots(){
     SLOTS.push(key);
     SL[key]=`${sl.from} - ${sl.to}`;
   });
-  // تحديث منسدلة الفترة في modal الحصة
+  // تحديث منسدلة الفترة في modal الحصة إن وُجدت
   const mSlot=document.getElementById('ms-slot');
-  if(mSlot){
-    mSlot.innerHTML=SLOTS.map(sl=>`<option value="${sl}">${SL[sl]}</option>`).join('');
-  }
+  if(mSlot) mSlot.innerHTML=SLOTS.map(sl=>`<option value="${sl}">${SL[sl]}</option>`).join('');
 }
 
 // -- SETTINGS --------------------------------------
