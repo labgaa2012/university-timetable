@@ -4596,7 +4596,9 @@ async function exportGroupPDFClassic(lv,dp,spec,sec,grp){
           <div class="h-dept">${dp}</div>
           <div class="h-meta">
             السنة الدراسية: ${S.ay}<br>
-            ${period?'الفترة: '+period:''}${sec?' | '+sec:''}${grp?' | '+grp:''}
+            ${period?'الفترة: '+period:''}
+            ${sec?'<br>الفصيلة: '+sec:''}
+            ${grp?'<br>الفوج: '+grp:''}
           </div>
         </div>
         <div class="h-center">
@@ -4713,7 +4715,9 @@ async function exportGroupPDF(lv,dp,spec,sec,grp){
           <div class="h-dept">${dp}</div>
           <div class="h-meta">
             السنة الدراسية: ${S.ay}<br>
-            ${period?'الفترة: '+period:''}
+            ${period?'الفترة: '+period+'<br>':''}
+            ${sec?'الفصيلة: '+sec+'<br>':''}
+            ${grp?'الفوج: '+grp:''}
           </div>
         </div>
         <!-- وسط -->
@@ -4730,7 +4734,7 @@ async function exportGroupPDF(lv,dp,spec,sec,grp){
         </div>
       </div>
       <div style="text-align:center;font-size:9pt;font-weight:800;color:#0f1f3d;margin-bottom:6px;">
-        جدول التوقيت الأسبوعي — ${lv} | ${grpLabel}
+        جدول التوقيت الأسبوعي — ${lv}
       </div>`;
 
     let rows='';
