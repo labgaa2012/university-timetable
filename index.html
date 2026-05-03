@@ -4147,11 +4147,24 @@ function renderExams(){
   );
   let groups=[...new Set(regGroups.map(t=>t.group))].sort((a,b)=>S.groups.indexOf(a)-S.groups.indexOf(b));
 
+  // إذا لم توجد مجموعات مسجّلة، نأخذها من بيانات الامتحانات الموجودة
+  if(!groups.length){
+    const fromExams=new Set();
+    S.exams.filter(e=>e.round==S.round&&e.y===S.ay&&(!f.lv||e.lv===f.lv)&&(!f.spec||e.spec===f.spec))
+      .forEach(e=>{if(e.rooms)Object.keys(e.rooms).forEach(g=>fromExams.add(g));});
+    groups=[...fromExams].sort((a,b)=>S.groups.indexOf(a)-S.groups.indexOf(b));
+  }
+
   // إضافة أفواج مؤقتة من examExtraGroups
   if(!S.examExtraGroups)S.examExtraGroups={};
   const extraKey=`${f.lv}|${f.dp}|${f.spec}|${f.sec}`;
   const extra=S.examExtraGroups[extraKey]||[];
   extra.forEach(g=>{if(!groups.includes(g))groups.push(g);});
+
+  // إذا لا توجد أفواج بعد → استخدم أفواج S.groups الأولى كافتراضي
+  if(!groups.length&&(f.lv||f.spec)){
+    groups=S.groups.slice(0,3);
+  }
 
   const exams=S.exams.filter(e=>
     e.round==f.round&&e.y===S.ay&&
