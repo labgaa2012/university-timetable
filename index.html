@@ -3853,8 +3853,8 @@ function renderTT(){
   const curSpec=att.spec||'';const curSec=att.section||'';
   const curGrp=att.group||'';const curPer=att.period||'';
 
-  const lvOpts=S.levels.map(l=>`<option value="${l}"${l===curLv?' selected':''}>${l}</option>`).join('');
-  const dpOpts=S.depts.map(d=>`<option value="${d}"${d===curDp?' selected':''}>${d}</option>`).join('');
+  const lvOpts='<option value="">جميع المستويات</option>'+S.levels.map(l=>`<option value="${l}"${l===curLv?' selected':''}>${l}</option>`).join('');
+  const dpOpts='<option value="">جميع الأقسام</option>'+S.depts.map(d=>`<option value="${d}"${d===curDp?' selected':''}>${d}</option>`).join('');
   const filteredSpecs=S.specs.filter(sp=>(!curLv||sp.lv===curLv)&&(!curDp||sp.dp===curDp));
   const spOpts='<option value="">كل التخصصات</option>'
     +filteredSpecs.map(sp=>`<option value="${sp.name}"${sp.name===curSpec?' selected':''}>${sp.name}</option>`).join('');
