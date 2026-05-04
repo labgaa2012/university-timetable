@@ -1922,6 +1922,10 @@ table.occ-matrix td.cell-occ:hover{background:#fee2e2;filter:brightness(.97);}
       <div class="mch">
         <div class="mct"><div class="mcti">⏰</div>الساعات الإضافية</div>
         <div class="frow">
+          <select class="fs" id="ot-year" onchange="renderOvertime()" style="min-width:100px;font-weight:700;"></select>
+          <select class="fs" id="ot-period" onchange="renderOvertime()">
+            <option value="">كل الفترات</option>
+          </select>
           <select class="fs" id="ot-filter" onchange="renderOvertime()">
             <option value="">-- جميع الأساتذة --</option>
           </select>
@@ -4023,7 +4027,10 @@ function renderTT(){
       const grpHdr=showGrpHdr
         ?`<div class="grp-block-header ${colorCls}">
             <div class="grp-dot"></div>
-            <span>${subLabel||'— عام —'}</span>
+            <div style="display:flex;flex-direction:column;gap:1px;">
+              <span style="font-size:13px;">${subLabel||'— عام —'}</span>
+              <span style="font-size:10px;opacity:.75;font-weight:500;">${[k.dp.replace('قسم ',''),k.spec,S.ay].filter(Boolean).join(' · ')}</span>
+            </div>
             <button class="grp-pdf-btn"
               onclick="openPDFChoice('${lvE}','${dpE}','${spE}','${seE}','${gE}')">
               📄 PDF
@@ -5383,14 +5390,20 @@ function calcTeacherOvertime(tchName,yearFilter,periodFilter){
 }
 
 function renderOvertime(){
+  const otYSel=document.getElementById('ot-year');
+  if(otYSel&&otYSel.options.length===0)otYSel.innerHTML=S.years.map(y=>`<option value="${y}"${y===S.ay?' selected':''}>${y}</option>`).join('');
+  const otPSel=document.getElementById('ot-period');
+  if(otPSel&&otPSel.options.length<=1)otPSel.innerHTML='<option value="">كل الفترات</option>'+S.periods.map((p,i)=>`<option value="${i+1}">${p}</option>`).join('');
   const filter=document.getElementById('ot-filter')?.value||'';
+  const otYear=document.getElementById('ot-year')?.value||S.ay;
+  const otPer=document.getElementById('ot-period')?.value||'';
   const teachers=filter ? [filter] : S.teachers.map(t=>t.name);
   if(!teachers.length){
     document.getElementById('ot-container').innerHTML=
       '<div style="color:var(--gray);text-align:center;padding:20px;font-size:12px;">أضف أساتذة أولاً من اللوحة الجانبية</div>';
     return;
   }
-  const rows=teachers.map(n=>calcTeacherOvertime(n));
+  const rows=teachers.map(n=>calcTeacherOvertime(n,otYear,otPer));
   const totalOT=rows.reduce((a,r)=>a+r.overtime,0);
 
   let html=`
@@ -5422,9 +5435,9 @@ function renderOvertime(){
     html+=`<tr>
       <td><strong>${r.name}</strong></td>
       <td>${kb}</td>
-      <td class="num">${r.firstLecCount} <span style="font-size:9px;color:var(--gray);">(${r.eqFirstLec.toFixed(2)})</span></td>
-      <td class="num">${r.repLecCount} <span style="font-size:9px;color:var(--gray);">(${r.eqRepLec.toFixed(2)})</span></td>
-      <td class="num">${r.tdTpCount} <span style="font-size:9px;color:var(--gray);">(${r.eqTdTp.toFixed(2)})</span></td>
+      <td class="num">${r.firstLecCount} <span style="font-size:9px;color:var(--gray);">(${r.eqLec?.toFixed(2)||'0.00'})</span></td>
+      <td class="num">${r.repLecCount} <span style="font-size:9px;color:var(--gray);">—</span></td>
+      <td class="num">${r.tdTpCount} <span style="font-size:9px;color:var(--gray);">(${r.eqOther?.toFixed(2)||'0.00'})</span></td>
       <td class="num"><strong>${r.totalEq.toFixed(2)}</strong></td>
       <td class="num">${r.quorum>0?r.quorum+'h':'—'}</td>
       <td class="num ${otClass}">${r.overtime>0?'+'+r.overtime.toFixed(2)+'h':r.kind==='temporary'?r.totalEq.toFixed(2)+'h':'ضمن النصاب'}</td>
