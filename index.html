@@ -6688,26 +6688,28 @@ function detectConflicts(){
     }
   }
 
-  // -- 2. تكرار المقياس لنفس الفوج --
-  const grpMap={};
+  // -- 2. تكرار حقيقي: نفس المادة/النوع/الفوج في نفس اليوم+الفترة --
+  const dupMap={};
   sess.forEach(s=>{
-    const isTDTP=s.type==='ttd'||s.type==='ttp'||s.type==='ttd-remote';
-    // TD/TP: يُسمح بتكرار بأيام مختلفة
-    const k=isTDTP
-      ?`${s.group}-${s.section}-${s.spec}-${s.subj}-${s.type}-${s.day}`
-      :`${s.group}-${s.section}-${s.spec}-${s.subj}-${s.type}`;
-    if(!grpMap[k])grpMap[k]=[];
-    grpMap[k].push(s);
+    // مفتاح يشمل اليوم+الفترة — حصتان في يومين مختلفين = طبيعي
+    const k=`${s.group}|${s.section}|${s.spec}|${s.subj}|${s.type}|${s.day}|${s.slot}`;
+    if(!dupMap[k])dupMap[k]=[];
+    dupMap[k].push(s);
   });
-  Object.values(grpMap).forEach(group=>{
+  Object.values(dupMap).forEach(group=>{
     if(group.length>1){
+      // تحقق: هل هي محاضرات مشتركة بين أفواج مختلفة (طبيعي) ؟
+      const uniqueGroups=new Set(group.map(x=>x.group));
+      const isSharedLec=uniqueGroups.size>1&&
+        (group[0].type==='tlc'||group[0].type==='tlc-remote');
+      if(isSharedLec)return; // محاضرة مشتركة — ليست تعارضاً
       const s=group[0];
       const key=`dup-${group.map(x=>x.id).sort().join('-')}`;
       if(!_acceptedConflicts.has(key)){
         list.push({
           type:'dup',key,
-          msg:`تكرار مقياس: ${s.subj} (${TL[s.type]||s.type})`,
-          detail:`الفوج ${s.group||''} — ${s.section||''} — ${group.length} مرات`,
+          msg:`تكرار حصة: ${s.subj} (${TL[s.type]||s.type}) — ${s.day} ${SL[s.slot]||s.slot}`,
+          detail:`الفوج ${s.group||''} — ${s.section||''}`,
           ids:group.map(x=>x.id)
         });
         group.forEach(x=>conflictIds.add(x.id));
@@ -6740,6 +6742,7 @@ function renderConflictBanner(){
         <span class="ch-icon">⚠️</span>
         <span class="ch-title">تعارضات مكتشفة في الجدول</span>
         <span class="ch-count">${list.length}</span>
+        ${_acceptedConflicts.size?`<button onclick="event.stopPropagation();clearAllDismissed()" style="font-size:10px;background:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.4);color:#fff;border-radius:5px;padding:2px 8px;cursor:pointer;">مسح المتجاهَلة</button>`:''}
         <span class="ch-arrow">▼</span>
       </div>
       ${isOpen?`<div class="conflict-list">
@@ -6770,6 +6773,12 @@ function dismissConflict(key){
   localStorage.setItem('acceptedConflicts',JSON.stringify([..._acceptedConflicts]));
   renderConflictBanner();renderTT();
   toast('✅ تم تجاهل هذا التعارض');
+}
+function clearAllDismissed(){
+  _acceptedConflicts.clear();
+  localStorage.removeItem('acceptedConflicts');
+  renderConflictBanner();renderTT();
+  toast('🔄 تم مسح كل التنبيهات المتجاهلة');
 }
 
 // -- DASHBOARD -------------------------------------
