@@ -643,6 +643,26 @@ table.tt td.ec:hover::after{color:var(--teal);}
 .overload-badge{padding:2px 8px;border-radius:10px;font-size:10.5px;font-weight:700;}
 .ob-ok{background:#dcfce7;color:#166534;}.ob-warn{background:#fef9c3;color:#92400e;}.ob-over{background:#fee2e2;color:#991b1b;}
 
+/* AUTH / LOGIN */
+#login-screen{position:fixed;inset:0;z-index:99999;background:linear-gradient(135deg,#0f1f3d 0%,#1a3a6e 50%,#0d8a7d 100%);display:flex;align-items:center;justify-content:center;}
+.login-box{background:#fff;border-radius:20px;padding:40px 44px;width:380px;box-shadow:0 20px 60px rgba(0,0,0,.4);text-align:center;}
+.login-box .lb-logo{font-size:48px;margin-bottom:8px;}
+.login-box h2{font-size:18pt;font-weight:900;color:var(--navy);margin:0 0 4px;}
+.login-box p{font-size:11px;color:var(--gray);margin-bottom:22px;}
+.login-box select,.login-box input{width:100%;padding:11px 14px;border:2px solid #e0e8f5;border-radius:10px;font-size:13px;font-family:'Cairo',sans-serif;direction:rtl;margin-bottom:12px;outline:none;transition:border-color .2s;}
+.login-box select:focus,.login-box input:focus{border-color:var(--teal);}
+.login-btn{width:100%;padding:13px;background:linear-gradient(135deg,var(--navy),var(--teal));color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:800;font-family:'Cairo',sans-serif;cursor:pointer;}
+.login-error{color:#dc2626;font-size:12px;margin-top:8px;min-height:18px;}
+.acc-card{background:#fff;border:2px solid #e0e8f5;border-radius:12px;padding:14px 18px;display:flex;align-items:center;gap:14px;margin-bottom:10px;}
+.acc-avatar{width:42px;height:42px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;}
+.acc-info{flex:1;min-width:0;}
+.acc-name{font-size:13px;font-weight:800;color:var(--navy);}
+.acc-role{font-size:11px;color:var(--gray);}
+.sb-accounts-btn{margin:8px 14px 0;padding:9px 14px;background:linear-gradient(90deg,rgba(239,68,68,.1),transparent);border:2px solid rgba(239,68,68,.3);border-radius:10px;display:flex;align-items:center;gap:10px;cursor:pointer;font-size:12px;font-weight:700;color:#dc2626;font-family:'Cairo',sans-serif;width:calc(100% - 28px);}
+.sb-accounts-btn:hover{background:rgba(239,68,68,.15);}
+.role-admin{background:#fef3cd;color:#92400e;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700;}
+.role-dept{background:#dbeafe;color:#1e40af;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700;}
+
 /* CONFLICT SYSTEM */
 .conflict-banner{
   border-radius:10px;margin-bottom:12px;overflow:hidden;
@@ -1107,12 +1127,85 @@ table.occ-matrix td.cell-occ:hover{background:#fee2e2;filter:brightness(.97);}
     <span class="snb-arrow">←</span>
   </button>
 
+  <!-- زر الحسابات (admin فقط) -->
+  <button class="sb-accounts-btn" id="btn-accounts" onclick="showMgmtPg('accounts')" style="display:none;">
+    👥 إدارة الحسابات
+  </button>
+
+  <!-- معلومات المستخدم الحالي + تسجيل خروج -->
+  <div id="sb-user-info" style="margin:8px 14px 14px;padding:9px 14px;background:#f8fafc;border-radius:10px;border:1.5px solid #e0e8f5;display:flex;align-items:center;gap:10px;">
+    <span style="font-size:18px;">👤</span>
+    <div style="flex:1;min-width:0;">
+      <div id="sb-user-name" style="font-size:12px;font-weight:700;color:var(--navy);"></div>
+      <div id="sb-user-role" style="font-size:10px;color:var(--gray);"></div>
+    </div>
+    <button onclick="doLogout()" style="background:none;border:1.5px solid #e0e8f5;border-radius:8px;cursor:pointer;padding:3px 8px;font-size:11px;color:var(--danger);" title="خروج">🚪</button>
+  </div>
+
 </aside>
 
 <!-- SIDEBAR PERSISTENT HANDLE -->
 <button id="sb-handle" class="sb-open" onclick="toggleSB()" title="إظهار/إخفاء اللوحة">
   ☰
 </button>
+
+<!-- ══ LOGIN SCREEN ══ -->
+<div id="login-screen">
+  <div class="login-box">
+    <div class="lb-logo">🏛️</div>
+    <h2>نظام جداول التوقيت</h2>
+    <p>كلية العلوم الاقتصادية — جامعة الأغواط</p>
+    <select id="login-user">
+      <option value="admin">👑 المشرف العام (admin)</option>
+    </select>
+    <input type="password" id="login-pass" placeholder="كلمة المرور"
+      onkeydown="if(event.key==='Enter')doLogin()">
+    <button class="login-btn" onclick="doLogin()">🔐 دخول</button>
+    <div class="login-error" id="login-error"></div>
+  </div>
+</div>
+
+<!-- ══ ACCOUNTS PAGE ══ -->
+<div class="pg" id="pg-accounts" style="display:none;">
+  <div class="mc">
+    <div class="mgmt-header">
+      <div class="mct"><div class="mcti">👥</div>إدارة الحسابات</div>
+      <button class="btn bg" onclick="openAddAccount()">➕ حساب جديد</button>
+    </div>
+    <div id="acc-list"></div>
+  </div>
+</div>
+
+<!-- MODAL: إضافة/تعديل حساب -->
+<div class="mo" id="mAccount">
+  <div class="mb" style="width:400px;">
+    <div class="mt" id="mAccTitle">➕ حساب جديد</div>
+    <input type="hidden" id="acc-edit-id">
+    <div class="fg">
+      <label class="fl">نوع الحساب</label>
+      <select class="fs" id="acc-role" onchange="syncAccRole()">
+        <option value="admin">👑 مشرف عام</option>
+        <option value="dept">🏛️ قسم</option>
+      </select>
+    </div>
+    <div class="fg" id="acc-dept-row" style="display:none;">
+      <label class="fl">القسم</label>
+      <select class="fs" id="acc-dept"></select>
+    </div>
+    <div class="fg">
+      <label class="fl">اسم المستخدم</label>
+      <input class="fi" id="acc-username" placeholder="admin أو dept-economie..." dir="ltr">
+    </div>
+    <div class="fg">
+      <label class="fl">كلمة المرور</label>
+      <input class="fi" type="password" id="acc-password" placeholder="كلمة المرور">
+    </div>
+    <div class="ma">
+      <button class="btn bg" onclick="saveAccount()" style="flex:1;justify-content:center;">💾 حفظ</button>
+      <button class="btn" style="background:var(--gray-light);color:var(--text-mid);" onclick="closeM('mAccount')">إلغاء</button>
+    </div>
+  </div>
+</div>
 
 <!-- MAIN -->
 <main id="main">
@@ -2774,6 +2867,7 @@ function showMgmtPg(id){
   if(id==='settings')loadSettingsPage();
   if(id==='tchtimetable')renderTchTT();
   if(id==='dashboard')renderDashboard();
+  if(id==='accounts'){renderAccounts();}
   if(id==='teachers')renderTchGrid();
   if(id==='rooms-manage')renderRmGrid();
   if(id==='specs')renderSpGrid();
@@ -7305,6 +7399,188 @@ async function exportTchPDF(){
   }catch(e){console.error(e);toast('❌ خطأ: '+e.message);}
 }
 
+// ══ AUTH SYSTEM ══════════════════════════════════
+
+// المستخدم الحالي
+let CURRENT_USER=null;
+
+const DEFAULT_PASS='987654321';
+
+function getAuthData(){
+  try{return JSON.parse(localStorage.getItem('univ_auth')||'null');}catch{return null;}
+}
+function saveAuthData(data){localStorage.setItem('univ_auth',JSON.stringify(data));}
+
+function initAuth(){
+  let auth=getAuthData();
+  if(!auth){
+    // إنشاء الحسابات الافتراضية
+    auth={users:[{id:'admin',username:'admin',password:DEFAULT_PASS,role:'admin',dept:''}]};
+    // إضافة حساب لكل قسم
+    S.depts.forEach((d,i)=>{
+      auth.users.push({
+        id:'dept-'+i,
+        username:d.replace('قسم ','').replace(/\s+/g,'-').toLowerCase(),
+        password:DEFAULT_PASS,
+        role:'dept',
+        dept:d
+      });
+    });
+    saveAuthData(auth);
+  }
+  // تحديث المنسدلة
+  const sel=document.getElementById('login-user');
+  if(sel){
+    sel.innerHTML=auth.users.map(u=>
+      `<option value="${u.username}">${u.role==='admin'?'👑 المشرف العام (admin)':'🏛️ '+u.dept.replace('قسم ','')}</option>`
+    ).join('');
+  }
+}
+
+function doLogin(){
+  const auth=getAuthData();
+  const username=document.getElementById('login-user')?.value||'';
+  const password=document.getElementById('login-pass')?.value||'';
+  const errEl=document.getElementById('login-error');
+  const user=auth?.users.find(u=>u.username===username&&u.password===password);
+  if(!user){
+    if(errEl){errEl.textContent='❌ كلمة المرور غير صحيحة';errEl.style.display='block';}
+    return;
+  }
+  CURRENT_USER=user;
+  document.getElementById('login-screen').style.display='none';
+  applyPermissions();
+  document.getElementById('sb-user-name').textContent=user.role==='admin'?'المشرف العام':user.dept.replace('قسم ','');
+  document.getElementById('sb-user-role').textContent=user.role==='admin'?'👑 مشرف عام':'🏛️ قسم';
+  if(errEl)errEl.style.display='none';
+  document.getElementById('login-pass').value='';
+}
+
+function doLogout(){
+  CURRENT_USER=null;
+  document.getElementById('login-screen').style.display='flex';
+  document.getElementById('login-pass').value='';
+  const errEl=document.getElementById('login-error');
+  if(errEl)errEl.style.display='none';
+}
+
+function applyPermissions(){
+  if(!CURRENT_USER)return;
+  const isAdmin=CURRENT_USER.role==='admin';
+
+  // زر الحسابات
+  const btnAcc=document.getElementById('btn-accounts');
+  if(btnAcc)btnAcc.style.display=isAdmin?'flex':'none';
+
+  if(isAdmin){
+    // admin: كل شيء ظاهر
+    document.querySelectorAll('.sb-nav-btn,.nav-tab').forEach(b=>b.style.display='');
+  } else {
+    // قسم: إخفاء الأزرار المحظورة
+    const hideMgmt=['snb-settings','snb-years','snb-depts','snb-periods',
+      'snb-stypes','snb-sections','snb-groups','snb-specs','snb-rooms-manage'];
+    hideMgmt.forEach(id=>{
+      const el=document.getElementById(id);
+      if(el)el.style.display='none';
+    });
+    // إظهار ما يُسمح به
+    const showMgmt=['snb-levels','snb-teachers','snb-subjects',
+      'snb-tchtimetable','snb-dashboard'];
+    showMgmt.forEach(id=>{
+      const el=document.getElementById(id);
+      if(el)el.style.display='';
+    });
+  }
+}
+
+// -- صفحة الحسابات --
+function renderAccounts(){
+  const auth=getAuthData();
+  if(!auth)return;
+  const el=document.getElementById('acc-list');
+  if(!el)return;
+  el.innerHTML=auth.users.map(u=>`
+    <div class="acc-card">
+      <div class="acc-avatar" style="background:${u.role==='admin'?'#fef3cd':'#dbeafe'};">
+        ${u.role==='admin'?'👑':'🏛️'}
+      </div>
+      <div class="acc-info">
+        <div class="acc-name">${u.username}</div>
+        <div class="acc-role">${u.role==='admin'?'مشرف عام':u.dept.replace('قسم ','')}</div>
+      </div>
+      <span class="${u.role==='admin'?'role-admin':'role-dept'}">${u.role==='admin'?'admin':'قسم'}</span>
+      <button class="btn bp bsm" onclick="editAccount('${u.id}')">✏️ تعديل</button>
+      ${u.id!=='admin'?`<button class="btn bd bsm" onclick="delAccount('${u.id}')">🗑️</button>`:''}
+    </div>`).join('');
+}
+
+function openAddAccount(){
+  document.getElementById('acc-edit-id').value='';
+  document.getElementById('mAccTitle').textContent='➕ حساب جديد';
+  document.getElementById('acc-role').value='dept';
+  document.getElementById('acc-username').value='';
+  document.getElementById('acc-password').value='';
+  const dSel=document.getElementById('acc-dept');
+  if(dSel)dSel.innerHTML=S.depts.map(d=>`<option value="${d}">${d.replace('قسم ','')}</option>`).join('');
+  syncAccRole();
+  openM('mAccount');
+}
+
+function editAccount(id){
+  const auth=getAuthData();
+  const u=auth?.users.find(x=>x.id===id);
+  if(!u)return;
+  document.getElementById('acc-edit-id').value=id;
+  document.getElementById('mAccTitle').textContent='✏️ تعديل الحساب';
+  document.getElementById('acc-role').value=u.role;
+  document.getElementById('acc-username').value=u.username;
+  document.getElementById('acc-password').value='';
+  const dSel=document.getElementById('acc-dept');
+  if(dSel){dSel.innerHTML=S.depts.map(d=>`<option value="${d}"${d===u.dept?' selected':''}>${d.replace('قسم ','')}</option>`).join('');}
+  syncAccRole();
+  openM('mAccount');
+}
+
+function syncAccRole(){
+  const role=document.getElementById('acc-role')?.value||'dept';
+  const dRow=document.getElementById('acc-dept-row');
+  if(dRow)dRow.style.display=role==='dept'?'block':'none';
+}
+
+function saveAccount(){
+  const auth=getAuthData()||{users:[]};
+  const id=document.getElementById('acc-edit-id').value;
+  const role=document.getElementById('acc-role').value;
+  const dept=role==='dept'?document.getElementById('acc-dept')?.value||'':'';
+  const username=document.getElementById('acc-username').value.trim();
+  const password=document.getElementById('acc-password').value;
+  if(!username){toast('⚠️ أدخل اسم المستخدم');return;}
+  if(id){
+    const u=auth.users.find(x=>x.id===id);
+    if(u){u.role=role;u.dept=dept;u.username=username;if(password)u.password=password;}
+  } else {
+    if(auth.users.find(u=>u.username===username)){toast('⚠️ اسم المستخدم موجود');return;}
+    auth.users.push({id:'u'+Date.now(),username,password:password||DEFAULT_PASS,role,dept});
+  }
+  saveAuthData(auth);closeM('mAccount');renderAccounts();toast('✅ تم الحفظ');
+  initAuth();
+}
+
+function delAccount(id){
+  if(!confirm('حذف هذا الحساب؟'))return;
+  const auth=getAuthData();
+  auth.users=auth.users.filter(u=>u.id!==id);
+  saveAuthData(auth);renderAccounts();toast('🗑️ تم الحذف');
+  initAuth();
+}
+
+// تقييد الدخول للتعديل بناءً على القسم
+function canEditDept(dp){
+  if(!CURRENT_USER)return false;
+  if(CURRENT_USER.role==='admin')return true;
+  return CURRENT_USER.dept===dp;
+}
+
 // -- SLOTS MANAGER ---------------------------------
 function openSlotsMgr(){
   renderSlotsList();
@@ -7440,17 +7716,18 @@ function saveSettings(){
 
 // -- INIT ------------------------------------------
 load();
-rebuildSlots(); // تطبيق الفترات الزمنية المحفوظة
+rebuildSlots();
 renderAll();
-// تطبيق الإعدادات المحفوظة
 if(S.settings?.university){
   const h1=document.querySelector('header .logo h1');
   if(h1)h1.textContent=S.settings.university;
 }
 if(S.settings?.faculty){
-  const sub=document.querySelector('header .logo span');
-  if(sub)sub.textContent=S.settings.faculty;
+  const h2=document.querySelector('header .logo p');
+  if(h2)h2.textContent=S.settings.faculty;
 }
+// تهيئة نظام المصادقة
+initAuth();
 </script>
 </body>
 </html>
