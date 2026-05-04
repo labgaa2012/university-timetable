@@ -5134,7 +5134,10 @@ function initCompPage(){
   const slotSel=document.getElementById('cp-slot');
   if(slotSel&&slotSel.options.length<=1)
     slotSel.innerHTML='<option value="">كل الفترات الزمنية</option>'
-      +SLOTS.map(sl=>`<option value="${sl}">${SL[sl]||sl}</option>`).join('');
+      +SLOTS.map((sl,i)=>{
+        const name=S.slots[i]?.name||SL[sl]||sl;
+        return `<option value="${sl}">${name} (${SL[sl]||sl})</option>`;
+      }).join('');
   // نوع الحصة
   const typeSel=document.getElementById('cp-type');
   if(typeSel&&typeSel.options.length<=1){
@@ -5242,7 +5245,7 @@ function searchFreeSlots(){
   const typeLabel=sessType?TL[sessType]||sessType:'كل الأنواع';
   const roomLabel=room?room:'كل القاعات';
   const dayLabel=filterDay?filterDay:'كل الأيام';
-  const slotLabel=filterSlot?SL[filterSlot]||filterSlot:'كل الفترات';
+  const slotLabel=filterSlot?(S.slots[SLOTS.indexOf(filterSlot)]?.name||SL[filterSlot]||filterSlot):'كل الفترات';
 
   res.innerHTML=`
     <div class="comp-summary">
@@ -5261,7 +5264,7 @@ function searchFreeSlots(){
           <div class="comp-card-header">
             <div>
               <div class="comp-card-day">📅 ${r.day}</div>
-              <div class="comp-card-slot">${SL[r.slot]||r.slot}</div>
+              <div class="comp-card-slot">${S.slots[SLOTS.indexOf(r.slot)]?.name||''} ${SL[r.slot]||r.slot}</div>
             </div>
             <span class="comp-card-badge">🚪 ${r.freeRooms.length}</span>
           </div>
