@@ -2723,7 +2723,11 @@ function load(){
     name:t.name||'',kind:t.kind||'permanent',rank:t.rank||'mca',dept:t.dept||'',post:t.post||''
   }));
 }
-function save(){try{localStorage.setItem(SK,JSON.stringify(S));}catch(e){}}
+function save(){
+  try{localStorage.setItem(SK,JSON.stringify(S));}catch(e){}
+  // تحديث صفحة الساعات الإضافية تلقائياً عند تغيير البيانات
+  if(document.getElementById('pg-overtime')?.style.display==='block') renderOvertime();
+}
 function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,6);}
 
 // -- SIDEBAR ---------------------------------------
@@ -5346,7 +5350,10 @@ function calcTeacherOvertime(tchName,yearFilter,periodFilter){
   const tchObj=S.teachers.find(t=>t.name===tchName)||{kind:'permanent'};
 
   const lectures=sessions.filter(s=>s.type==='tlc'||s.type==='tlc-remote');
-  const others  =sessions.filter(s=>s.type!=='tlc'&&s.type!=='tlc-remote');
+  // يُحسب فقط: محاضرة + TD + TP + TD عن بعد — يُستثنى: tot (تقييم مستمر/أخرى)
+  const others=sessions.filter(s=>
+    s.type==='ttd'||s.type==='ttp'||s.type==='ttd-remote'
+  );
 
   // محاضرات فريدة: نفس (يوم+فترة+مادة+نوع+فصيلة) = جلسة واحدة عبر الأفواج
   const uniqueLecMap={};
