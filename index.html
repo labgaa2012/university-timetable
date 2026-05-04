@@ -1490,37 +1490,43 @@ table.occ-matrix td.cell-occ:hover{background:#fee2e2;filter:brightness(.97);}
       <!-- فلتر البحث -->
       <div style="background:linear-gradient(135deg,#f0f4ff,#e8f5ff);border:2px solid #c7d7f5;border-radius:14px;padding:18px;margin-bottom:18px;">
         <div class="frow" style="flex-wrap:wrap;gap:12px;align-items:flex-end;">
-          <div class="fg" style="min-width:140px;">
-            <label class="fl">الفصيلة</label>
-            <select class="fs" id="cp-section" onchange="compSyncGroups()">
+          <div class="fg" style="min-width:130px;">
+            <label class="fl">نوع الحصة</label>
+            <select class="fs" id="cp-type">
+              <option value="">الكل</option>
             </select>
           </div>
-          <div class="fg" style="min-width:140px;">
+          <div class="fg" style="min-width:130px;">
+            <label class="fl">الفصيلة</label>
+            <select class="fs" id="cp-section" onchange="compSyncGroups()"></select>
+          </div>
+          <div class="fg" style="min-width:130px;">
             <label class="fl">الفوج</label>
             <select class="fs" id="cp-group"></select>
           </div>
-          <div class="fg" style="min-width:140px;">
+          <div class="fg" style="min-width:130px;">
             <label class="fl">الفترة</label>
             <select class="fs" id="cp-period">
               <option value="">كل الفترات</option>
             </select>
           </div>
-          <div class="fg" style="flex:2;min-width:200px;">
-            <label class="fl">القاعات (اتركها فارغة للكل)</label>
-            <select class="fs" id="cp-rooms" multiple size="1"
-              onfocus="this.size=6" onblur="this.size=1"
-              style="min-height:38px;">
+          <div class="fg" style="min-width:180px;">
+            <label class="fl">القاعة (اتركها فارغة للكل)</label>
+            <select class="fs" id="cp-room">
+              <option value="">-- كل القاعات --</option>
             </select>
           </div>
-          <button class="btn bg" onclick="searchFreeSlots()" style="padding:10px 22px;align-self:flex-end;">
-            🔍 بحث عن أوقات الفراغ
-          </button>
-          <button class="btn" onclick="clearCompResults()" style="padding:10px 14px;align-self:flex-end;background:var(--gray-light);color:var(--text-mid);">
-            ✕ مسح
-          </button>
+          <div style="display:flex;gap:8px;align-self:flex-end;">
+            <button class="btn bg" onclick="searchFreeSlots()" style="padding:10px 22px;">
+              🔍 بحث
+            </button>
+            <button class="btn" onclick="clearCompResults()" style="padding:10px 14px;background:var(--gray-light);color:var(--text-mid);">
+              ✕
+            </button>
+          </div>
         </div>
         <div style="font-size:11px;color:#6b7280;margin-top:8px;">
-          💡 يبحث عن كل الأوقات التي يكون فيها الفوج فارغاً + تتوفر فيها قاعة مناسبة
+          💡 يبحث عن الأوقات التي يكون فيها الفوج فارغاً والقاعة متاحة
         </div>
       </div>
 
@@ -5107,31 +5113,37 @@ function printRooms(){
 // -- COMPENSATION ----------------------------------
 // -- COMPENSATION (تعويض الحصص) -------------------
 function initCompPage(){
+  // نوع الحصة
+  const typeSel=document.getElementById('cp-type');
+  if(typeSel&&typeSel.options.length<=1){
+    typeSel.innerHTML='<option value="">الكل</option>'
+      +S.sessionTypes.map(t=>`<option value="${t.id}">${t.icon||''} ${t.label}</option>`).join('');
+    if(!typeSel.options.length||typeSel.options.length===1){
+      typeSel.innerHTML='<option value="">الكل</option>'
+        +Object.entries(TL).map(([k,v])=>`<option value="${k}">${v}</option>`).join('');
+    }
+  }
   // الفصائل
   const secSel=document.getElementById('cp-section');
-  if(secSel){
+  if(secSel&&secSel.options.length===0)
     secSel.innerHTML=S.sections.map(s=>`<option value="${s}">${s}</option>`).join('');
-  }
-  // الأفواج
   compSyncGroups();
   // الفترات
   const pSel=document.getElementById('cp-period');
-  if(pSel&&pSel.options.length<=1){
+  if(pSel&&pSel.options.length<=1)
     pSel.innerHTML='<option value="">كل الفترات</option>'
       +S.periods.map((p,i)=>`<option value="${i+1}">${p}</option>`).join('');
-  }
-  // القاعات
-  const rSel=document.getElementById('cp-rooms');
-  if(rSel){
-    rSel.innerHTML=S.rooms.map(r=>`<option value="${r}">${r}</option>`).join('');
-  }
+  // القاعة الواحدة
+  const rSel=document.getElementById('cp-room');
+  if(rSel&&rSel.options.length<=1)
+    rSel.innerHTML='<option value="">-- كل القاعات --</option>'
+      +S.rooms.map(r=>`<option value="${r}">${r}</option>`).join('');
 }
 
 function compSyncGroups(){
   const sec=document.getElementById('cp-section')?.value||'';
   const grpSel=document.getElementById('cp-group');
   if(!grpSel)return;
-  // أفواج مسجّلة لهذه الفصيلة
   const registered=[...new Set(
     S.registeredTTs.filter(t=>(!t.y||t.y===S.ay)&&(!sec||t.section===sec)&&t.group)
       .map(t=>t.group)
@@ -5141,67 +5153,77 @@ function compSyncGroups(){
 }
 
 function searchFreeSlots(){
+  const sessType=document.getElementById('cp-type')?.value||'';
   const section=document.getElementById('cp-section')?.value||'';
   const group=document.getElementById('cp-group')?.value||'';
   const period=document.getElementById('cp-period')?.value||'';
-  const roomsSel=document.getElementById('cp-rooms');
-  const selectedRooms=roomsSel?[...roomsSel.selectedOptions].map(o=>o.value):[];
+  const room=document.getElementById('cp-room')?.value||'';
   const res=document.getElementById('cp-res');
   if(!res)return;
 
-  // 1. الفترات المشغولة للفوج
+  // 1. الفترات المشغولة للفوج (حسب نوع الحصة والفترة)
   let groupSess=S.sessions.filter(s=>
-    s.y===S.ay&&s.section===section&&s.group===group
+    s.y===S.ay&&s.section===section&&s.group===group&&
+    (!period||s.sem==period)&&
+    (!sessType||s.type===sessType)
   );
-  if(period)groupSess=groupSess.filter(s=>s.sem==period);
   const occupied=new Set(groupSess.map(s=>`${s.day}|${s.slot}`));
-
-  // القاعات المراد البحث فيها
-  const allRooms=selectedRooms.length>0?selectedRooms:S.rooms;
 
   // 2. البحث في كل الأيام × كل الفترات
   const results=[];
   DAYS.forEach(day=>{
     SLOTS.forEach(slot=>{
-      const key=`${day}|${slot}`;
-      if(occupied.has(key))return; // الفوج مشغول
+      if(occupied.has(`${day}|${slot}`))return; // الفوج مشغول هنا
 
-      // القاعات الفارغة في هذا الوقت
+      // القاعات المشغولة في هذا الوقت
       const usedRooms=new Set(
-        S.sessions.filter(s=>s.y===S.ay&&s.day===day&&s.slot===slot&&s.rm&&(!period||s.sem==period))
-          .map(s=>s.rm)
+        S.sessions.filter(s=>
+          s.y===S.ay&&s.day===day&&s.slot===slot&&s.rm&&(!period||s.sem==period)
+        ).map(s=>s.rm)
       );
-      const freeRooms=allRooms.filter(r=>r&&!usedRooms.has(r));
 
-      if(freeRooms.length>0){
-        results.push({day,slot,freeRooms});
+      if(room){
+        // قاعة محددة → تحقق فقط منها
+        if(!usedRooms.has(room)){
+          results.push({day,slot,freeRooms:[room]});
+        }
+      } else {
+        // كل القاعات → أعطِ كل الفارغة
+        const freeRooms=S.rooms.filter(r=>r&&!usedRooms.has(r));
+        if(freeRooms.length>0){
+          results.push({day,slot,freeRooms});
+        }
       }
     });
   });
 
-  // 3. عرض النتائج
+  // 3. ترتيب حسب اليوم ثم الفترة
+  results.sort((a,b)=>{
+    const di=DAYS.indexOf(a.day)-DAYS.indexOf(b.day);
+    return di!==0?di:SLOTS.indexOf(a.slot)-SLOTS.indexOf(b.slot);
+  });
+
   if(!results.length){
     res.innerHTML=`<div class="comp-empty">
       <div style="font-size:36px;margin-bottom:10px;">📭</div>
       <div style="font-weight:700;font-size:14px;">لا توجد أوقات فارغة متاحة</div>
-      <div style="font-size:12px;margin-top:6px;color:var(--gray);">جرّب تغيير الفصيلة أو اختيار قاعات مختلفة</div>
+      <div style="font-size:12px;margin-top:6px;color:var(--gray);">جرّب تغيير الفصيلة أو القاعة أو نوع الحصة</div>
     </div>`;
     return;
   }
 
-  // ترتيب حسب اليوم ثم الفترة
-  results.sort((a,b)=>{
-    const di=DAYS.indexOf(a.day)-DAYS.indexOf(b.day);
-    if(di!==0)return di;
-    return SLOTS.indexOf(a.slot)-SLOTS.indexOf(b.slot);
-  });
+  const typeLabel=sessType?TL[sessType]||sessType:'كل الأنواع';
+  const roomLabel=room?room:'كل القاعات';
 
   res.innerHTML=`
     <div class="comp-summary">
       <span style="font-size:20px;">✅</span>
       <div>
-        <div style="font-weight:800;">وُجد ${results.length} وقت فارغ</div>
-        <div style="font-size:11px;opacity:.8;">${section} — ${group}${period?' — '+S.periods[parseInt(period)-1]:''}</div>
+        <div style="font-weight:800;">${results.length} وقت متاح</div>
+        <div style="font-size:11px;opacity:.8;">
+          ${section} — ${group} | ${typeLabel} | ${roomLabel}
+          ${period?' | '+S.periods[parseInt(period)-1]:''}
+        </div>
       </div>
     </div>
     <div class="comp-grid">
@@ -5212,11 +5234,11 @@ function searchFreeSlots(){
               <div class="comp-card-day">📅 ${r.day}</div>
               <div class="comp-card-slot">${SL[r.slot]||r.slot}</div>
             </div>
-            <span class="comp-card-badge">✅ ${r.freeRooms.length} قاعة</span>
+            <span class="comp-card-badge">🚪 ${r.freeRooms.length}</span>
           </div>
           <div class="comp-rooms">
-            ${r.freeRooms.slice(0,12).map(rm=>`<span class="comp-room-tag">🚪 ${rm}</span>`).join('')}
-            ${r.freeRooms.length>12?`<span class="comp-room-tag" style="background:#f8fafc;color:var(--gray);">+${r.freeRooms.length-12} أخرى</span>`:''}
+            ${r.freeRooms.slice(0,10).map(rm=>`<span class="comp-room-tag">${rm}</span>`).join('')}
+            ${r.freeRooms.length>10?`<span class="comp-room-tag" style="background:#f8fafc;color:var(--gray);">+${r.freeRooms.length-10}</span>`:''}
           </div>
         </div>`).join('')}
     </div>`;
@@ -5227,7 +5249,7 @@ function clearCompResults(){
   if(res)res.innerHTML='';
 }
 
-function findFree(){searchFreeSlots();} // backward compat
+function findFree(){searchFreeSlots();}
 
 // -- OVERTIME ENGINE -------------------------------
 const QUORUM=9; // ساعات معادلة / أسبوع
