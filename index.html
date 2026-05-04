@@ -1509,12 +1509,24 @@ table.occ-matrix td.cell-occ:hover{background:#fee2e2;filter:brightness(.97);}
             </select>
           </div>
           <div class="fg" style="min-width:130px;">
+            <label class="fl">القسم</label>
+            <select class="fs" id="cp-dept" onchange="compSyncSpec()"></select>
+          </div>
+          <div class="fg" style="min-width:150px;">
+            <label class="fl">التخصص</label>
+            <select class="fs" id="cp-spec" onchange="compSyncGroups()">
+              <option value="">كل التخصصات</option>
+            </select>
+          </div>
+          <div class="fg" style="min-width:130px;">
             <label class="fl">الفصيلة</label>
             <select class="fs" id="cp-section" onchange="compSyncGroups()"></select>
           </div>
           <div class="fg" style="min-width:130px;">
             <label class="fl">الفوج</label>
-            <select class="fs" id="cp-group"></select>
+            <select class="fs" id="cp-group">
+              <option value="">جميع الأفواج</option>
+            </select>
           </div>
           <div class="fg" style="min-width:130px;">
             <label class="fl">الفترة</label>
@@ -1523,9 +1535,9 @@ table.occ-matrix td.cell-occ:hover{background:#fee2e2;filter:brightness(.97);}
             </select>
           </div>
           <div class="fg" style="min-width:180px;">
-            <label class="fl">القاعة (اتركها فارغة للكل)</label>
+            <label class="fl">القاعة</label>
             <select class="fs" id="cp-room">
-              <option value="">-- كل القاعات --</option>
+              <option value="">جميع القاعات</option>
             </select>
           </div>
           <div style="display:flex;gap:8px;align-self:flex-end;">
@@ -5148,10 +5160,15 @@ function initCompPage(){
         +Object.entries(TL).map(([k,v])=>`<option value="${k}">${v}</option>`).join('');
     }
   }
+  // القسم
+  const deptSel=document.getElementById('cp-dept');
+  if(deptSel&&deptSel.options.length===0)
+    deptSel.innerHTML=S.depts.map(d=>`<option value="${d}">${d.replace('قسم ','')}</option>`).join('');
+  compSyncSpec();
   // الفصائل
   const secSel=document.getElementById('cp-section');
   if(secSel&&secSel.options.length===0)
-    secSel.innerHTML=S.sections.map(s=>`<option value="${s}">${s}</option>`).join('');
+    secSel.innerHTML='<option value="">كل الفصائل</option>'+S.sections.map(s=>`<option value="${s}">${s}</option>`).join('');
   compSyncGroups();
   // الفترات
   const pSel=document.getElementById('cp-period');
@@ -5165,22 +5182,43 @@ function initCompPage(){
       +S.rooms.map(r=>`<option value="${r}">${r}</option>`).join('');
 }
 
+function compSyncSpec(){
+  const dept=document.getElementById('cp-dept')?.value||'';
+  const specSel=document.getElementById('cp-spec');
+  if(!specSel)return;
+  const cur=specSel.value;
+  const specs=S.specs.filter(sp=>!dept||sp.dp===dept);
+  specSel.innerHTML='<option value="">كل التخصصات</option>'
+    +[...new Set(specs.map(sp=>sp.name))].map(n=>`<option value="${n}"${n===cur?' selected':''}>${n}</option>`).join('');
+  compSyncGroups();
+}
+
 function compSyncGroups(){
+  const dept=document.getElementById('cp-dept')?.value||'';
+  const spec=document.getElementById('cp-spec')?.value||'';
   const sec=document.getElementById('cp-section')?.value||'';
   const grpSel=document.getElementById('cp-group');
   if(!grpSel)return;
+  const cur=grpSel.value;
   const registered=[...new Set(
-    S.registeredTTs.filter(t=>(!t.y||t.y===S.ay)&&(!sec||t.section===sec)&&t.group)
-      .map(t=>t.group)
+    S.registeredTTs.filter(t=>
+      (!t.y||t.y===S.ay)&&
+      (!dept||t.dp===dept)&&
+      (!spec||t.spec===spec)&&
+      (!sec||t.section===sec)&&t.group
+    ).map(t=>t.group)
   )].sort((a,b)=>S.groups.indexOf(a)-S.groups.indexOf(b));
   const groups=registered.length?registered:S.groups;
-  grpSel.innerHTML=groups.map(g=>`<option value="${g}">${g}</option>`).join('');
+  grpSel.innerHTML='<option value="">جميع الأفواج</option>'
+    +groups.map(g=>`<option value="${g}"${g===cur?' selected':''}>${g}</option>`).join('');
 }
 
 function searchFreeSlots(){
   const sessType=document.getElementById('cp-type')?.value||'';
+  const dept=document.getElementById('cp-dept')?.value||'';
+  const spec=document.getElementById('cp-spec')?.value||'';
   const section=document.getElementById('cp-section')?.value||'';
-  const group=document.getElementById('cp-group')?.value||'';
+  const group=document.getElementById('cp-group')?.value||''; // ''=جميع الأفواج
   const period=document.getElementById('cp-period')?.value||'';
   const room=document.getElementById('cp-room')?.value||'';
   const filterDay=document.getElementById('cp-day')?.value||'';
@@ -5188,9 +5226,13 @@ function searchFreeSlots(){
   const res=document.getElementById('cp-res');
   if(!res)return;
 
-  // 1. الفترات المشغولة للفوج (حسب نوع الحصة والفترة)
+  // الحصص المشغولة للفوج (أو لجميع الأفواج في الفصيلة/التخصص)
   let groupSess=S.sessions.filter(s=>
-    s.y===S.ay&&s.section===section&&s.group===group&&
+    s.y===S.ay&&
+    (!dept||s.dp===dept)&&
+    (!spec||s.spec===spec)&&
+    (!section||s.section===section)&&
+    (!group||s.group===group)&&
     (!period||s.sem==period)&&
     (!sessType||s.type===sessType)
   );
@@ -5243,9 +5285,10 @@ function searchFreeSlots(){
   }
 
   const typeLabel=sessType?TL[sessType]||sessType:'كل الأنواع';
-  const roomLabel=room?room:'كل القاعات';
+  const roomLabel=room?room:'جميع القاعات';
   const dayLabel=filterDay?filterDay:'كل الأيام';
   const slotLabel=filterSlot?(S.slots[SLOTS.indexOf(filterSlot)]?.name||SL[filterSlot]||filterSlot):'كل الفترات';
+  const grpLabel=group?group:'جميع الأفواج';
 
   res.innerHTML=`
     <div class="comp-summary">
@@ -5253,8 +5296,7 @@ function searchFreeSlots(){
       <div>
         <div style="font-weight:800;">${results.length} وقت متاح</div>
         <div style="font-size:11px;opacity:.8;">
-          ${section} — ${group} | ${typeLabel} | ${roomLabel} | ${dayLabel} | ${slotLabel}
-          ${period?' | '+S.periods[parseInt(period)-1]:''}
+          ${[spec,section,grpLabel,typeLabel,roomLabel,dayLabel,slotLabel,period?S.periods[parseInt(period)-1]:''].filter(Boolean).join(' | ')}
         </div>
       </div>
     </div>
