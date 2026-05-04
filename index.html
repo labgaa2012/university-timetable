@@ -5426,7 +5426,23 @@ function renderOvertime(){
     <tbody>`;
 
   rows.forEach(r=>{
-    const otClass=r.overtime>0?'ot-pos':r.quorum>0&&r.totalEq>=r.quorum?'ot-zero':'ot-neg';
+    const otYear=document.getElementById('ot-year')?.value||S.ay;
+    const otPer=document.getElementById('ot-period')?.value||'';
+    // حالة الأستاذ الدائم: 3 مستويات
+    let otLabel='',otStyle='';
+    if(r.kind==='temporary'||r.kind==='associate'){
+      otLabel=r.totalEq.toFixed(2)+'h إضافية';
+      otStyle='color:#d97706;font-weight:800;';
+    } else if(r.totalEq<r.quorum){
+      otLabel='أقل من النصاب ('+r.totalEq.toFixed(1)+'h / '+r.quorum+'h)';
+      otStyle='color:#dc2626;font-weight:800;';
+    } else if(r.totalEq===r.quorum||(r.overtime===0&&r.totalEq>0)){
+      otLabel='ضمن النصاب';
+      otStyle='color:#16a34a;font-weight:800;';
+    } else {
+      otLabel='تجاوز النصاب (+'+r.overtime.toFixed(2)+'h)';
+      otStyle='color:#d97706;font-weight:800;';
+    }
     const barPct=r.quorum>0?Math.min(100,r.totalEq/r.quorum*100):100;
     const isOver=r.totalEq>r.quorum;
     const kb=r.kind==='permanent'?'<span class="kb-p">دائم</span>'
@@ -5440,7 +5456,7 @@ function renderOvertime(){
       <td class="num">${r.tdTpCount} <span style="font-size:9px;color:var(--gray);">(${r.eqOther?.toFixed(2)||'0.00'})</span></td>
       <td class="num"><strong>${r.totalEq.toFixed(2)}</strong></td>
       <td class="num">${r.quorum>0?r.quorum+'h':'—'}</td>
-      <td class="num ${otClass}">${r.overtime>0?'+'+r.overtime.toFixed(2)+'h':r.kind==='temporary'?r.totalEq.toFixed(2)+'h':'ضمن النصاب'}</td>
+      <td class="num" style="${otStyle}">${otLabel}</td>
       <td>
         <div class="ot-bar-wrap">
           <div class="ot-bar ${isOver?'over':''}" style="width:${barPct.toFixed(0)}%"></div>
@@ -5455,43 +5471,55 @@ function renderOvertime(){
 }
 
 function showOtDetail(tchName){
-  const r=calcTeacherOvertime(tchName,year,period||'');
-  const kb=r.kind==='permanent'?'<span class="kb-p">دائم</span>':'<span class="kb-t">مؤقت</span>';
-  const otColor=r.overtime>0?'pos':r.overtime===0&&r.quorum>0?'':'zero';
+  const otYear=document.getElementById('ot-year')?.value||S.ay;
+  const otPer=document.getElementById('ot-period')?.value||'';
+  const r=calcTeacherOvertime(tchName,otYear,otPer);
+  const kb=r.kind==='permanent'?'<span class="kb-p">دائم</span>'
+    :r.kind==='associate'?'<span class="kb-a">مشارك</span>'
+    :'<span class="kb-t">مؤقت</span>';
+  let statusLabel='',statusColor='';
+  if(r.kind==='temporary'){statusLabel='كل ساعاته إضافية';statusColor='#d97706';}
+  else if(r.totalEq<r.quorum){statusLabel='أقل من النصاب';statusColor='#dc2626';}
+  else if(r.overtime===0){statusLabel='ضمن النصاب';statusColor='#16a34a';}
+  else{statusLabel='تجاوز النصاب';statusColor='#d97706';}
   document.getElementById('mOvTitle').textContent='⏰ تفاصيل ساعات: '+tchName;
   document.getElementById('mOvBody').innerHTML=`
-    <div style="margin-bottom:12px;">${kb} — السنة: ${S.ay}</div>
-    <div class="ot-detail-row">
-      <span class="ot-detail-lbl">📖 عدد المحاضرات الأولى</span>
-      <span class="ot-detail-val">${r.firstLecCount} حصة × 2.25 = <strong>${r.eqFirstLec.toFixed(2)}h</strong></span>
+    <div style="margin-bottom:12px;display:flex;gap:8px;align-items:center;">
+      ${kb}<span style="font-size:12px;color:var(--gray);">${otYear}${otPer?' | '+(S.periods[parseInt(otPer)-1]||''):''}</span>
     </div>
     <div class="ot-detail-row">
-      <span class="ot-detail-lbl">🔁 عدد المحاضرات المكررة</span>
-      <span class="ot-detail-val">${r.repLecCount} حصة × 1.5 = <strong>${r.eqRepLec.toFixed(2)}h</strong></span>
+      <span class="ot-detail-lbl">📖 محاضرات أولى</span>
+      <span class="ot-detail-val">${r.firstLecCount} × 2.25 = <strong>${(r.firstLecCount*2.25).toFixed(2)}h</strong></span>
     </div>
     <div class="ot-detail-row">
-      <span class="ot-detail-lbl">✏️ عدد حصص أع. موجهة/تطبيقية</span>
-      <span class="ot-detail-val">${r.tdTpCount} حصة × 1.5 = <strong>${r.eqTdTp.toFixed(2)}h</strong></span>
+      <span class="ot-detail-lbl">🔁 محاضرات مكررة</span>
+      <span class="ot-detail-val">${r.repLecCount} × 1.5 = <strong>${(r.repLecCount*1.5).toFixed(2)}h</strong></span>
+    </div>
+    <div class="ot-detail-row">
+      <span class="ot-detail-lbl">✏️ TD / TP</span>
+      <span class="ot-detail-val">${r.tdTpCount} × 1.5 = <strong>${r.eqOther.toFixed(2)}h</strong></span>
     </div>
     <div style="height:1px;background:var(--navy);margin:10px 0;opacity:.2;"></div>
     <div class="ot-detail-row">
-      <span class="ot-detail-lbl" style="font-weight:800;color:var(--navy);">🔢 مجموع الساعات المعادلة</span>
+      <span class="ot-detail-lbl" style="font-weight:800;color:var(--navy);">🔢 المعادل الكلي</span>
       <span class="ot-detail-val" style="font-size:15px;color:var(--navy);">${r.totalEq.toFixed(2)} ساعة</span>
     </div>
     <div class="ot-detail-row">
-      <span class="ot-detail-lbl">⚖️ النصاب القانوني</span>
+      <span class="ot-detail-lbl">⚖️ النصاب</span>
       <span class="ot-detail-val">${r.quorum>0?r.quorum+' ساعة':'— (مؤقت)'}</span>
     </div>
-    <div class="ot-total-box ${r.overtime>0?'pos':r.kind==='temporary'?'pos':'zero'}">
-      <div class="ov-num">${r.kind==='temporary'?r.totalEq.toFixed(2):r.overtime>0?'+'+r.overtime.toFixed(2):'0'} h</div>
-      <div class="ov-lbl">${r.kind==='temporary'?'إجمالي الساعات الإضافية (مؤقت — كل ساعاته إضافية)':r.overtime>0?'الساعات الإضافية الأسبوعية':'ضمن النصاب القانوني'}</div>
+    <div style="background:${statusColor}15;border:2px solid ${statusColor};border-radius:10px;padding:14px;text-align:center;margin-top:12px;">
+      <div style="font-size:22px;font-weight:900;color:${statusColor};">
+        ${r.kind==='temporary'?'+'+r.totalEq.toFixed(2):r.overtime>0?'+'+r.overtime.toFixed(2):r.totalEq<r.quorum?'-'+(r.quorum-r.totalEq).toFixed(2):'0'} h
+      </div>
+      <div style="font-size:12px;font-weight:700;color:${statusColor};margin-top:4px;">${statusLabel}</div>
     </div>
     <div style="margin-top:12px;">
       <div style="font-size:11.5px;font-weight:700;color:var(--navy);margin-bottom:8px;">📋 الحصص المسجلة (${r.sessions})</div>
-      ${S.sessions.filter(s=>s.y===S.ay&&s.tch===tchName).map(s=>`
+      ${S.sessions.filter(s=>s.y===otYear&&s.tch===tchName&&(!otPer||s.sem==otPer)).map(s=>`
         <div style="font-size:11px;padding:5px 8px;background:var(--gray-light);border-radius:6px;margin-bottom:4px;display:flex;justify-content:space-between;">
-          <span><strong>${s.subj}</strong> — ${s.day} ${SL[s.slot]}</span>
-          <span style="color:var(--text-mid);">${TL[s.type]}${s.type==='tlc'?(s.firstLec===0?' (مكررة)':' (أولى)'):''}</span>
+          <span><strong>${s.subj}</strong> — ${s.day} ${SL[s.slot]||s.slot}</span>
+          <span style="color:var(--text-mid);">${TL[s.type]||s.type}${s.type==='tlc'?(s.firstLec===0?' (مكررة)':' (أولى)'):''}</span>
         </div>`).join('')||'<div style="font-size:11px;color:var(--gray);">لا توجد حصص</div>'}
     </div>`;
   openM('mOvDetail');
