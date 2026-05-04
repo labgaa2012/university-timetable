@@ -5177,8 +5177,8 @@ function initCompPage(){
       +S.periods.map((p,i)=>`<option value="${i+1}">${p}</option>`).join('');
   // القاعة الواحدة
   const rSel=document.getElementById('cp-room');
-  if(rSel&&rSel.options.length<=1)
-    rSel.innerHTML='<option value="">-- كل القاعات --</option>'
+  if(rSel)
+    rSel.innerHTML='<option value="">جميع القاعات</option>'
       +S.rooms.map(r=>`<option value="${r}">${r}</option>`).join('');
 }
 
