@@ -2866,7 +2866,9 @@ function renderLvGrid(){
     }).join('');
   }
   const opts=S.levels.map(l=>`<option${l===S.al?' selected':''}>${l}</option>`).join('');
-  ['tt-lv','ms-lv','me-lv','sp-lv','sp-lv-inline'].forEach(id=>{const el=document.getElementById(id);if(el)el.innerHTML=opts;});
+  const optsWithAll='<option value="">جميع المستويات</option>'+opts;
+  ['ms-lv','me-lv','sp-lv','sp-lv-inline'].forEach(id=>{const el=document.getElementById(id);if(el)el.innerHTML=opts;});
+  const ttLv=document.getElementById('tt-lv');if(ttLv)ttLv.innerHTML=optsWithAll;
   const cnt=document.getElementById('snb-count-levels');if(cnt)cnt.textContent=S.levels.length;
 }
 function setActiveLevel(i){S.al=S.levels[i];save();renderLvGrid();renderTT();toast('✅ المستوى النشط: '+S.al);}
@@ -2921,7 +2923,9 @@ function renderDptGrid(){
     }).join('');
   }
   const opts=S.depts.map(d=>`<option${d===S.ad?' selected':''}>${d}</option>`).join('');
-  ['tt-dp','ms-dp','me-dp','sp-dp','sp-dp-inline'].forEach(id=>{const el=document.getElementById(id);if(el)el.innerHTML=opts;});
+  const optsWithAll='<option value="">جميع الأقسام</option>'+opts;
+  ['ms-dp','me-dp','sp-dp','sp-dp-inline'].forEach(id=>{const el=document.getElementById(id);if(el)el.innerHTML=opts;});
+  const ttDp=document.getElementById('tt-dp');if(ttDp)ttDp.innerHTML=optsWithAll;
   const dOpts='<option value="">-- اختر --</option>'+S.depts.map(d=>`<option value="${d}">${d}</option>`).join('');
   const tD=document.getElementById('tchDept');if(tD)tD.innerHTML=dOpts;
   const fD=document.getElementById('tch-f-dept');
