@@ -5227,19 +5227,7 @@ function clearCompResults(){
   if(res)res.innerHTML='';
 }
 
-function findFree(){searchFreeSlots();} // backward compat  const day=document.getElementById('cp-day').value;
-  const room=document.getElementById('cp-room').value;
-  const tch=document.getElementById('cp-teach').value;
-  const occSlots=S.sessions
-    .filter(s=>s.y===S.ay&&s.day===day&&(s.rm===room||(tch&&s.tch===tch)))
-    .map(s=>s.slot);
-  const freeSlots=SLOTS.filter(sl=>!occSlots.includes(sl));
-  const el=document.getElementById('cp-res');
-  el.innerHTML=freeSlots.length
-    ?`<div class="cr"><h4 style="font-size:12px;font-weight:700;color:var(--teal);margin-bottom:8px;">✅ أوقات الفراغ - ${day} - ${room}</h4>
-       ${freeSlots.map(sl=>`<span class="tt-tag">⏰ ${SL[sl]}</span>`).join('')}</div>`
-    :'<div class="cr" style="border-color:var(--danger)"><p style="color:var(--danger);font-size:12px;font-weight:600;">⛔ لا توجد أوقات فراغ</p></div>';
-}
+function findFree(){searchFreeSlots();} // backward compat
 
 // -- OVERTIME ENGINE -------------------------------
 const QUORUM=9; // ساعات معادلة / أسبوع
