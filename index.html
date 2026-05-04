@@ -1491,6 +1491,18 @@ table.occ-matrix td.cell-occ:hover{background:#fee2e2;filter:brightness(.97);}
       <div style="background:linear-gradient(135deg,#f0f4ff,#e8f5ff);border:2px solid #c7d7f5;border-radius:14px;padding:18px;margin-bottom:18px;">
         <div class="frow" style="flex-wrap:wrap;gap:12px;align-items:flex-end;">
           <div class="fg" style="min-width:130px;">
+            <label class="fl">اليوم</label>
+            <select class="fs" id="cp-day">
+              <option value="">كل الأيام</option>
+            </select>
+          </div>
+          <div class="fg" style="min-width:150px;">
+            <label class="fl">التوقيت</label>
+            <select class="fs" id="cp-slot">
+              <option value="">كل الفترات الزمنية</option>
+            </select>
+          </div>
+          <div class="fg" style="min-width:130px;">
             <label class="fl">نوع الحصة</label>
             <select class="fs" id="cp-type">
               <option value="">الكل</option>
@@ -5113,6 +5125,16 @@ function printRooms(){
 // -- COMPENSATION ----------------------------------
 // -- COMPENSATION (تعويض الحصص) -------------------
 function initCompPage(){
+  // اليوم
+  const daySel=document.getElementById('cp-day');
+  if(daySel&&daySel.options.length<=1)
+    daySel.innerHTML='<option value="">كل الأيام</option>'
+      +DAYS.map(d=>`<option value="${d}">${d}</option>`).join('');
+  // التوقيت
+  const slotSel=document.getElementById('cp-slot');
+  if(slotSel&&slotSel.options.length<=1)
+    slotSel.innerHTML='<option value="">كل الفترات الزمنية</option>'
+      +SLOTS.map(sl=>`<option value="${sl}">${SL[sl]||sl}</option>`).join('');
   // نوع الحصة
   const typeSel=document.getElementById('cp-type');
   if(typeSel&&typeSel.options.length<=1){
@@ -5158,6 +5180,8 @@ function searchFreeSlots(){
   const group=document.getElementById('cp-group')?.value||'';
   const period=document.getElementById('cp-period')?.value||'';
   const room=document.getElementById('cp-room')?.value||'';
+  const filterDay=document.getElementById('cp-day')?.value||'';
+  const filterSlot=document.getElementById('cp-slot')?.value||'';
   const res=document.getElementById('cp-res');
   if(!res)return;
 
@@ -5171,8 +5195,11 @@ function searchFreeSlots(){
 
   // 2. البحث في كل الأيام × كل الفترات
   const results=[];
-  DAYS.forEach(day=>{
-    SLOTS.forEach(slot=>{
+  const daysToSearch=filterDay?[filterDay]:DAYS;
+  const slotsToSearch=filterSlot?[filterSlot]:SLOTS;
+
+  daysToSearch.forEach(day=>{
+    slotsToSearch.forEach(slot=>{
       if(occupied.has(`${day}|${slot}`))return; // الفوج مشغول هنا
 
       // القاعات المشغولة في هذا الوقت
@@ -5214,6 +5241,8 @@ function searchFreeSlots(){
 
   const typeLabel=sessType?TL[sessType]||sessType:'كل الأنواع';
   const roomLabel=room?room:'كل القاعات';
+  const dayLabel=filterDay?filterDay:'كل الأيام';
+  const slotLabel=filterSlot?SL[filterSlot]||filterSlot:'كل الفترات';
 
   res.innerHTML=`
     <div class="comp-summary">
@@ -5221,7 +5250,7 @@ function searchFreeSlots(){
       <div>
         <div style="font-weight:800;">${results.length} وقت متاح</div>
         <div style="font-size:11px;opacity:.8;">
-          ${section} — ${group} | ${typeLabel} | ${roomLabel}
+          ${section} — ${group} | ${typeLabel} | ${roomLabel} | ${dayLabel} | ${slotLabel}
           ${period?' | '+S.periods[parseInt(period)-1]:''}
         </div>
       </div>
