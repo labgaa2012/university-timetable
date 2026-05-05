@@ -1496,8 +1496,8 @@ table.occ-matrix td.cell-occ:hover{background:#fee2e2;filter:brightness(.97);}
         <div class="mct"><div class="mcti">📝</div>جدول الامتحانات</div>
         <div class="frow">
           <div class="vtabs" style="margin:0;">
-            <button class="vt active" onclick="setRound(1,this)">الدور الأول</button>
-            <button class="vt" onclick="setRound(2,this)">الدور الثاني</button>
+            <button class="vt active" onclick="setRound(1,this)">الدورة العادية</button>
+            <button class="vt" onclick="setRound(2,this)">الدورة الاستدراكية</button>
           </div>
           <button class="btn bg" onclick="addExamRow()">➕ إضافة امتحان</button>
           <button class="btn" onclick="exportExamPDF()" style="background:#7c3aed;color:#fff;">📄 PDF</button>
@@ -2528,8 +2528,8 @@ table.occ-matrix td.cell-occ:hover{background:#fee2e2;filter:brightness(.97);}
         <input class="fi" id="me-date" type="date"></div>
       <div class="fg"><label class="fl">الدور</label>
         <select class="fs" id="me-round">
-          <option value="1">الدور الأول</option>
-          <option value="2">الدور الثاني</option>
+          <option value="1">الدورة العادية</option>
+          <option value="2">الدورة الاستدراكية</option>
         </select></div>
     </div>
     <div class="frow2">
@@ -5324,7 +5324,7 @@ async function exportExamPDF(){
       <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;800;900&display=swap" rel="stylesheet">
       <style>${css}</style></head><body>
       <div class="pdf-header">
-        <div class="h-right"><div class="h-dept">${f.dp||''}</div><div class="h-meta">السنة: ${S.ay}<br>${period?'الفترة: '+period+'<br>':''}${f.sec?'<span style="unicode-bidi:bidi-override;direction:rtl;">الفصيلة: '+f.sec+'</span><br>':''}الدور: ${S.round===2?'الثاني':'الأول'}</div></div>
+        <div class="h-right"><div class="h-dept">${f.dp||''}</div><div class="h-meta">السنة: ${S.ay}<br>${period?'الفترة: '+period+'<br>':''}${f.sec?'<span style="unicode-bidi:bidi-override;direction:rtl;">الفصيلة: '+f.sec+'</span><br>':''}الدور: ${S.round===2?'الاستدراكية':'العادية'}</div></div>
         <div class="h-center"><div class="h-min">${S.settings?.ministry||'وزارة التعليم العالي والبحث العلمي'}</div><div class="h-sep"></div><div class="h-univ">${S.settings?.university||'جامعة عمار ثليجي الأغواط'}</div><div class="h-fac">${S.settings?.faculty||'كلية العلوم الاقتصادية والتجارية وعلوم التسيير'}</div></div>
         <div class="h-left">${logoHtml}<div style="font-size:8.5pt;font-weight:700;color:#0f1f3d;text-align:center;">${f.spec||f.lv||''}</div></div>
       </div>
