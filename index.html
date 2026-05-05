@@ -2245,6 +2245,32 @@ table.occ-matrix td.cell-occ:hover{background:#fee2e2;filter:brightness(.97);}
   </div>
 </div>
 
+<!-- MODAL: تعديل حصة التوقيت الأسبوعي -->
+<div class="mo" id="mSlotEdit">
+  <div class="mb" style="width:380px;">
+    <div class="mt">✏️ تعديل الحصة</div>
+    <input type="hidden" id="slot-edit-i">
+    <div class="fg">
+      <label class="fl">اسم الحصة</label>
+      <input class="fi" id="slot-edit-name" placeholder="الحصة الأولى...">
+    </div>
+    <div class="frow2">
+      <div class="fg">
+        <label class="fl">من</label>
+        <input class="fi" id="slot-edit-from" type="time">
+      </div>
+      <div class="fg">
+        <label class="fl">إلى</label>
+        <input class="fi" id="slot-edit-to" type="time">
+      </div>
+    </div>
+    <div class="ma">
+      <button class="btn bg" onclick="saveSlotEdit()" style="flex:1;justify-content:center;">💾 حفظ</button>
+      <button class="btn" style="background:var(--gray-light);color:var(--text-mid);" onclick="closeM('mSlotEdit')">إلغاء</button>
+    </div>
+  </div>
+</div>
+
 <!-- MODAL: تعديل حصة امتحان -->
 <div class="mo" id="mExamSlotEdit">
   <div class="mb" style="width:380px;">
@@ -2853,7 +2879,8 @@ function defState(){
       {name:'الحصة الثانية', from:'09:30',to:'11:00'},
       {name:'الحصة الثالثة', from:'11:15',to:'12:45'},
       {name:'الحصة الرابعة', from:'13:30',to:'15:00'},
-      {name:'الحصة الخامسة', from:'15:00',to:'16:30'}
+      {name:'الحصة الخامسة', from:'15:00',to:'16:30'},
+      {name:'الحصة السادسة', from:'16:30',to:'18:00'}
     ],
     examSlots:[
       {from:'08:00',to:'10:00'},
@@ -2891,7 +2918,8 @@ function load(){
     {name:'الحصة الثانية', from:'09:30',to:'11:00'},
     {name:'الحصة الثالثة', from:'11:15',to:'12:45'},
     {name:'الحصة الرابعة', from:'13:30',to:'15:00'},
-    {name:'الحصة الخامسة', from:'15:00',to:'16:30'}
+    {name:'الحصة الخامسة', from:'15:00',to:'16:30'},
+    {name:'الحصة السادسة', from:'16:30',to:'18:00'}
   ];
   if(!S.sessionTypes||!S.sessionTypes.length) S.sessionTypes=[
     {id:'tlc',       label:'محاضرة',              code:'CM',  icon:'📖'},
@@ -7833,9 +7861,31 @@ function renderSlotsList(){
       <span style="font-size:11px;font-weight:700;color:var(--navy);flex:1;">${sl.name}</span>
       <span style="font-size:11px;color:var(--teal);font-weight:700;background:#f0faf9;
         padding:3px 10px;border-radius:20px;">${sl.from} — ${sl.to}</span>
+      <button onclick="openSlotEdit(${i})"
+        style="background:none;border:1.5px solid #e0e8f5;border-radius:7px;cursor:pointer;padding:3px 8px;font-size:12px;">✏️</button>
       <button onclick="rmSlot(${i})" style="background:none;border:none;cursor:pointer;
         color:var(--danger);font-size:14px;padding:0 4px;">✕</button>
     </div>`).join('');
+}
+function openSlotEdit(i){
+  const sl=S.slots[i];if(!sl)return;
+  document.getElementById('slot-edit-i').value=i;
+  document.getElementById('slot-edit-name').value=sl.name;
+  document.getElementById('slot-edit-from').value=sl.from;
+  document.getElementById('slot-edit-to').value=sl.to;
+  openM('mSlotEdit');
+}
+function saveSlotEdit(){
+  const i=parseInt(document.getElementById('slot-edit-i').value);
+  const name=document.getElementById('slot-edit-name').value.trim();
+  const from=document.getElementById('slot-edit-from').value;
+  const to=document.getElementById('slot-edit-to').value;
+  if(!name){toast('⚠️ أدخل اسم الحصة');return;}
+  if(!from||!to){toast('⚠️ الوقت غير مكتمل');return;}
+  if(from>=to){toast('⚠️ وقت البداية قبل النهاية');return;}
+  S.slots[i]={name,from,to};
+  rebuildSlots();save();closeM('mSlotEdit');renderSlotsList();renderTT();
+  toast('✅ تم التعديل');
 }
 function addSlot(){
   const name=document.getElementById('slot-name').value.trim();
