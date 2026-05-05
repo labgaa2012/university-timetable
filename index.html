@@ -2247,13 +2247,10 @@ table.occ-matrix td.cell-occ:hover{background:#fee2e2;filter:brightness(.97);}
 
 <!-- MODAL: تعديل حصة التوقيت الأسبوعي -->
 <div class="mo" id="mSlotEdit">
-  <div class="mb" style="width:380px;">
-    <div class="mt">✏️ تعديل الحصة</div>
+  <div class="mb" style="width:360px;">
+    <div class="mt">✏️ تعديل التوقيت</div>
     <input type="hidden" id="slot-edit-i">
-    <div class="fg">
-      <label class="fl">اسم الحصة</label>
-      <input class="fi" id="slot-edit-name" placeholder="الحصة الأولى...">
-    </div>
+    <div id="slot-edit-label" style="text-align:center;font-size:14px;font-weight:800;color:var(--navy);margin-bottom:14px;background:#f0f4ff;padding:8px;border-radius:8px;"></div>
     <div class="frow2">
       <div class="fg">
         <label class="fl">من</label>
@@ -2306,7 +2303,14 @@ table.occ-matrix td.cell-occ:hover{background:#fee2e2;filter:brightness(.97);}
       <div style="font-size:12px;font-weight:700;color:var(--navy);margin-bottom:10px;">➕ إضافة حصة</div>
       <div class="fg" style="margin-bottom:10px;">
         <label class="fl">اسم الحصة</label>
-        <input class="fi" id="slot-name" placeholder="مثال: الحصة الأولى...">
+        <select class="fs" id="slot-name">
+          <option value="الحصة الأولى">الحصة الأولى</option>
+          <option value="الحصة الثانية">الحصة الثانية</option>
+          <option value="الحصة الثالثة">الحصة الثالثة</option>
+          <option value="الحصة الرابعة">الحصة الرابعة</option>
+          <option value="الحصة الخامسة">الحصة الخامسة</option>
+          <option value="الحصة السادسة">الحصة السادسة</option>
+        </select>
       </div>
       <div class="frow2">
         <div class="fg">
@@ -7870,33 +7874,29 @@ function renderSlotsList(){
 function openSlotEdit(i){
   const sl=S.slots[i];if(!sl)return;
   document.getElementById('slot-edit-i').value=i;
-  document.getElementById('slot-edit-name').value=sl.name;
   document.getElementById('slot-edit-from').value=sl.from;
   document.getElementById('slot-edit-to').value=sl.to;
+  const lbl=document.getElementById('slot-edit-label');
+  if(lbl)lbl.textContent=sl.name; // الاسم ثابت للعرض فقط
   openM('mSlotEdit');
 }
 function saveSlotEdit(){
   const i=parseInt(document.getElementById('slot-edit-i').value);
-  const name=document.getElementById('slot-edit-name').value.trim();
   const from=document.getElementById('slot-edit-from').value;
   const to=document.getElementById('slot-edit-to').value;
-  if(!name){toast('⚠️ أدخل اسم الحصة');return;}
   if(!from||!to){toast('⚠️ الوقت غير مكتمل');return;}
-  if(from>=to){toast('⚠️ وقت البداية قبل النهاية');return;}
-  S.slots[i]={name,from,to};
+  if(from>=to){toast('⚠️ وقت البداية يجب أن يكون قبل النهاية');return;}
+  S.slots[i]={...S.slots[i],from,to}; // الاسم يبقى كما هو
   rebuildSlots();save();closeM('mSlotEdit');renderSlotsList();renderTT();
-  toast('✅ تم التعديل');
+  toast('✅ تم تعديل التوقيت');
 }
 function addSlot(){
-  const name=document.getElementById('slot-name').value.trim();
+  const name=document.getElementById('slot-name').value;
   const from=document.getElementById('slot-from').value;
   const to  =document.getElementById('slot-to').value;
-  if(!name){toast('⚠️ أدخل اسم الحصة');return;}
   if(!from||!to){toast('⚠️ حدد وقت البداية والنهاية');return;}
   if(from>=to){toast('⚠️ وقت البداية يجب أن يكون قبل النهاية');return;}
   S.slots.push({name,from,to});
-  document.getElementById('slot-name').value='';
-  // نُحدِّث ثوابت SLOTS و SL ليعكس التغيير
   rebuildSlots();
   save();renderSlotsList();renderTT();
   toast('✅ أضيفت الحصة: '+name);
