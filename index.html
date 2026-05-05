@@ -5274,29 +5274,29 @@ function updateExamRoom(id,grp,room,extraKey){
 function addExamRow(){
   const f=getExamFilters();
   if(!f.lv&&!f.spec){toast('⚠️ اختر المستوى والتخصص من الفلتر أولاً');return;}
-  const lastExam=S.exams.filter(e=>e.round==S.round&&e.y===S.ay&&(!f.spec||e.spec===f.spec)).slice(-1)[0];
-  const rooms=lastExam?.rooms?{...lastExam.rooms}:{};
-  const baseExam={id:uid(),y:S.ay,round:S.round||1,lv:f.lv,dp:f.dp,spec:f.spec,section:f.sec,sem:parseInt(f.period)||1,subj:'',tch:'',day:'السبت',date:'',slot:getExamSlots()[0],rooms};
+  const currentSec=f.sec||'';
+  const baseExam={id:uid(),y:S.ay,round:S.round||1,lv:f.lv,dp:f.dp,spec:f.spec,
+    section:currentSec,sem:parseInt(f.period)||1,subj:'',tch:'',
+    day:'السبت',date:'',slot:getExamSlots()[0],rooms:{}};
   S.exams.push(baseExam);
 
-  // نسخ لباقي الفصائل المنصَّبة لنفس التخصص
-  if(f.sec){
-    const otherSecs=[...new Set(
-      S.registeredTTs.filter(t=>
-        (!t.y||t.y===S.ay)&&t.lv===f.lv&&t.dp===f.dp&&t.spec===f.spec&&
-        t.section&&t.section!==f.sec
-      ).map(t=>t.section)
-    )];
+  // إيجاد الفصائل الأخرى — من registeredTTs أو من S.sections
+  const regSecs=[...new Set(
+    S.registeredTTs.filter(t=>
+      (!t.y||t.y===S.ay)&&t.lv===f.lv&&t.dp===f.dp&&t.spec===f.spec&&t.section
+    ).map(t=>t.section)
+  )];
+  // fallback: كل الفصائل
+  const allSecs=regSecs.length>0?regSecs:S.sections;
+  const otherSecs=allSecs.filter(sec=>sec!==currentSec);
+
+  if(otherSecs.length>0){
     otherSecs.forEach(sec=>{
-      // الأستاذ من جدول التوقيت لهذه الفصيلة
-      const tch=getSubjTeachers(baseExam.subj,f.lv,f.dp,f.spec)[0]||'';
-      S.exams.push({...baseExam,id:uid(),section:sec,tch,rooms:{}});
+      S.exams.push({...baseExam,id:uid(),section:sec,tch:'',rooms:{}});
     });
-    if(otherSecs.length>0){
-      save();renderExams();
-      toast(`✅ أضيف الامتحان + نُسخ لـ ${otherSecs.length} فصيلة أخرى`);
-      return;
-    }
+    save();renderExams();
+    toast(`✅ أضيف الامتحان + نُسخ لـ ${otherSecs.length} فصيلة أخرى`);
+    return;
   }
   save();renderExams();
 }
