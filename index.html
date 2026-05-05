@@ -1176,6 +1176,28 @@ table.occ-matrix td.cell-occ:hover{background:#fee2e2;filter:brightness(.97);}
   </div>
 </div>
 
+<!-- MODAL: تغيير كلمة المرور -->
+<div class="mo" id="mChangePass">
+  <div class="mb" style="width:380px;">
+    <div class="mt">🔑 تغيير كلمة المرور</div>
+    <input type="hidden" id="chpass-id">
+    <div id="chpass-user" style="text-align:center;font-size:13px;font-weight:700;color:var(--navy);
+      background:#f0f4ff;padding:8px;border-radius:8px;margin-bottom:14px;"></div>
+    <div class="fg">
+      <label class="fl">كلمة المرور الجديدة</label>
+      <input class="fi" type="password" id="chpass-new" placeholder="أدخل كلمة المرور الجديدة">
+    </div>
+    <div class="fg">
+      <label class="fl">تأكيد كلمة المرور</label>
+      <input class="fi" type="password" id="chpass-confirm" placeholder="أعد كتابة كلمة المرور">
+    </div>
+    <div class="ma">
+      <button class="btn bg" onclick="saveNewPassword()" style="flex:1;justify-content:center;">💾 حفظ</button>
+      <button class="btn" style="background:var(--gray-light);color:var(--text-mid);" onclick="closeM('mChangePass')">إلغاء</button>
+    </div>
+  </div>
+</div>
+
 <!-- MODAL: إضافة/تعديل حساب -->
 <div class="mo" id="mAccount">
   <div class="mb" style="width:400px;">
@@ -5324,7 +5346,7 @@ async function exportExamPDF(){
       <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;800;900&display=swap" rel="stylesheet">
       <style>${css}</style></head><body>
       <div class="pdf-header">
-        <div class="h-right"><div class="h-dept">${f.dp||''}</div><div class="h-meta">السنة: ${S.ay}<br>${period?'الفترة: '+period+'<br>':''}${f.sec?'<span style="unicode-bidi:bidi-override;direction:rtl;">الفصيلة: '+f.sec+'</span><br>':''}الدور: ${S.round===2?'الاستدراكية':'العادية'}</div></div>
+        <div class="h-right"><div class="h-dept">${f.dp||''}</div><div class="h-meta">السنة: ${S.ay}<br>${period?'الفترة: '+period+'<br>':''}${f.sec?'<span style="unicode-bidi:bidi-override;direction:rtl;">الفصيلة: '+f.sec+'</span><br>':''}الدور: ${S.round===2?'الدورة الاستدراكية':'الدورة العادية'}</div></div>
         <div class="h-center"><div class="h-min">${S.settings?.ministry||'وزارة التعليم العالي والبحث العلمي'}</div><div class="h-sep"></div><div class="h-univ">${S.settings?.university||'جامعة عمار ثليجي الأغواط'}</div><div class="h-fac">${S.settings?.faculty||'كلية العلوم الاقتصادية والتجارية وعلوم التسيير'}</div></div>
         <div class="h-left">${logoHtml}<div style="font-size:8.5pt;font-weight:700;color:#0f1f3d;text-align:center;">${f.spec||f.lv||''}</div></div>
       </div>
@@ -7784,6 +7806,7 @@ function renderAccounts(){
       <span class="${u.role==='admin'?'role-admin':'role-dept'}">${u.role==='admin'?'admin':'قسم'}</span>
       <button class="btn bp bsm" onclick="editAccount('${u.id}')">✏️ تعديل</button>
       ${u.id!=='admin'?`<button class="btn bd bsm" onclick="delAccount('${u.id}')">🗑️</button>`:''}
+      <button class="btn bsm" onclick="changePassword('${u.id}')" style="background:#f0fdf4;color:#16a34a;border:1.5px solid #86efac;">🔑</button>
     </div>`).join('');
 }
 
@@ -7837,6 +7860,32 @@ function saveAccount(){
   }
   saveAuthData(auth);closeM('mAccount');renderAccounts();toast('✅ تم الحفظ');
   initAuth();
+}
+
+function changePassword(id){
+  const auth=getAuthData();
+  const u=auth?.users.find(x=>x.id===id);
+  if(!u)return;
+  document.getElementById('chpass-id').value=id;
+  document.getElementById('chpass-user').textContent=u.username+(u.role==='dept'?' — '+u.dept.replace('قسم ',''):'');
+  document.getElementById('chpass-new').value='';
+  document.getElementById('chpass-confirm').value='';
+  openM('mChangePass');
+}
+function saveNewPassword(){
+  const id=document.getElementById('chpass-id').value;
+  const np=document.getElementById('chpass-new').value;
+  const nc=document.getElementById('chpass-confirm').value;
+  if(!np){toast('⚠️ أدخل كلمة المرور الجديدة');return;}
+  if(np.length<6){toast('⚠️ كلمة المرور يجب أن تكون 6 أحرف على الأقل');return;}
+  if(np!==nc){toast('⚠️ كلمتا المرور غير متطابقتين');return;}
+  const auth=getAuthData();
+  const u=auth.users.find(x=>x.id===id);
+  if(!u){toast('❌ الحساب غير موجود');return;}
+  u.password=np;
+  saveAuthData(auth);
+  closeM('mChangePass');
+  toast(`✅ تم تغيير كلمة مرور "${u.username}" بنجاح`);
 }
 
 function delAccount(id){
