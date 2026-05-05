@@ -5074,11 +5074,18 @@ function renderExams(){
             ${ex.subj&&!S.subjects.find(s=>s.name===ex.subj)?`<option value="${ex.subj}" selected>${ex.subj}</option>`:''}
           </select>
           <div style="margin-top:4px;">
-            <select class="exam-edit-input" style="font-size:11px;color:#555;width:100%;"
+            <select class="exam-edit-input" style="font-size:11px;width:100%;"
               onchange="updateExam('${ex.id}','tch',this.value)">
               <option value="">-- الأستاذ --</option>
-              ${getSubjTeachers(ex.subj,ex.lv,ex.dp,ex.spec).map(t=>`<option value="${t}"${t===ex.tch?' selected':''}>${t}</option>`).join('')}
-              ${ex.tch&&!getSubjTeachers(ex.subj,ex.lv,ex.dp,ex.spec).includes(ex.tch)?`<option value="${ex.tch}" selected>${ex.tch}</option>`:''}
+              ${(()=>{
+                // أولاً: من المحاضرة في جدول التوقيت
+                const fromLec=getSubjTeachers(ex.subj,ex.lv,ex.dp,ex.spec);
+                // ثانياً: كل أساتذة القسم (إضافية)
+                const allDept=S.teachers.filter(t=>(!ex.dp||t.dept===ex.dp)&&!fromLec.includes(t.name)).map(t=>t.name);
+                const all=[...fromLec,...allDept];
+                return all.map(t=>`<option value="${t}"${t===ex.tch?' selected':''}>${fromLec.includes(t)?'★ ':''}${t}</option>`).join('');
+              })()}
+              ${ex.tch&&!S.teachers.find(t=>t.name===ex.tch)?`<option value="${ex.tch}" selected>${ex.tch}</option>`:''}
             </select>
           </div>
         </td>`;
@@ -5088,13 +5095,19 @@ function renderExams(){
         groups.forEach((g,gi)=>{
           const room=ex.rooms?.[g]||'';
           h+=`<td class="grp-room-cell rc-${gi%8}" rowspan="${exams.length}"
-            style="vertical-align:middle;font-size:18px;font-weight:800;text-align:center;min-width:90px;">
-            <div style="font-size:18pt;font-weight:900;color:var(--navy);margin-bottom:6px;white-space:pre-line;">
-              ${room||'—'}
-            </div>
-            <input class="exam-room-input" style="background:rgba(255,255,255,.6);font-size:11px;font-weight:700;"
-              value="${room}" placeholder="القاعة..."
+            style="vertical-align:middle;text-align:center;min-width:110px;padding:6px;">
+            <select class="exam-edit-input" style="width:100%;font-size:11px;font-weight:700;margin-bottom:4px;"
+              onchange="onExamRoomSelect('${ex.id}','${g.replace(/'/g,"\\'")}',this.value,'${extraKey.replace(/'/g,"\\'")}',this)">
+              <option value="">-- اختر قاعة --</option>
+              ${S.rooms.map(r=>`<option value="${r}"${r===room?' selected':''}>${r}</option>`).join('')}
+              <option value="__manual__"${!room||!S.rooms.includes(room)?'':''}>✏️ كتابة يدوية</option>
+            </select>
+            <input class="exam-room-input" id="eri-${ex.id}-${gi}"
+              style="background:rgba(255,255,255,.6);font-size:12px;font-weight:800;width:100%;
+              display:${room&&!S.rooms.includes(room)?'block':'none'};"
+              value="${!S.rooms.includes(room)?room:''}" placeholder="اكتب اسم القاعة..."
               onchange="updateExamRoom('${ex.id}','${g.replace(/'/g,"\\'")}',this.value,'${extraKey.replace(/'/g,"\\'")}')">
+            <div style="font-size:16pt;font-weight:900;color:var(--navy);margin-top:4px;">${room||'—'}</div>
           </td>`;
         });
       }
@@ -5175,6 +5188,45 @@ function onExamSubjChange(id,subj){
   const teachers=getSubjTeachers(subj,ex.lv,ex.dp,ex.spec);
   if(teachers.length===1)ex.tch=teachers[0];
   save();renderExams();
+}
+
+function onExamRoomSelect(id,grp,val,extraKey,sel){
+  const gi=sel.closest('td').querySelectorAll('select')[0]===sel?0:0;
+  // إيجاد input اليدوي في نفس الـ td
+  const td=sel.closest('td');
+  const manualInput=td.querySelector('.exam-room-input');
+  const display=td.querySelector('div[style*="16pt"]');
+  if(val==='__manual__'){
+    // إظهار input اليدوي
+    if(manualInput)manualInput.style.display='block';
+    sel.value='';
+  } else {
+    // إخفاء input اليدوي + حفظ القيمة
+    if(manualInput)manualInput.style.display='none';
+    if(display)display.textContent=val||'—';
+    updateExamRoom(id,grp,val,extraKey);
+  }
+}
+function updateExamRoom(id,grp,room,extraKey){
+  const f=getExamFilters();
+  S.exams.forEach(ex=>{
+    if(ex.round==S.round&&ex.y===S.ay&&
+      (!f.lv||ex.lv===f.lv)&&(!f.dp||ex.dp===f.dp)&&
+      (!f.spec||ex.spec===f.spec)&&(!f.sec||ex.section===f.sec)){
+      if(!ex.rooms)ex.rooms={};
+      ex.rooms[grp]=room;
+    }
+  });
+  save();
+  // تحديث العرض
+  document.querySelectorAll('div[style*="16pt"]').forEach(div=>{
+    const td=div.closest('td');
+    if(!td)return;
+    const sel=td.querySelector('select');
+    if(sel&&[...sel.options].some(o=>o.value===grp)){
+      // تحديث العرض في كل الصفوف
+    }
+  });
 }
 
 function addExamRow(){
