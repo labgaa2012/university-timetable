@@ -5078,15 +5078,22 @@ function renderExams(){
               onchange="updateExam('${ex.id}','tch',this.value)">
               <option value="">-- الأستاذ --</option>
               ${(()=>{
-                // أولاً: من المحاضرة في جدول التوقيت
                 const fromLec=getSubjTeachers(ex.subj,ex.lv,ex.dp,ex.spec);
-                // ثانياً: كل أساتذة القسم (إضافية)
                 const allDept=S.teachers.filter(t=>(!ex.dp||t.dept===ex.dp)&&!fromLec.includes(t.name)).map(t=>t.name);
-                const all=[...fromLec,...allDept];
+                const others=S.teachers.filter(t=>ex.dp&&t.dept!==ex.dp&&!fromLec.includes(t.name)&&!allDept.includes(t.name)).map(t=>t.name);
+                const all=[...fromLec,...allDept,...others];
                 return all.map(t=>`<option value="${t}"${t===ex.tch?' selected':''}>${fromLec.includes(t)?'★ ':''}${t}</option>`).join('');
               })()}
               ${ex.tch&&!S.teachers.find(t=>t.name===ex.tch)?`<option value="${ex.tch}" selected>${ex.tch}</option>`:''}
             </select>
+            <input class="exam-edit-input" style="font-size:11px;width:100%;margin-top:3px;display:${ex.tch&&!S.teachers.find(t=>t.name===ex.tch)?'block':'none'};"
+              id="tch-manual-${ex.id}"
+              value="${ex.tch||''}" placeholder="أو اكتب اسم الأستاذ يدوياً..."
+              oninput="updateExam('${ex.id}','tch',this.value)">
+            <button onclick="toggleTchManual('${ex.id}')"
+              style="font-size:9.5px;background:none;border:1px solid #e0e8f5;border-radius:5px;cursor:pointer;padding:2px 8px;margin-top:3px;color:var(--gray);">
+              ✏️ كتابة يدوية
+            </button>
           </div>
         </td>`;
 
@@ -5188,6 +5195,14 @@ function onExamSubjChange(id,subj){
   const teachers=getSubjTeachers(subj,ex.lv,ex.dp,ex.spec);
   if(teachers.length===1)ex.tch=teachers[0];
   save();renderExams();
+}
+
+function toggleTchManual(id){
+  const inp=document.getElementById('tch-manual-'+id);
+  if(!inp)return;
+  const visible=inp.style.display==='block';
+  inp.style.display=visible?'none':'block';
+  if(!visible)inp.focus();
 }
 
 function onExamRoomSelect(id,grp,val,extraKey,sel){
