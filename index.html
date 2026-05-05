@@ -3015,13 +3015,16 @@ function showMgmtPg(id){
   document.querySelectorAll('.pg').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('.nav-tab').forEach(t=>t.classList.remove('active'));
   document.querySelectorAll('.sb-nav-btn').forEach(b=>b.classList.remove('active-pg'));
-  document.getElementById('pg-'+id).classList.add('active');
+  const pg=document.getElementById('pg-'+id);
+  if(!pg)return;
+  pg.classList.add('active');
+  pg.style.display=''; // إزالة display:none إذا وُجد
   const btn=document.getElementById('snb-'+id);
   if(btn)btn.classList.add('active-pg');
   if(id==='settings')loadSettingsPage();
   if(id==='tchtimetable')renderTchTT();
   if(id==='dashboard')renderDashboard();
-  if(id==='accounts'){renderAccounts();}
+  if(id==='accounts')renderAccounts();
   if(id==='teachers')renderTchGrid();
   if(id==='rooms-manage')renderRmGrid();
   if(id==='specs')renderSpGrid();
