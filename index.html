@@ -5276,8 +5276,62 @@ function addExamRow(){
   if(!f.lv&&!f.spec){toast('⚠️ اختر المستوى والتخصص من الفلتر أولاً');return;}
   const lastExam=S.exams.filter(e=>e.round==S.round&&e.y===S.ay&&(!f.spec||e.spec===f.spec)).slice(-1)[0];
   const rooms=lastExam?.rooms?{...lastExam.rooms}:{};
-  S.exams.push({id:uid(),y:S.ay,round:S.round||1,lv:f.lv,dp:f.dp,spec:f.spec,section:f.sec,sem:parseInt(f.period)||1,subj:'',tch:'',day:'السبت',date:'',slot:getExamSlots()[0],rooms});
+  const baseExam={id:uid(),y:S.ay,round:S.round||1,lv:f.lv,dp:f.dp,spec:f.spec,section:f.sec,sem:parseInt(f.period)||1,subj:'',tch:'',day:'السبت',date:'',slot:getExamSlots()[0],rooms};
+  S.exams.push(baseExam);
+
+  // نسخ لباقي الفصائل المنصَّبة لنفس التخصص
+  if(f.sec){
+    const otherSecs=[...new Set(
+      S.registeredTTs.filter(t=>
+        (!t.y||t.y===S.ay)&&t.lv===f.lv&&t.dp===f.dp&&t.spec===f.spec&&
+        t.section&&t.section!==f.sec
+      ).map(t=>t.section)
+    )];
+    otherSecs.forEach(sec=>{
+      // الأستاذ من جدول التوقيت لهذه الفصيلة
+      const tch=getSubjTeachers(baseExam.subj,f.lv,f.dp,f.spec)[0]||'';
+      S.exams.push({...baseExam,id:uid(),section:sec,tch,rooms:{}});
+    });
+    if(otherSecs.length>0){
+      save();renderExams();
+      toast(`✅ أضيف الامتحان + نُسخ لـ ${otherSecs.length} فصيلة أخرى`);
+      return;
+    }
+  }
   save();renderExams();
+}
+
+// نسخ التحديثات (تاريخ/وقت/مقياس) لباقي الفصائل
+function syncExamToSections(id,field,value){
+  const ex=S.exams.find(e=>e.id===id);
+  if(!ex)return;
+  // حقول تُنسخ: date, day, slot, subj فقط — ليس tch ولا rooms
+  if(!['date','day','slot','subj'].includes(field))return;
+  const f=getExamFilters();
+  S.exams.forEach(e=>{
+    if(e.id===id)return; // تخطى الأصل
+    if(e.round===ex.round&&e.y===ex.y&&e.lv===ex.lv&&e.dp===ex.dp&&
+      e.spec===ex.spec&&e.sem===ex.sem&&
+      e.section!==ex.section){ // فصيلة مختلفة
+      // نتحقق أنه نسخة من نفس الدورة (نفس الترتيب = نفس الفهرس)
+      const exList=S.exams.filter(x=>x.round===ex.round&&x.y===ex.y&&x.lv===ex.lv&&x.dp===ex.dp&&x.spec===ex.spec&&x.sem===ex.sem&&x.section===ex.section);
+      const eList=S.exams.filter(x=>x.round===ex.round&&x.y===ex.y&&x.lv===ex.lv&&x.dp===ex.dp&&x.spec===ex.spec&&x.sem===ex.sem&&x.section===e.section);
+      const idx=exList.findIndex(x=>x.id===id);
+      if(idx>=0&&eList[idx]){
+        eList[idx][field]=value;
+        // إذا تغير المقياس → نُحدِّث الأستاذ من جدول التوقيت لتلك الفصيلة
+        if(field==='subj'){
+          const tch=getSubjTeachers(value,ex.lv,ex.dp,ex.spec)[0]||'';
+          eList[idx].tch=tch;
+        }
+        // إذا تغير التاريخ → نُحدِّث اليوم
+        if(field==='date'&&value){
+          const dn=['الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'];
+          eList[idx].day=dn[new Date(value).getDay()]||'';
+        }
+      }
+    }
+  });
 }
 function updateExam(id,field,value){
   const ex=S.exams.find(e=>e.id===id);if(!ex)return;
@@ -5285,21 +5339,18 @@ function updateExam(id,field,value){
   if(field==='date'&&value){
     const dn=['الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'];
     ex.day=dn[new Date(value).getDay()]||'';
-
-    // الامتحانات المطابقة للفلتر الحالي بترتيب الإضافة (لا حسب التاريخ)
     const f=getExamFilters();
     const allExams=S.exams.filter(e=>
       e.round==S.round&&e.y===S.ay&&
       (!f.lv||e.lv===f.lv)&&(!f.dp||e.dp===f.dp)&&
       (!f.spec||e.spec===f.spec)&&(!f.sec||e.section===f.sec)
-    ); // بدون sort — ترتيب الإضافة
-
+    );
     const idx=allExams.findIndex(e=>e.id===id);
     if(idx>=0){
       let curDate=new Date(value);
       for(let i=idx+1;i<allExams.length;i++){
         curDate.setDate(curDate.getDate()+1);
-        if(curDate.getDay()===5)curDate.setDate(curDate.getDate()+1); // تخطي الجمعة
+        if(curDate.getDay()===5)curDate.setDate(curDate.getDate()+1);
         const y2=curDate.getFullYear();
         const m2=String(curDate.getMonth()+1).padStart(2,'0');
         const d2=String(curDate.getDate()).padStart(2,'0');
@@ -5307,9 +5358,12 @@ function updateExam(id,field,value){
         allExams[i].day=dn[curDate.getDay()]||'';
       }
     }
+    syncExamToSections(id,'date',value);
     save();renderExams();return;
   }
+  syncExamToSections(id,field,value);
   save();
+  if(field==='subj')renderExams();
 }
 function delExam(id){S.exams=S.exams.filter(e=>e.id!==id);save();renderExams();toast('🗑️ تم الحذف');}
 
