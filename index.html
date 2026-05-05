@@ -1470,6 +1470,7 @@ table.occ-matrix td.cell-occ:hover{background:#fee2e2;filter:brightness(.97);}
           <select class="fs" id="tt-year-sel" onchange="onTTYearChange(this.value)"
             style="font-weight:700;min-width:120px;"></select>
           <button class="btn" onclick="openInstallTT()" style="background:#7c3aed;color:#fff;">⚡ تنصيب جداول</button>
+          <button class="btn" onclick="openReinstallGroup()" style="background:#059669;color:#fff;">➕ إنشاء جدول فوج</button>
           <button class="btn" onclick="openCopyGroup()" style="background:#0d8a7d;color:#fff;">📋 نسخ جدول فوج</button>
           <button class="btn bn" onclick="expExcel()">📊 تصدير</button>
           <button class="btn bi" onclick="trigImp('imp-sessions')">📥 استيراد</button>
@@ -2141,6 +2142,36 @@ table.occ-matrix td.cell-occ:hover{background:#fee2e2;filter:brightness(.97);}
     <div class="ma">
       <button class="btn" onclick="confirmInstallTT()" style="background:#7c3aed;color:#fff;flex:1;justify-content:center;">⚡ تنصيب</button>
       <button class="btn" style="background:var(--gray-light);color:var(--text-mid);" onclick="closeM('mInstallTT')">إلغاء</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: إنشاء جدول فوج واحد -->
+<div class="mo" id="mReinstallGroup">
+  <div class="mb" style="width:440px;">
+    <div class="mt">➕ إنشاء / استعادة جدول فوج</div>
+    <div style="background:#f0fdf4;border:1.5px solid #86efac;border-radius:9px;padding:10px 14px;font-size:11.5px;color:#166534;margin-bottom:14px;">
+      يُنشئ جدولاً فارغاً لفوج محدد دون المساس بباقي الجداول.
+    </div>
+    <div class="frow2">
+      <div class="fg"><label class="fl">المستوى</label>
+        <select class="fs" id="rg-lv" onchange="syncRGSpec()"></select></div>
+      <div class="fg"><label class="fl">القسم</label>
+        <select class="fs" id="rg-dp" onchange="syncRGSpec()"></select></div>
+    </div>
+    <div class="fg"><label class="fl">التخصص</label>
+      <select class="fs" id="rg-spec"></select></div>
+    <div class="frow2">
+      <div class="fg"><label class="fl">الفصيلة</label>
+        <select class="fs" id="rg-section"></select></div>
+      <div class="fg"><label class="fl">الفوج</label>
+        <select class="fs" id="rg-group"></select></div>
+    </div>
+    <div class="fg"><label class="fl">الفترة</label>
+      <select class="fs" id="rg-period"></select></div>
+    <div class="ma">
+      <button class="btn bg" onclick="confirmReinstallGroup()" style="flex:1;justify-content:center;">✅ إنشاء الجدول</button>
+      <button class="btn" style="background:var(--gray-light);color:var(--text-mid);" onclick="closeM('mReinstallGroup')">إلغاء</button>
     </div>
   </div>
 </div>
@@ -4133,6 +4164,10 @@ function renderTT(){
               onclick="openPDFChoice('${lvE}','${dpE}','${spE}','${seE}','${gE}')">
               📄 PDF
             </button>
+            <button class="grp-pdf-btn" style="background:rgba(239,68,68,.25);border-color:rgba(239,68,68,.5);"
+              onclick="deleteGroupTT('${lvE}','${dpE}','${spE}','${seE}','${gE}')">
+              🗑️ حذف
+            </button>
           </div>`
         :'';
 
@@ -4452,6 +4487,69 @@ function delSess(id){
 }
 
 // -- EXAMS -----------------------------------------
+function openReinstallGroup(){
+  // تعبئة المنسدلات
+  const att=S.activeTT||{};
+  const lvSel=document.getElementById('rg-lv');
+  const dpSel=document.getElementById('rg-dp');
+  if(lvSel)lvSel.innerHTML=S.levels.map(l=>`<option value="${l}"${l===att.lv?' selected':''}>${l}</option>`).join('');
+  if(dpSel)dpSel.innerHTML=S.depts.map(d=>`<option value="${d}"${d===att.dp?' selected':''}>${d}</option>`).join('');
+  const secSel=document.getElementById('rg-section');
+  if(secSel)secSel.innerHTML=S.sections.map(s=>`<option value="${s}">${s}</option>`).join('');
+  const grpSel=document.getElementById('rg-group');
+  if(grpSel)grpSel.innerHTML=S.groups.map(g=>`<option value="${g}">${g}</option>`).join('');
+  const perSel=document.getElementById('rg-period');
+  if(perSel)perSel.innerHTML=S.periods.map((p,i)=>`<option value="${i+1}">${p}</option>`).join('');
+  syncRGSpec();
+  openM('mReinstallGroup');
+}
+function syncRGSpec(){
+  const lv=document.getElementById('rg-lv')?.value||'';
+  const dp=document.getElementById('rg-dp')?.value||'';
+  const specSel=document.getElementById('rg-spec');
+  if(!specSel)return;
+  const specs=[...new Set(S.specs.filter(sp=>(!lv||sp.lv===lv)&&(!dp||sp.dp===dp)).map(sp=>sp.name))];
+  specSel.innerHTML=specs.map(n=>`<option value="${n}">${n}</option>`).join('');
+}
+function confirmReinstallGroup(){
+  const lv=document.getElementById('rg-lv')?.value||'';
+  const dp=document.getElementById('rg-dp')?.value||'';
+  const spec=document.getElementById('rg-spec')?.value||'';
+  const sec=document.getElementById('rg-section')?.value||'';
+  const grp=document.getElementById('rg-group')?.value||'';
+  const per=document.getElementById('rg-period')?.value||'1';
+  if(!spec){toast('⚠️ اختر التخصص');return;}
+  // تحقق هل الجدول موجود أصلاً
+  const exists=S.registeredTTs.find(t=>
+    (!t.y||t.y===S.ay)&&t.lv===lv&&t.dp===dp&&t.spec===spec&&t.section===sec&&t.group===grp
+  );
+  if(exists){toast('⚠️ هذا الجدول موجود بالفعل — يمكنك الحذف أولاً ثم إعادة الإنشاء');return;}
+  S.registeredTTs.push({period:parseInt(per),lv,dp,spec,section:sec,group:grp,y:S.ay});
+  save();closeM('mReinstallGroup');renderTT();
+  toast(`✅ أُنشئ جدول ${grp} — ${spec}`);
+}
+
+// -- DELETE & REINSTALL GROUP TT -------------------
+function deleteGroupTT(lv,dp,spec,sec,grp){
+  const sessCount=S.sessions.filter(s=>
+    s.y===S.ay&&s.lv===lv&&s.dp===dp&&s.spec===spec&&s.section===sec&&s.group===grp
+  ).length;
+  const msg=sessCount
+    ?`⚠️ حذف جدول الفوج "${grp}"${sec?' — "'+sec+'"':''} — "${spec}"؟\n\nسيتم حذف ${sessCount} حصة مرتبطة.\n\nتأكيد؟`
+    :`حذف جدول الفوج "${grp}" — "${spec}"؟`;
+  if(!confirm(msg))return;
+  // حذف الحصص
+  S.sessions=S.sessions.filter(s=>
+    !(s.y===S.ay&&s.lv===lv&&s.dp===dp&&s.spec===spec&&s.section===sec&&s.group===grp)
+  );
+  // حذف من registeredTTs
+  S.registeredTTs=S.registeredTTs.filter(t=>
+    !((!t.y||t.y===S.ay)&&t.lv===lv&&t.dp===dp&&t.spec===spec&&t.section===sec&&t.group===grp)
+  );
+  save();renderTT();
+  toast(`🗑️ حُذف جدول ${grp} — ${spec}`);
+}
+
 // ══ ⑨ نسخ جدول فوج ══
 function openCopyGroup(){
   const att=S.activeTT||{};
