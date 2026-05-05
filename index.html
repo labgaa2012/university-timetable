@@ -5075,7 +5075,7 @@ function renderExams(){
           </select>
           <div style="margin-top:4px;">
             <select class="exam-edit-input" style="font-size:11px;width:100%;"
-              onchange="updateExam('${ex.id}','tch',this.value)">
+              onchange="onExamTchSelect('${ex.id}',this)">
               <option value="">-- الأستاذ --</option>
               ${(()=>{
                 const fromLec=getSubjTeachers(ex.subj,ex.lv,ex.dp,ex.spec);
@@ -5084,16 +5084,13 @@ function renderExams(){
                 const all=[...fromLec,...allDept,...others];
                 return all.map(t=>`<option value="${t}"${t===ex.tch?' selected':''}>${fromLec.includes(t)?'★ ':''}${t}</option>`).join('');
               })()}
-              ${ex.tch&&!S.teachers.find(t=>t.name===ex.tch)?`<option value="${ex.tch}" selected>${ex.tch}</option>`:''}
+              <option value="__manual__">✏️ كتابة يدوية</option>
             </select>
-            <input class="exam-edit-input" style="font-size:11px;width:100%;margin-top:3px;display:${ex.tch&&!S.teachers.find(t=>t.name===ex.tch)?'block':'none'};"
-              id="tch-manual-${ex.id}"
-              value="${ex.tch||''}" placeholder="أو اكتب اسم الأستاذ يدوياً..."
+            <input class="exam-edit-input" id="tch-manual-${ex.id}"
+              style="font-size:11px;width:100%;margin-top:3px;display:${ex.tch&&!S.teachers.find(t=>t.name===ex.tch)&&ex.tch?'block':'none'};"
+              value="${ex.tch&&!S.teachers.find(t=>t.name===ex.tch)?ex.tch:''}"
+              placeholder="اكتب اسم الأستاذ..."
               oninput="updateExam('${ex.id}','tch',this.value)">
-            <button onclick="toggleTchManual('${ex.id}')"
-              style="font-size:9.5px;background:none;border:1px solid #e0e8f5;border-radius:5px;cursor:pointer;padding:2px 8px;margin-top:3px;color:var(--gray);">
-              ✏️ كتابة يدوية
-            </button>
           </div>
         </td>`;
 
@@ -5197,12 +5194,17 @@ function onExamSubjChange(id,subj){
   save();renderExams();
 }
 
-function toggleTchManual(id){
-  const inp=document.getElementById('tch-manual-'+id);
-  if(!inp)return;
-  const visible=inp.style.display==='block';
-  inp.style.display=visible?'none':'block';
-  if(!visible)inp.focus();
+function onExamTchSelect(id,sel){
+  const val=sel.value;
+  const td=sel.closest('td');
+  const manualInput=document.getElementById('tch-manual-'+id);
+  if(val==='__manual__'){
+    if(manualInput){manualInput.style.display='block';manualInput.focus();}
+    sel.value='';
+  } else {
+    if(manualInput)manualInput.style.display='none';
+    updateExam(id,'tch',val);
+  }
 }
 
 function onExamRoomSelect(id,grp,val,extraKey,sel){
