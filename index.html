@@ -1494,6 +1494,7 @@ table.occ-matrix td.cell-occ:hover{background:#fee2e2;filter:brightness(.97);}
         <div class="frow">
           <select class="fs" id="tt-year-sel" onchange="onTTYearChange(this.value)"
             style="font-weight:700;min-width:120px;"></select>
+          <button class="btn" onclick="openDaysMgr()" style="background:#059669;color:#fff;padding:7px 12px;font-size:12px;">📅 الأيام</button>
           <button class="btn" onclick="openInstallTT()" style="background:#7c3aed;color:#fff;">⚡ تنصيب جداول</button>
           <button class="btn" onclick="openReinstallGroup()" style="background:#059669;color:#fff;">➕ إنشاء جدول فوج</button>
           <button class="btn" onclick="openCopyGroup()" style="background:#0d8a7d;color:#fff;">📋 نسخ جدول فوج</button>
@@ -2171,6 +2172,29 @@ table.occ-matrix td.cell-occ:hover{background:#fee2e2;filter:brightness(.97);}
   </div>
 </div>
 
+<!-- MODAL: إدارة الأيام -->
+<div class="mo" id="mDaysMgr">
+  <div class="mb" style="width:420px;">
+    <div class="mt">📅 إدارة أيام الأسبوع</div>
+    <div style="margin-bottom:12px;font-size:11.5px;color:var(--gray);">
+      اختر الأيام الظاهرة في جدول التوقيت — الحصص المحذوفة تبقى في قاعدة البيانات
+    </div>
+    <!-- قائمة الأيام مع toggle -->
+    <div id="days-list" style="margin-bottom:16px;"></div>
+    <!-- إضافة يوم مخصص -->
+    <div style="background:#f8fafc;border:1.5px solid #e0e8f5;border-radius:10px;padding:12px;">
+      <div style="font-size:12px;font-weight:700;color:var(--navy);margin-bottom:8px;">➕ إضافة يوم</div>
+      <div style="display:flex;gap:8px;">
+        <input class="fi" id="new-day-input" placeholder="اسم اليوم..." style="flex:1;">
+        <button class="btn bg" onclick="addDay()">إضافة</button>
+      </div>
+    </div>
+    <div class="ma" style="margin-top:14px;">
+      <button class="btn" style="background:var(--gray-light);color:var(--text-mid);" onclick="closeM('mDaysMgr')">إغلاق</button>
+    </div>
+  </div>
+</div>
+
 <!-- MODAL: إنشاء جدول فوج واحد -->
 <div class="mo" id="mReinstallGroup">
   <div class="mb" style="width:440px;">
@@ -2620,6 +2644,12 @@ table.occ-matrix td.cell-occ:hover{background:#fee2e2;filter:brightness(.97);}
 <script>
 // -- CONSTANTS --------------------------------------
 const DAYS=['السبت','الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس'];
+// الأيام الافتراضية — يمكن تعديلها عبر S.days
+function rebuildDays(){
+  DAYS.length=0;
+  const src=S.days&&S.days.length?S.days:['السبت','الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس'];
+  src.forEach(d=>DAYS.push(d));
+}
 const SLOTS=['08:00-09:30','09:30-11:00','11:15-12:45','13:30-15:00','15:00-16:30'];
 const SL={'08:00-09:30':'08:00 - 09:30','09:30-11:00':'09:30 - 11:00',
   '11:15-12:45':'11:15 - 12:45','13:30-15:00':'13:30 - 15:00','15:00-16:30':'15:00 - 16:30'};
@@ -2914,6 +2944,7 @@ function defState(){
       {from:'14:00',to:'16:00'},
       {from:'16:30',to:'18:30'}
     ],
+    days:['السبت','الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس'],
     teachers:DEFAULT_TEACHERS(),rooms,sessions:[],exams:[],archive:[],
     ay:'2025/2026',al:'سنة أولى ليسانس',ad:'قسم السنة أولى جذع مشترك',round:1
   };
@@ -2947,6 +2978,7 @@ function load(){
     {name:'الحصة الخامسة', from:'15:00',to:'16:30'},
     {name:'الحصة السادسة', from:'16:30',to:'18:00'}
   ];
+  if(!S.days||!S.days.length)        S.days=['السبت','الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس'];
   if(!S.sessionTypes||!S.sessionTypes.length) S.sessionTypes=[
     {id:'tlc',       label:'محاضرة',              code:'CM',  icon:'📖'},
     {id:'tlc-remote',label:'محاضرة عن بعد',       code:'CM-E',icon:'🖥️'},
@@ -4653,6 +4685,64 @@ function confirmReinstallGroup(){
   S.registeredTTs.push({period:parseInt(per),lv,dp,spec,section:sec,group:grp,y:S.ay});
   save();closeM('mReinstallGroup');renderTT();
   toast(`✅ أُنشئ جدول ${grp} — ${spec}`);
+}
+
+// -- DAYS MANAGER ----------------------------------
+const ALL_DAYS_AR=['السبت','الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس','الجمعة'];
+
+function openDaysMgr(){
+  renderDaysList();
+  openM('mDaysMgr');
+}
+function renderDaysList(){
+  const el=document.getElementById('days-list');
+  if(!el)return;
+  // كل الأيام المعروفة (الافتراضية + المضافة)
+  const known=[...new Set([...ALL_DAYS_AR,...(S.days||[])])];
+  el.innerHTML=known.map(d=>{
+    const active=(S.days||[]).includes(d);
+    return `<div style="display:flex;align-items:center;gap:10px;padding:9px 12px;
+      background:${active?'#f0faf9':'#f8fafc'};border:1.5px solid ${active?'#99e6da':'#e0e8f5'};
+      border-radius:9px;margin-bottom:6px;transition:all .2s;">
+      <span style="font-size:13px;font-weight:700;color:var(--navy);flex:1;">${d}</span>
+      <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:11.5px;color:${active?'var(--teal)':'var(--gray)'};">
+        <input type="checkbox" ${active?'checked':''} onchange="toggleDay('${d}',this.checked)"
+          style="width:16px;height:16px;accent-color:var(--teal);cursor:pointer;">
+        ${active?'مفعّل':'معطّل'}
+      </label>
+      ${!ALL_DAYS_AR.includes(d)?`<button onclick="removeCustomDay('${d}')"
+        style="background:none;border:none;cursor:pointer;color:var(--danger);font-size:14px;">✕</button>`:''}
+    </div>`;
+  }).join('');
+}
+function toggleDay(day,checked){
+  if(!S.days)S.days=[...ALL_DAYS_AR.slice(0,6)];
+  if(checked){
+    if(!S.days.includes(day))S.days.push(day);
+    // ترتيب حسب اليوم الطبيعي
+    const allRef=[...ALL_DAYS_AR,...S.days.filter(d=>!ALL_DAYS_AR.includes(d))];
+    S.days.sort((a,b)=>allRef.indexOf(a)-allRef.indexOf(b));
+  } else {
+    if(S.days.length<=1){toast('⚠️ يجب أن يبقى يوم واحد على الأقل');renderDaysList();return;}
+    S.days=S.days.filter(d=>d!==day);
+  }
+  rebuildDays();save();renderDaysList();renderTT();
+  toast(checked?`✅ أضيف يوم "${day}"`:`🗑️ حُذف يوم "${day}" من الجدول`);
+}
+function addDay(){
+  const inp=document.getElementById('new-day-input');
+  const day=inp?.value.trim();
+  if(!day){toast('⚠️ أدخل اسم اليوم');return;}
+  if(!S.days)S.days=[];
+  if(S.days.includes(day)){toast('⚠️ هذا اليوم موجود بالفعل');return;}
+  S.days.push(day);
+  rebuildDays();save();if(inp)inp.value='';renderDaysList();renderTT();
+  toast(`✅ أضيف يوم "${day}"`);
+}
+function removeCustomDay(day){
+  S.days=(S.days||[]).filter(d=>d!==day);
+  rebuildDays();save();renderDaysList();renderTT();
+  toast(`🗑️ حُذف يوم "${day}"`);
 }
 
 // -- DELETE & REINSTALL GROUP TT -------------------
@@ -8176,6 +8266,7 @@ function saveSettings(){
 // -- INIT ------------------------------------------
 load();
 rebuildSlots();
+rebuildDays(); // تطبيق الأيام المحفوظة
 renderAll();
 if(S.settings?.university){
   const h1=document.querySelector('header .logo h1');
