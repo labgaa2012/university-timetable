@@ -1358,9 +1358,12 @@ table.occ-matrix td.cell-occ:hover{background:#fee2e2;filter:brightness(.97);}
       <button class="btn bg" onclick="saveSettings()" style="width:100%;justify-content:center;padding:12px;font-size:14px;">
         💾 حفظ الإعدادات
       </button>
-      <div style="margin-top:12px;display:flex;gap:8px;">
+      <div style="margin-top:10px;display:flex;gap:8px;">
         <button class="btn" onclick="openSlotsMgr()" style="flex:1;justify-content:center;padding:11px;font-size:13px;background:#7c3aed;color:#fff;">
-          ⏰ ضبط التوقيت
+          ⏰ ضبط التوقيت الأسبوعي
+        </button>
+        <button class="btn" onclick="openExamSlotsMgr()" style="flex:1;justify-content:center;padding:11px;font-size:13px;background:#0d8a7d;color:#fff;">
+          📝 ضبط توقيت الامتحان
         </button>
       </div>
       <div style="margin-top:10px;display:flex;gap:8px;">
@@ -2210,6 +2213,60 @@ table.occ-matrix td.cell-occ:hover{background:#fee2e2;filter:brightness(.97);}
   </div>
 </div>
 
+<!-- MODAL: ضبط توقيت الامتحان -->
+<div class="mo" id="mExamSlotsMgr">
+  <div class="mb" style="width:520px;">
+    <div class="mt">📝 ضبط توقيت الامتحان</div>
+
+    <!-- قائمة الحصص الحالية -->
+    <div id="exam-slots-list" style="margin-bottom:14px;"></div>
+
+    <!-- إضافة حصة جديدة -->
+    <div style="background:#f0faf9;border:1.5px solid #99e6da;border-radius:10px;padding:14px;">
+      <div style="font-size:12px;font-weight:700;color:var(--teal);margin-bottom:10px;">➕ إضافة حصة امتحان</div>
+      <div class="frow2">
+        <div class="fg">
+          <label class="fl">من</label>
+          <input class="fi" id="exam-slot-from" type="time" value="08:00">
+        </div>
+        <div class="fg">
+          <label class="fl">إلى</label>
+          <input class="fi" id="exam-slot-to" type="time" value="10:00">
+        </div>
+      </div>
+      <button class="btn" onclick="addExamSlot()" style="margin-top:8px;width:100%;justify-content:center;background:var(--teal);color:#fff;">
+        ✅ إضافة
+      </button>
+    </div>
+
+    <div class="ma" style="margin-top:14px;">
+      <button class="btn" style="background:var(--gray-light);color:var(--text-mid);" onclick="closeM('mExamSlotsMgr')">إغلاق</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: تعديل حصة امتحان -->
+<div class="mo" id="mExamSlotEdit">
+  <div class="mb" style="width:380px;">
+    <div class="mt">✏️ تعديل حصة الامتحان</div>
+    <input type="hidden" id="exam-slot-edit-i">
+    <div class="frow2">
+      <div class="fg">
+        <label class="fl">من</label>
+        <input class="fi" id="exam-slot-edit-from" type="time">
+      </div>
+      <div class="fg">
+        <label class="fl">إلى</label>
+        <input class="fi" id="exam-slot-edit-to" type="time">
+      </div>
+    </div>
+    <div class="ma">
+      <button class="btn bg" onclick="saveExamSlotEdit()" style="flex:1;justify-content:center;">💾 حفظ</button>
+      <button class="btn" style="background:var(--gray-light);color:var(--text-mid);" onclick="closeM('mExamSlotEdit')">إلغاء</button>
+    </div>
+  </div>
+</div>
+
 <!-- MODAL: ضبط التوقيت -->
 <div class="mo" id="mSlotsMgr">
   <div class="mb" style="width:500px;">
@@ -2798,6 +2855,12 @@ function defState(){
       {name:'الحصة الرابعة', from:'13:30',to:'15:00'},
       {name:'الحصة الخامسة', from:'15:00',to:'16:30'}
     ],
+    examSlots:[
+      {from:'08:00',to:'10:00'},
+      {from:'10:30',to:'12:30'},
+      {from:'14:00',to:'16:00'},
+      {from:'16:30',to:'18:30'}
+    ],
     teachers:DEFAULT_TEACHERS(),rooms,sessions:[],exams:[],archive:[],
     ay:'2025/2026',al:'سنة أولى ليسانس',ad:'قسم السنة أولى جذع مشترك',round:1
   };
@@ -2816,6 +2879,12 @@ function load(){
   if(!S.sections||!S.sections.length)S.sections=['الفصيلة1','الفصيلة2','الفصيلة3'];
   if(!S.registeredTTs)               S.registeredTTs=[];
   if(!S.examExtraGroups)             S.examExtraGroups={};
+  if(!S.examSlots||!S.examSlots.length) S.examSlots=[
+    {from:'08:00',to:'10:00'},
+    {from:'10:30',to:'12:30'},
+    {from:'14:00',to:'16:00'},
+    {from:'16:30',to:'18:30'}
+  ];
   if(!S.settings)                    S.settings={ministry:'',university:'',faculty:'',logo:''};
   if(!S.slots||!S.slots.length)      S.slots=[
     {name:'الحصة الأولى',  from:'08:00',to:'09:30'},
@@ -4829,7 +4898,12 @@ function importJSON(file){
 }
 
 // -- EXAMS (new system) ----------------------------
-const EXAM_SLOTS=['08:00-10:00','10:30-12:30','14:00-16:00','16:30-18:30'];
+// EXAM_SLOTS يُبنى ديناميكياً من S.examSlots
+function getExamSlots(){return(S.examSlots||[]).map(sl=>`${sl.from}-${sl.to}`);}
+function getExamSlotLabel(key){
+  const sl=S.examSlots?.find(s=>`${s.from}-${s.to}`===key);
+  return sl?`${sl.from} - ${sl.to}`:key;
+}
 
 function syncExamFilters(){
   const pSel=document.getElementById('ex-period');
@@ -4957,7 +5031,7 @@ function renderExams(){
         </td>
         <td>
           <select class="exam-edit-input" onchange="updateExam('${ex.id}','slot',this.value)">
-            ${EXAM_SLOTS.map(s=>`<option${s===ex.slot?' selected':''}>${s}</option>`).join('')}
+            ${getExamSlots().map(s=>`<option${s===ex.slot?' selected':''}>${s}</option>`).join('')}
           </select>
         </td>
         <td class="exam-subj-cell">
@@ -5076,7 +5150,7 @@ function addExamRow(){
   if(!f.lv&&!f.spec){toast('⚠️ اختر المستوى والتخصص من الفلتر أولاً');return;}
   const lastExam=S.exams.filter(e=>e.round==S.round&&e.y===S.ay&&(!f.spec||e.spec===f.spec)).slice(-1)[0];
   const rooms=lastExam?.rooms?{...lastExam.rooms}:{};
-  S.exams.push({id:uid(),y:S.ay,round:S.round||1,lv:f.lv,dp:f.dp,spec:f.spec,section:f.sec,sem:parseInt(f.period)||1,subj:'',tch:'',day:'السبت',date:'',slot:EXAM_SLOTS[0],rooms});
+  S.exams.push({id:uid(),y:S.ay,round:S.round||1,lv:f.lv,dp:f.dp,spec:f.spec,section:f.sec,sem:parseInt(f.period)||1,subj:'',tch:'',day:'السبت',date:'',slot:getExamSlots()[0],rooms});
   save();renderExams();
 }
 function updateExam(id,field,value){
@@ -7677,6 +7751,68 @@ function canEditDept(dp){
   if(!CURRENT_USER)return false;
   if(CURRENT_USER.role==='admin')return true;
   return CURRENT_USER.dept===dp;
+}
+
+// -- EXAM SLOTS MANAGER ----------------------------
+function getExamSlotsArr(){
+  return (S.examSlots||[]).map(sl=>`${sl.from}-${sl.to}`);
+}
+function openExamSlotsMgr(){
+  renderExamSlotsList();
+  openM('mExamSlotsMgr');
+}
+function renderExamSlotsList(){
+  const el=document.getElementById('exam-slots-list');
+  if(!el)return;
+  const slots=S.examSlots||[];
+  if(!slots.length){
+    el.innerHTML='<div style="color:var(--gray);text-align:center;padding:12px;font-size:12px;">لا توجد حصص — أضف من الأسفل</div>';
+    return;
+  }
+  el.innerHTML=slots.map((sl,i)=>`
+    <div style="display:flex;align-items:center;gap:8px;padding:9px 12px;
+      background:#fff;border:1.5px solid #e0e8f5;border-radius:9px;margin-bottom:7px;">
+      <span style="font-size:12px;font-weight:700;color:var(--navy);min-width:60px;">الحصة ${i+1}</span>
+      <span style="font-size:12px;color:var(--teal);font-weight:700;background:#f0faf9;
+        padding:3px 12px;border-radius:20px;flex:1;">${sl.from} — ${sl.to}</span>
+      <button onclick="openExamSlotEdit(${i})"
+        style="background:none;border:1.5px solid #e0e8f5;border-radius:7px;cursor:pointer;padding:3px 8px;font-size:12px;">✏️</button>
+      <button onclick="rmExamSlot(${i})"
+        style="background:none;border:none;cursor:pointer;color:var(--danger);font-size:14px;padding:0 4px;">✕</button>
+    </div>`).join('');
+}
+function addExamSlot(){
+  const from=document.getElementById('exam-slot-from').value;
+  const to  =document.getElementById('exam-slot-to').value;
+  if(!from||!to){toast('⚠️ حدد وقت البداية والنهاية');return;}
+  if(from>=to){toast('⚠️ وقت البداية يجب أن يكون قبل النهاية');return;}
+  if(!S.examSlots)S.examSlots=[];
+  S.examSlots.push({from,to});
+  save();renderExamSlotsList();
+  toast('✅ أضيفت حصة الامتحان');
+}
+function rmExamSlot(i){
+  S.examSlots.splice(i,1);
+  save();renderExamSlotsList();
+  toast('🗑️ تم الحذف');
+}
+function openExamSlotEdit(i){
+  const sl=S.examSlots[i];
+  if(!sl)return;
+  document.getElementById('exam-slot-edit-i').value=i;
+  document.getElementById('exam-slot-edit-from').value=sl.from;
+  document.getElementById('exam-slot-edit-to').value=sl.to;
+  openM('mExamSlotEdit');
+}
+function saveExamSlotEdit(){
+  const i=parseInt(document.getElementById('exam-slot-edit-i').value);
+  const from=document.getElementById('exam-slot-edit-from').value;
+  const to  =document.getElementById('exam-slot-edit-to').value;
+  if(!from||!to){toast('⚠️ الوقت غير مكتمل');return;}
+  if(from>=to){toast('⚠️ وقت البداية يجب أن يكون قبل النهاية');return;}
+  S.examSlots[i]={from,to};
+  save();closeM('mExamSlotEdit');renderExamSlotsList();
+  toast('✅ تم التعديل');
 }
 
 // -- SLOTS MANAGER ---------------------------------
