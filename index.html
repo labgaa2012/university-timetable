@@ -5751,7 +5751,7 @@ function addExamRow(){
   )];
   // fallback: كل الفصائل
   const allSecs=regSecs.length>0?regSecs:S.sections;
-  const otherSecs=allSecs.filter(sec=>sec!==currentSec);
+  const otherSecs=allSecs.filter(sec=>sec&&sec!==currentSec);
 
   if(otherSecs.length>0){
     otherSecs.forEach(sec=>{
