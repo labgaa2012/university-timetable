@@ -5581,15 +5581,17 @@ function renderExams(){
   }
 
   // -- بناء الجدول --
-  // رأس الجدول: أعمدة الأفواج + زر إضافة فوج
   const addGrpOpts=S.groups.filter(g=>!groups.includes(g)).map(g=>`<option value="${g}">${g}</option>`).join('');
 
-  let h=`<table class="exam-table"><thead><tr>
+  // الحصول على قاعة كل فوج من أول امتحان
+  const firstExam=exams[0];
+
+  let h=`<table class="exam-table"><thead>
+  <tr>
     <th style="width:110px;">اليوم / التاريخ</th>
     <th style="width:95px;">التوقيت</th>
     <th>المقياس / الأستاذ</th>`;
 
-  // خلية لكل فوج مع زر حذف
   groups.forEach((g,gi)=>{
     const canRemove=groups.length>1;
     h+=`<th class="rc-${gi%8} grp-th" style="position:relative;">
@@ -5600,7 +5602,6 @@ function renderExams(){
     </th>`;
   });
 
-  // زر إضافة فوج
   h+=`<th style="width:90px;background:rgba(255,255,255,.1);">
     <select id="exam-add-grp-sel" class="fs" style="font-size:10px;padding:3px;background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.3);border-radius:5px;width:100%;">
       <option value="">+ فوج</option>${addGrpOpts}
@@ -5612,7 +5613,31 @@ function renderExams(){
     </button>
   </th>
   <th style="width:50px;"></th>
-</tr></thead><tbody>`;
+  </tr>
+  <!-- صف القاعات — يظهر مرة واحدة فوق الامتحانات -->
+  <tr style="background:#f0f4ff;">
+    <td colspan="3" style="font-size:11px;font-weight:700;color:var(--navy);padding:6px 10px;text-align:right;border:1px solid #e0e8f5;">
+      🏫 القاعات
+    </td>
+    ${groups.map((g,gi)=>{
+      const room=firstExam?.rooms?.[g]||'';
+      return `<td class="rc-${gi%8}" style="padding:3px;border:1px solid #e0e8f5;text-align:center;">
+        <div class="exam-room-display" onclick="showRoomEdit(this)" style="cursor:pointer;">${room||'—'}</div>
+        <select class="exam-edit-input" style="font-size:10px;width:100%;display:none;"
+          onchange="onExamRoomSel(this,'${firstExam?.id||''}','${g.replace(/'/g,"\\'")}','${extraKey.replace(/'/g,"\\'")}')">
+          <option value="">-- اختر --</option>
+          ${S.rooms.map(r=>`<option value="${r}"${r===room?' selected':''}>${r}</option>`).join('')}
+          <option value="__manual__">✏️ يدوي</option>
+        </select>
+        <input class="exam-room-input" style="font-size:10px;width:100%;display:none;"
+          value="${room}" placeholder="اسم القاعة..."
+          onblur="saveRoomManual(this,'${firstExam?.id||''}','${g.replace(/'/g,"\\'")}','${extraKey.replace(/'/g,"\\'")}')">
+      </td>`;
+    }).join('')}
+    <td style="border:1px solid #e0e8f5;"></td>
+    <td style="border:1px solid #e0e8f5;"></td>
+  </tr>
+  </thead><tbody>`;
 
   if(!exams.length){
     h+=`<tr><td colspan="${5+groups.length}" style="padding:30px;text-align:center;color:var(--gray);">
@@ -5660,27 +5685,11 @@ function renderExams(){
           </div>
         </td>`;
 
-      // -- خلايا القاعة: rowspan لأول صف فقط --
-      if(i===0){
-        groups.forEach((g,gi)=>{
-          const room=ex.rooms?.[g]||'';
-          h+=`<td class="grp-room-cell rc-${gi%8}" rowspan="${exams.length}"
-            style="vertical-align:middle;text-align:center;padding:4px 2px;">
-            <div class="exam-room-display" onclick="showRoomEdit(this)">${room||'—'}</div>
-            <select class="exam-edit-input" style="font-size:10px;width:100%;margin-top:3px;display:none;"
-              onchange="onExamRoomSel(this,'${ex.id}','${g.replace(/'/g,"\\'")}','${extraKey.replace(/'/g,"\\'")}')">
-              <option value="">-- اختر قاعة --</option>
-              ${S.rooms.map(r=>`<option value="${r}"${r===room?' selected':''}>${r}</option>`).join('')}
-              <option value="__manual__">✏️ كتابة يدوية</option>
-            </select>
-            <input class="exam-room-input" style="font-size:10px;width:100%;margin-top:2px;display:none;"
-              value="${room}" placeholder="اكتب اسم القاعة..."
-              onblur="saveRoomManual(this,'${ex.id}','${g.replace(/'/g,"\\'")}','${extraKey.replace(/'/g,"\\'")}')">
-          </td>`;
-        });
-      }
-
-      h+=`<td><button onclick="delExam('${ex.id}')"
+      // خلايا فارغة للأفواج (للمحاذاة مع رأس القاعات)
+      groups.forEach((_,gi)=>{
+        h+=`<td class="rc-${gi%8}" style="border:1px solid #e0e8f5;"></td>`;
+      });
+      h+=`<td></td><td><button onclick="delExam('${ex.id}')"
         style="background:none;border:none;cursor:pointer;color:var(--danger);font-size:16px;">🗑️</button></td>
       </tr>`;
     });
