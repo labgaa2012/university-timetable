@@ -1552,6 +1552,7 @@ table.occ-matrix td.cell-occ:hover{background:#fee2e2;filter:brightness(.97);}
         <div class="fg">
           <label class="fl">الفصيلة</label>
           <select class="fs" id="ex-sec" onchange="renderExams()">
+            <option value="">كل الفصائل</option>
           </select>
         </div>
         <div class="fg">
@@ -5432,7 +5433,7 @@ function syncExamFilters(){
   if(dpSel&&dpSel.options.length===0)dpSel.innerHTML=S.depts.map(d=>`<option>${d}</option>`).join('');
   syncExamSpec();
   const secSel=document.getElementById('ex-sec');
-  if(secSel&&secSel.options.length===0)secSel.innerHTML=S.sections.map(s=>`<option value="${s}">${s}</option>`).join('');
+  if(secSel&&secSel.options.length<=1)secSel.innerHTML='<option value="">كل الفصائل</option>'+S.sections.map(s=>`<option value="${s}">${s}</option>`).join('');
   const grpSel=document.getElementById('ex-grp');
   if(grpSel&&grpSel.options.length<=1)grpSel.innerHTML='<option value="">كل الأفواج</option>'+S.groups.map(g=>`<option value="${g}">${g}</option>`).join('');
 }
@@ -5764,29 +5765,25 @@ function syncExamToSections(id,field,value){
   if(!['date','day','slot','subj'].includes(field))return;
   const dn=['الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'];
 
-  const doUpdate=(e)=>{
+  // مطابق للمرجع: نُحدِّث كل الامتحانات بنفس groupId مباشرة
+  const siblings=ex.groupId
+    ? S.exams.filter(e=>e.groupId===ex.groupId&&e.id!==id)
+    : S.exams.filter(e=>e.id!==id&&e.y===ex.y&&e.lv===ex.lv&&e.dp===ex.dp&&e.spec===ex.spec&&e.sem==ex.sem&&e.round==ex.round&&e.section!==ex.section);
+
+  let changed=0;
+  siblings.forEach(e=>{
     e[field]=value;
     if(field==='date'&&value)e.day=dn[new Date(value).getDay()]||'';
-    if(field==='subj')e.tch=S.sessions.filter(s=>
-      s.y===S.ay&&s.lv===e.lv&&s.dp===e.dp&&s.spec===e.spec&&
-      s.section===e.section&&s.subj===value&&(s.type==='tlc'||s.type==='tlc-remote')
-    ).map(s=>s.tch).filter(Boolean)[0]||'';
-  };
-
-  // groupId: الطريقة المباشرة والموثوقة
-  if(ex.groupId){
-    S.exams.filter(e=>e.groupId===ex.groupId&&e.id!==id).forEach(doUpdate);
-    return;
-  }
-
-  // fallback للامتحانات القديمة: بحث بالموضع
-  const sameSecList=S.exams.filter(e=>e.y===ex.y&&e.lv===ex.lv&&e.dp===ex.dp&&e.spec===ex.spec&&e.sem==ex.sem&&e.round==ex.round&&e.section===ex.section);
-  const idx=sameSecList.findIndex(e=>e.id===id);
-  if(idx<0)return;
-  [...new Set(S.exams.filter(e=>e.y===ex.y&&e.lv===ex.lv&&e.dp===ex.dp&&e.spec===ex.spec&&e.sem==ex.sem&&e.round==ex.round&&e.section!==ex.section).map(e=>e.section))].forEach(sec=>{
-    const target=S.exams.filter(e=>e.y===ex.y&&e.lv===ex.lv&&e.dp===ex.dp&&e.spec===ex.spec&&e.sem==ex.sem&&e.round==ex.round&&e.section===sec)[idx];
-    if(target)doUpdate(target);
+    if(field==='subj'){
+      e.tch=S.sessions.filter(s=>
+        s.y===S.ay&&s.lv===e.lv&&s.dp===e.dp&&s.spec===e.spec&&
+        s.section===e.section&&s.subj===value&&(s.type==='tlc'||s.type==='tlc-remote')
+      ).map(s=>s.tch).filter(Boolean)[0]||'';
+    }
+    changed++;
   });
+
+  if(changed>0)toast(`🔄 نُسخ لـ ${changed} امتحان في الفصائل الأخرى`,1500);
 }
 
 function updateExam(id,field,value){
@@ -7098,7 +7095,7 @@ function dl(blob,name){const a=document.createElement('a');a.href=URL.createObje
 
 // -- TOAST -----------------------------------------
 let toastT;
-function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove('show'),2800);}
+function toast(msg,dur=2800){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove('show'),dur);}
 
 // -- IMPORT / EXPORT UTILITIES ---------------------
 
