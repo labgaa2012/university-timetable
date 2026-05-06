@@ -5735,26 +5735,27 @@ function updateExamRoom(id,grp,room,extraKey){
 function addExamRow(){
   const f=getExamFilters();
   if(!f.lv&&!f.spec){toast('⚠️ اختر المستوى والتخصص من الفلتر أولاً');return;}
-  const currentSec=f.sec||'';
-  const gid=uid(); // groupId مشترك بين كل الفصائل لهذا الامتحان
-  const regSecs=[...new Set(S.registeredTTs.filter(t=>(!t.y||t.y===S.ay)&&t.lv===f.lv&&t.dp===f.dp&&t.spec===f.spec&&t.section).map(t=>t.section))];
-  const allSecs=(regSecs.length?regSecs:S.sections).filter(s=>s);
 
-  const mkExam=(sec)=>({id:uid(),groupId:gid,y:S.ay,round:S.round||1,lv:f.lv,dp:f.dp,spec:f.spec,
-    section:sec,sem:parseInt(f.period)||1,subj:'',tch:'',day:'السبت',date:'',slot:getExamSlots()[0],rooms:{}});
+  // جمع الفصائل من المنسدلة مباشرة (المصدر الأكيد)
+  const secSel=document.getElementById('ex-sec');
+  const allSecs=[...secSel.options].map(o=>o.value).filter(v=>v);
 
-  if(currentSec){
-    S.exams.push(mkExam(currentSec));
-    const others=allSecs.filter(s=>s!==currentSec);
-    others.forEach(sec=>S.exams.push(mkExam(sec)));
-    save();renderExams();
-    toast(others.length?`✅ أضيف + نُسخ لـ ${others.length} فصيلة`:'✅ أضيف الامتحان');
-  } else {
-    const secsToAdd=allSecs.length?allSecs:[''];
-    secsToAdd.forEach(sec=>S.exams.push(mkExam(sec)));
-    save();renderExams();
-    toast(`✅ أضيف الامتحان لـ ${secsToAdd.length} فصيلة`);
+  if(!allSecs.length){
+    toast('⚠️ لا توجد فصائل — أضفها من إدارة الفصائل');return;
   }
+
+  const gid=uid();
+  const mkExam=(sec)=>({
+    id:uid(),groupId:gid,y:S.ay,round:S.round||1,
+    lv:f.lv,dp:f.dp,spec:f.spec,section:sec,
+    sem:parseInt(f.period)||1,subj:'',tch:'',
+    day:'السبت',date:'',slot:getExamSlots()[0],rooms:{}
+  });
+
+  // أضف امتحاناً لكل فصيلة بنفس groupId
+  allSecs.forEach(sec=>S.exams.push(mkExam(sec)));
+  save();renderExams();
+  toast(`✅ أضيف الامتحان لـ ${allSecs.length} فصيلة (${allSecs.join('، ')})`);
 }
 
 // نسخ التحديثات (تاريخ/وقت/مقياس) لباقي الفصائل
