@@ -5735,30 +5735,24 @@ function addExamRow(){
   const f=getExamFilters();
   if(!f.lv&&!f.spec){toast('⚠️ اختر المستوى والتخصص من الفلتر أولاً');return;}
   const currentSec=f.sec||'';
-  const baseExam={id:uid(),y:S.ay,round:S.round||1,lv:f.lv,dp:f.dp,spec:f.spec,
-    section:currentSec,sem:parseInt(f.period)||1,subj:'',tch:'',
-    day:'السبت',date:'',slot:getExamSlots()[0],rooms:{}};
-  S.exams.push(baseExam);
+  const regSecs=[...new Set(S.registeredTTs.filter(t=>(!t.y||t.y===S.ay)&&t.lv===f.lv&&t.dp===f.dp&&t.spec===f.spec&&t.section).map(t=>t.section))];
+  const allSecs=(regSecs.length>0?regSecs:S.sections).filter(s=>s);
 
-  // إيجاد الفصائل الأخرى — من registeredTTs أو من S.sections
-  const regSecs=[...new Set(
-    S.registeredTTs.filter(t=>
-      (!t.y||t.y===S.ay)&&t.lv===f.lv&&t.dp===f.dp&&t.spec===f.spec&&t.section
-    ).map(t=>t.section)
-  )];
-  // fallback: كل الفصائل
-  const allSecs=regSecs.length>0?regSecs:S.sections;
-  const otherSecs=allSecs.filter(sec=>sec&&sec!==currentSec);
-
-  if(otherSecs.length>0){
-    otherSecs.forEach(sec=>{
-      S.exams.push({...baseExam,id:uid(),section:sec,tch:'',rooms:{}});
-    });
+  if(currentSec){
+    // فصيلة محددة → أضف + انسخ للأخريات
+    const baseExam={id:uid(),y:S.ay,round:S.round||1,lv:f.lv,dp:f.dp,spec:f.spec,section:currentSec,sem:parseInt(f.period)||1,subj:'',tch:'',day:'السبت',date:'',slot:getExamSlots()[0],rooms:{}};
+    S.exams.push(baseExam);
+    const others=allSecs.filter(s=>s!==currentSec);
+    others.forEach(sec=>S.exams.push({...baseExam,id:uid(),section:sec,tch:'',rooms:{}}));
     save();renderExams();
-    toast(`✅ أضيف الامتحان + نُسخ لـ ${otherSecs.length} فصيلة أخرى`);
-    return;
+    toast(others.length?`✅ أضيف + نُسخ لـ ${others.length} فصيلة`:'✅ أضيف الامتحان');
+  } else {
+    // بدون فصيلة → أضف لكل فصيلة مباشرة (بدون امتحان section:'')
+    const secsToAdd=allSecs.length?allSecs:[''];
+    secsToAdd.forEach(sec=>S.exams.push({id:uid(),y:S.ay,round:S.round||1,lv:f.lv,dp:f.dp,spec:f.spec,section:sec,sem:parseInt(f.period)||1,subj:'',tch:'',day:'السبت',date:'',slot:getExamSlots()[0],rooms:{}}));
+    save();renderExams();
+    toast(`✅ أضيف الامتحان لـ ${secsToAdd.length} فصيلة`);
   }
-  save();renderExams();
 }
 
 // نسخ التحديثات (تاريخ/وقت/مقياس) لباقي الفصائل
