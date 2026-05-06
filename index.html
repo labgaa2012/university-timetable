@@ -4842,30 +4842,38 @@ function openRestoreDays(){
     byDay[f.day].push(f);
   });
 
-  el.innerHTML=Object.entries(byDay).map(([day,items])=>`
+  let _restoreItems=[];
+  el.innerHTML=Object.entries(byDay).map(([day,items],idx)=>{
+    _restoreItems[idx]={day,keys:items.map(i=>i.key)};
+    return `
     <div style="background:#f0fdf4;border:1.5px solid #86efac;border-radius:11px;padding:14px;margin-bottom:10px;">
-      <div style="font-size:15px;font-weight:900;color:var(--navy);margin-bottom:10px;">📅 ${day}</div>
+      <div style="font-size:15px;font-weight:900;color:var(--navy);margin-bottom:6px;">📅 ${day}</div>
       <div style="font-size:11px;color:var(--gray);margin-bottom:12px;">
         محذوف من: ${[...new Set(items.map(i=>i.scope))].join(' · ')}
       </div>
       <div style="display:flex;gap:8px;">
-        <button onclick="execRestoreDay(${JSON.stringify(day)},${JSON.stringify(items.map(i=>i.key))},true)"
+        <button onclick="execRestoreDay(${idx},true)"
           style="flex:1;padding:9px;border-radius:8px;border:none;cursor:pointer;
             background:#059669;color:#fff;font-size:12px;font-weight:700;font-family:'Cairo',sans-serif;">
           🔄 استعادة لهذا الفوج
         </button>
-        <button onclick="execRestoreDay(${JSON.stringify(day)},${JSON.stringify(items.map(i=>i.key))},false)"
+        <button onclick="execRestoreDay(${idx},false)"
           style="flex:1;padding:9px;border-radius:8px;border:1.5px solid #86efac;cursor:pointer;
             background:#f0fdf4;color:#059669;font-size:12px;font-weight:700;font-family:'Cairo',sans-serif;">
           🔄 استعادة لكل الأفواج
         </button>
       </div>
-    </div>`).join('');
+    </div>`;
+  }).join('');
+  window._restoreItems=_restoreItems;
 
   openM('mRestoreDays');
 }
 
-function execRestoreDay(day,keys,groupOnly){
+function execRestoreDay(idx,groupOnly){
+  const item=(window._restoreItems||[])[idx];
+  if(!item){toast('❌ خطأ في الاستعادة');return;}
+  const {day,keys}=item;
   if(!S.hiddenDays)return;
   const lv=document.getElementById('tt-lv')?.value||'';
   const dp=document.getElementById('tt-dp')?.value||'';
@@ -4874,7 +4882,6 @@ function execRestoreDay(day,keys,groupOnly){
   const grp=document.getElementById('tt-grp')?.value||'';
 
   if(groupOnly){
-    // استعادة للفوج الحالي فقط — نحذف من مفتاح الفوج أو الفصيلة
     const grpKey=`${lv}|${dp}|${spec}|${sec}|${grp}`;
     const secKey=`${lv}|${dp}|${spec}|${sec}`;
     [grpKey,secKey].forEach(k=>{
@@ -4884,7 +4891,6 @@ function execRestoreDay(day,keys,groupOnly){
       }
     });
   } else {
-    // استعادة لكل المفاتيح المرتبطة
     keys.forEach(k=>{
       if(S.hiddenDays[k]){
         S.hiddenDays[k]=S.hiddenDays[k].filter(d=>d!==day);
