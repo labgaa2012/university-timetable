@@ -4803,11 +4803,10 @@ function execDeleteDay(groupOnly){
 
 function openRestoreDays(){
   // نأخذ السياق من الفلتر النشط حالياً
-  const lv=document.getElementById('tt-lv')?.value||'';
-  const dp=document.getElementById('tt-dp')?.value||'';
-  const spec=document.getElementById('tt-spec')?.value||'';
-  const sec=document.getElementById('tt-sec')?.value||'';
-  const grp=document.getElementById('tt-grp')?.value||'';
+  const att=S.activeTT||{};
+  const lv=att.lv||'';const dp=att.dp||'';
+  const spec=att.spec||'';const sec=att.section||'';
+  const grp=att.group||'';
 
   const el=document.getElementById('mrd-content');
   if(!el)return;
@@ -4875,22 +4874,37 @@ function execRestoreDay(idx,groupOnly){
   if(!item){toast('❌ خطأ في الاستعادة');return;}
   const {day,keys}=item;
   if(!S.hiddenDays)return;
-  const lv=document.getElementById('tt-lv')?.value||'';
-  const dp=document.getElementById('tt-dp')?.value||'';
-  const spec=document.getElementById('tt-spec')?.value||'';
-  const sec=document.getElementById('tt-sec')?.value||'';
-  const grp=document.getElementById('tt-grp')?.value||'';
 
-  if(groupOnly){
+  // قراءة السياق من S.activeTT
+  const att=S.activeTT||{};
+  const lv=att.lv||'';const dp=att.dp||'';
+  const spec=att.spec||'';const sec=att.section||'';
+  const grp=att.group||'';
+
+  if(groupOnly&&grp){
+    // استعادة لهذا الفوج فقط:
+    // 1. إزالة الإخفاء من مفتاح الفوج
     const grpKey=`${lv}|${dp}|${spec}|${sec}|${grp}`;
+    if(S.hiddenDays[grpKey]){
+      S.hiddenDays[grpKey]=S.hiddenDays[grpKey].filter(d=>d!==day);
+      if(!S.hiddenDays[grpKey].length)delete S.hiddenDays[grpKey];
+    }
+    // 2. إذا كان اليوم مخفياً على مستوى الفصيلة كلها:
+    //    → نحذفه من مفتاح الفصيلة + نُخفيه لكل الأفواج الأخرى
     const secKey=`${lv}|${dp}|${spec}|${sec}`;
-    [grpKey,secKey].forEach(k=>{
-      if(S.hiddenDays[k]){
-        S.hiddenDays[k]=S.hiddenDays[k].filter(d=>d!==day);
-        if(!S.hiddenDays[k].length)delete S.hiddenDays[k];
-      }
-    });
+    if(S.hiddenDays[secKey]&&S.hiddenDays[secKey].includes(day)){
+      S.hiddenDays[secKey]=S.hiddenDays[secKey].filter(d=>d!==day);
+      if(!S.hiddenDays[secKey].length)delete S.hiddenDays[secKey];
+      // أخفِ اليوم لكل الأفواج الأخرى
+      const otherGroups=S.groups.filter(g=>g!==grp);
+      otherGroups.forEach(g=>{
+        const k=`${lv}|${dp}|${spec}|${sec}|${g}`;
+        if(!S.hiddenDays[k])S.hiddenDays[k]=[];
+        if(!S.hiddenDays[k].includes(day))S.hiddenDays[k].push(day);
+      });
+    }
   } else {
+    // استعادة لكل الأفواج — حذف من كل المفاتيح
     keys.forEach(k=>{
       if(S.hiddenDays[k]){
         S.hiddenDays[k]=S.hiddenDays[k].filter(d=>d!==day);
