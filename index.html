@@ -1522,7 +1522,7 @@ table.occ-matrix td.cell-occ:hover{background:#fee2e2;filter:brightness(.97);}
             <button class="vt active" onclick="setRound(1,this)">الدورة العادية</button>
             <button class="vt" onclick="setRound(2,this)">الدورة الاستدراكية</button>
           </div>
-          <button class="btn bg" onclick="addExamRow()">➕ إضافة امتحان</button>
+          <button class="btn bg" onclick="openExamCreator()">➕ إضافة امتحانات</button>
           <button class="btn" onclick="openDuyunTable()" style="background:#0d8a7d;color:#fff;">📋 جدول الديون</button>
           <button class="btn" onclick="exportExamPDF()" style="background:#7c3aed;color:#fff;">📄 PDF</button>
           <button class="btn bn" onclick="expExamsExcel()">📊 Excel</button>
@@ -2275,6 +2275,71 @@ table.occ-matrix td.cell-occ:hover{background:#fee2e2;filter:brightness(.97);}
     <div class="ma">
       <button class="btn bg" onclick="confirmReinstallGroup()" style="flex:1;justify-content:center;">✅ إنشاء الجدول</button>
       <button class="btn" style="background:var(--gray-light);color:var(--text-mid);" onclick="closeM('mReinstallGroup')">إلغاء</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: إنشاء جدول امتحانات -->
+<div class="mo" id="mExamCreator">
+  <div class="mb" style="width:480px;">
+    <div class="mt">📝 إنشاء جدول امتحانات</div>
+
+    <div class="frow2">
+      <div class="fg">
+        <label class="fl">عدد الامتحانات <span style="color:var(--danger);">*</span></label>
+        <input class="fi" type="number" id="ec-count" min="1" max="30" value="6" placeholder="مثال: 6">
+      </div>
+      <div class="fg">
+        <label class="fl">تاريخ البداية <span style="color:var(--danger);">*</span></label>
+        <input class="fi" type="date" id="ec-start-date">
+      </div>
+    </div>
+
+    <div class="frow2">
+      <div class="fg">
+        <label class="fl">الفصيلة</label>
+        <select class="fs" id="ec-section">
+          <option value="__all__">جميع الفصائل</option>
+          <option value="">بدون فصيلة</option>
+        </select>
+      </div>
+      <div class="fg">
+        <label class="fl">الأفواج</label>
+        <select class="fs" id="ec-group">
+          <option value="__all__">جميع الأفواج</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="fg">
+      <label class="fl">التوقيت الافتراضي</label>
+      <select class="fs" id="ec-slot"></select>
+    </div>
+
+    <div style="background:#f0fdf4;border:1.5px solid #86efac;border-radius:9px;padding:10px 14px;font-size:11.5px;color:#166534;margin:10px 0;">
+      💡 سيتم إنشاء الامتحانات يوماً بيوم (مع تخطي الجمعة) ابتداءً من التاريخ المختار
+    </div>
+
+    <div class="ma">
+      <button class="btn bg" onclick="confirmExamCreator()" style="flex:1;justify-content:center;">✅ إنشاء الجدول</button>
+      <button class="btn" style="background:var(--gray-light);color:var(--text-mid);" onclick="closeM('mExamCreator')">إلغاء</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: تطبيق تغيير على جميع الفصائل -->
+<div class="mo" id="mExamApplyAll" style="z-index:3000;">
+  <div class="mb" style="width:400px;text-align:center;">
+    <div class="mt">❓ تطبيق على جميع الفصائل</div>
+    <div id="eaa-msg" style="font-size:13px;color:var(--navy);margin:14px 0;background:#f0f4ff;padding:12px;border-radius:8px;font-weight:700;"></div>
+    <div style="font-size:11.5px;color:var(--gray);margin-bottom:18px;">هل تريد تطبيق هذا التغيير على جميع الفصائل؟</div>
+    <div style="display:flex;gap:10px;">
+      <button onclick="applyExamChange(true)" style="flex:1;padding:11px;border-radius:9px;border:none;cursor:pointer;background:var(--navy);color:#fff;font-size:13px;font-weight:800;font-family:'Cairo',sans-serif;">
+        ✅ نعم، جميع الفصائل
+      </button>
+      <button onclick="applyExamChange(false)" style="flex:1;padding:11px;border-radius:9px;border:1.5px solid #e0e8f5;cursor:pointer;background:#f8fafc;color:var(--navy);font-size:13px;font-weight:800;font-family:'Cairo',sans-serif;">
+        لا، هذه الفصيلة فقط
+      </button>
     </div>
   </div>
 </div>
@@ -5732,33 +5797,81 @@ function updateExamRoom(id,grp,room,extraKey){
   });
 }
 
-function addExamRow(){
-  const f=getExamFilters();
-  if(!f.lv&&!f.spec){toast('⚠️ اختر المستوى والتخصص من الفلتر أولاً');return;}
-
-  // جمع الفصائل من المنسدلة مباشرة (المصدر الأكيد)
-  const secSel=document.getElementById('ex-sec');
-  const allSecs=[...secSel.options].map(o=>o.value).filter(v=>v);
-
-  if(!allSecs.length){
-    toast('⚠️ لا توجد فصائل — أضفها من إدارة الفصائل');return;
+// == EXAM CREATOR =============================================
+function openExamCreator(){
+  // تعبئة الفصائل
+  const secSel=document.getElementById('ec-section');
+  if(secSel){
+    const secs=S.sections.filter(s=>s);
+    secSel.innerHTML='<option value="__all__">جميع الفصائل</option><option value="">بدون فصيلة</option>'
+      +secs.map(s=>`<option value="${s}">${s}</option>`).join('');
   }
-
-  const gid=uid();
-  const mkExam=(sec)=>({
-    id:uid(),groupId:gid,y:S.ay,round:S.round||1,
-    lv:f.lv,dp:f.dp,spec:f.spec,section:sec,
-    sem:parseInt(f.period)||1,subj:'',tch:'',
-    day:'السبت',date:'',slot:getExamSlots()[0],rooms:{}
-  });
-
-  // أضف امتحاناً لكل فصيلة بنفس groupId
-  allSecs.forEach(sec=>S.exams.push(mkExam(sec)));
-  save();renderExams();
-  toast(`✅ أضيف الامتحان لـ ${allSecs.length} فصيلة (${allSecs.join('، ')})`);
+  // تعبئة الأفواج
+  const grpSel=document.getElementById('ec-group');
+  if(grpSel)grpSel.innerHTML='<option value="__all__">جميع الأفواج</option>'+S.groups.map(g=>`<option value="${g}">${g}</option>`).join('');
+  // تعبئة التوقيت
+  const slotSel=document.getElementById('ec-slot');
+  if(slotSel)slotSel.innerHTML=(S.examSlots||[]).map(sl=>`<option value="${sl.from}-${sl.to}">${sl.from} - ${sl.to}</option>`).join('');
+  // تاريخ اليوم كافتراضي
+  const dateIn=document.getElementById('ec-start-date');
+  if(dateIn&&!dateIn.value){
+    const t=new Date();dateIn.value=`${t.getFullYear()}-${String(t.getMonth()+1).padStart(2,'0')}-${String(t.getDate()).padStart(2,'0')}`;
+  }
+  openM('mExamCreator');
 }
 
-// نسخ التحديثات (تاريخ/وقت/مقياس) لباقي الفصائل
+function confirmExamCreator(){
+  const count=parseInt(document.getElementById('ec-count')?.value)||0;
+  const startDate=document.getElementById('ec-start-date')?.value||'';
+  const secVal=document.getElementById('ec-section')?.value;
+  const slot=document.getElementById('ec-slot')?.value||getExamSlots()[0]||'';
+
+  if(!count||count<1){toast('⚠️ أدخل عدد الامتحانات');return;}
+  if(!startDate){toast('⚠️ اختر تاريخ البداية');return;}
+
+  // تحديد الفصائل المستهدفة
+  const f=getExamFilters();
+  let sections;
+  if(secVal==='__all__') sections=S.sections.filter(s=>s);
+  else sections=[secVal]; // '' = بدون فصيلة أو فصيلة محددة
+
+  // توليد التواريخ (يوم بيوم مع تخطي الجمعة)
+  const dates=[];
+  const dn=['الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'];
+  let cur=new Date(startDate);
+  while(dates.length<count){
+    if(cur.getDay()!==5){
+      const y=cur.getFullYear();
+      const m=String(cur.getMonth()+1).padStart(2,'0');
+      const d=String(cur.getDate()).padStart(2,'0');
+      dates.push({date:`${y}-${m}-${d}`,day:dn[cur.getDay()]});
+    }
+    cur.setDate(cur.getDate()+1);
+  }
+
+  // إنشاء الامتحانات — كل مجموعة بنفس groupId
+  dates.forEach(({date,day})=>{
+    const gid=uid();
+    sections.forEach(sec=>{
+      S.exams.push({
+        id:uid(),groupId:gid,
+        y:S.ay,round:S.round||1,
+        lv:f.lv,dp:f.dp,spec:f.spec,
+        section:sec,sem:parseInt(f.period)||1,
+        subj:'',tch:'',day,date,slot,rooms:{}
+      });
+    });
+  });
+
+  save();closeM('mExamCreator');renderExams();
+  toast(`✅ أُنشئ ${count} امتحان لـ ${sections.length} فصيلة`);
+}
+
+// == EXAM FIELD UPDATE ==========================================
+let _pendingExamChange=null;
+
+function addExamRow(){openExamCreator();} // backward compat
+
 function syncExamToSections(id,field,value){
   const ex=S.exams.find(e=>e.id===id);
   if(!ex)return;
@@ -5789,31 +5902,35 @@ function syncExamToSections(id,field,value){
 function updateExam(id,field,value){
   const ex=S.exams.find(e=>e.id===id);
   if(!ex)return;
-
   const dn=['الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'];
 
-  // 1. تحديث هذا الامتحان
+  // تحديث هذا الامتحان
   ex[field]=value;
   if(field==='date'&&value) ex.day=dn[new Date(value).getDay()]||'';
 
-  // 2. نسخ فوري لكل الفصائل الأخرى (نفس groupId)
+  // إذا تغيّر المقياس → اسأل هل تطبق على جميع الفصائل؟
+  if(field==='subj'&&ex.groupId){
+    // جلب الأستاذ لهذه الفصيلة من جدول التوقيت
+    ex.tch=_getTchForSec(value,ex.lv,ex.dp,ex.spec,ex.section);
+    // أظهر نافذة السؤال
+    _pendingExamChange={id,field,value};
+    const lbl=document.getElementById('eaa-msg');
+    if(lbl)lbl.textContent=`تغيير المقياس إلى: "${value}"`;
+    openM('mExamApplyAll');
+    return;
+  }
+
+  // باقي الحقول (تاريخ، توقيت): طبّق على جميع الفصائل تلقائياً
   if(ex.groupId){
-    S.exams.forEach(e=>{
-      if(e.groupId!==ex.groupId||e.id===id)return;
+    S.exams.filter(e=>e.groupId===ex.groupId&&e.id!==id).forEach(e=>{
       e[field]=value;
       if(field==='date'&&value) e.day=dn[new Date(value).getDay()]||'';
-      if(field==='subj'){
-        e.tch=S.sessions.filter(s=>
-          s.y===S.ay&&s.lv===e.lv&&s.dp===e.dp&&s.spec===e.spec&&
-          s.section===e.section&&s.subj===value&&
-          (s.type==='tlc'||s.type==='tlc-remote')
-        ).map(s=>s.tch).filter(Boolean)[0]||'';
-      }
     });
   }
 
-  // 3. تسلسل التواريخ لنفس الفصيلة (بعد النسخ)
+  // تسلسل التواريخ لنفس الفصيلة + الفصائل الأخرى
   if(field==='date'&&value){
+    const f=getExamFilters();
     const sameSec=S.exams.filter(e=>
       e.round==S.round&&e.y===S.ay&&e.spec===ex.spec&&
       e.lv===ex.lv&&e.dp===ex.dp&&e.section===ex.section&&e.sem==ex.sem
@@ -5825,15 +5942,11 @@ function updateExam(id,field,value){
         cur.setDate(cur.getDate()+1);
         if(cur.getDay()===5)cur.setDate(cur.getDate()+1);
         const nd=`${cur.getFullYear()}-${String(cur.getMonth()+1).padStart(2,'0')}-${String(cur.getDate()).padStart(2,'0')}`;
-        sameSec[i].date=nd;
-        sameSec[i].day=dn[cur.getDay()]||'';
-        // تسلسل نفس الشيء في الفصائل الأخرى
+        sameSec[i].date=nd; sameSec[i].day=dn[cur.getDay()]||'';
+        // تسلسل في الفصائل الأخرى أيضاً
         if(sameSec[i].groupId){
-          S.exams.forEach(e=>{
-            if(e.groupId===sameSec[i].groupId&&e.id!==sameSec[i].id){
-              e.date=nd;e.day=dn[cur.getDay()]||'';
-            }
-          });
+          S.exams.filter(e=>e.groupId===sameSec[i].groupId&&e.id!==sameSec[i].id)
+            .forEach(e=>{e.date=nd;e.day=dn[cur.getDay()]||'';});
         }
       }
     }
@@ -5842,6 +5955,29 @@ function updateExam(id,field,value){
 
   save();
   if(field==='subj')renderExams();
+}
+
+function _getTchForSec(subj,lv,dp,spec,sec){
+  return S.sessions.filter(s=>
+    s.y===S.ay&&s.lv===lv&&s.dp===dp&&s.spec===spec&&
+    s.section===sec&&s.subj===subj&&(s.type==='tlc'||s.type==='tlc-remote')
+  ).map(s=>s.tch).filter(Boolean)[0]||'';
+}
+
+function applyExamChange(applyAll){
+  if(!_pendingExamChange){closeM('mExamApplyAll');return;}
+  const {id,field,value}=_pendingExamChange;
+  const ex=S.exams.find(e=>e.id===id);
+  if(ex&&applyAll&&ex.groupId){
+    // طبّق على جميع الفصائل مع جلب الأستاذ لكل فصيلة
+    S.exams.filter(e=>e.groupId===ex.groupId&&e.id!==id).forEach(e=>{
+      e[field]=value;
+      e.tch=_getTchForSec(value,e.lv,e.dp,e.spec,e.section);
+    });
+  }
+  _pendingExamChange=null;
+  closeM('mExamApplyAll');
+  save();renderExams();
 }
 
 function delExam(id){S.exams=S.exams.filter(e=>e.id!==id);save();renderExams();toast('🗑️ تم الحذف');}
