@@ -5765,32 +5765,51 @@ function addExamRow(){
 function syncExamToSections(id,field,value){
   const ex=S.exams.find(e=>e.id===id);
   if(!ex)return;
-  // حقول تُنسخ: date, day, slot, subj فقط — ليس tch ولا rooms
   if(!['date','day','slot','subj'].includes(field))return;
+
+  // الامتحانات في نفس الفصيلة — لمعرفة موضع هذا الامتحان
   const f=getExamFilters();
-  S.exams.forEach(e=>{
-    if(e.id===id)return; // تخطى الأصل
-    if(e.round===ex.round&&e.y===ex.y&&e.lv===ex.lv&&e.dp===ex.dp&&
-      e.spec===ex.spec&&e.sem===ex.sem&&
-      e.section!==ex.section){ // فصيلة مختلفة
-      // نتحقق أنه نسخة من نفس الدورة (نفس الترتيب = نفس الفهرس)
-      const exList=S.exams.filter(x=>x.round===ex.round&&x.y===ex.y&&x.lv===ex.lv&&x.dp===ex.dp&&x.spec===ex.spec&&x.sem===ex.sem&&x.section===ex.section);
-      const eList=S.exams.filter(x=>x.round===ex.round&&x.y===ex.y&&x.lv===ex.lv&&x.dp===ex.dp&&x.spec===ex.spec&&x.sem===ex.sem&&x.section===e.section);
-      const idx=exList.findIndex(x=>x.id===id);
-      if(idx>=0&&eList[idx]){
-        eList[idx][field]=value;
-        // إذا تغير المقياس → نُحدِّث الأستاذ من جدول التوقيت لتلك الفصيلة
-        if(field==='subj'){
-          const tch=getSubjTeachers(value,ex.lv,ex.dp,ex.spec)[0]||'';
-          eList[idx].tch=tch;
-        }
-        // إذا تغير التاريخ → نُحدِّث اليوم
-        if(field==='date'&&value){
-          const dn=['الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'];
-          eList[idx].day=dn[new Date(value).getDay()]||'';
-        }
-      }
+  const sameSecList=S.exams.filter(e=>
+    e.round===ex.round&&e.y===ex.y&&e.lv===ex.lv&&e.dp===ex.dp&&
+    e.spec===ex.spec&&e.sem===ex.sem&&e.section===ex.section
+  );
+  const idx=sameSecList.findIndex(e=>e.id===id);
+  if(idx<0)return;
+
+  // الفصائل الأخرى لنفس التخصص
+  const otherSecs=[...new Set(
+    S.exams.filter(e=>
+      e.round===ex.round&&e.y===ex.y&&e.lv===ex.lv&&e.dp===ex.dp&&
+      e.spec===ex.spec&&e.sem===ex.sem&&e.section&&e.section!==ex.section
+    ).map(e=>e.section)
+  )];
+
+  otherSecs.forEach(sec=>{
+    const secList=S.exams.filter(e=>
+      e.round===ex.round&&e.y===ex.y&&e.lv===ex.lv&&e.dp===ex.dp&&
+      e.spec===ex.spec&&e.sem===ex.sem&&e.section===sec
+    );
+    const target=secList[idx];
+    if(!target)return;
+
+    target[field]=value;
+
+    // إذا تغير التاريخ → نُحدِّث اليوم
+    if(field==='date'&&value){
+      const dn=['الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'];
+      target.day=dn[new Date(value).getDay()]||'';
     }
+
+    // إذا تغير المقياس → نجلب أستاذ هذه الفصيلة تحديداً من جدول التوقيت
+    if(field==='subj'){
+      const tch=S.sessions.filter(s=>
+        s.y===S.ay&&s.lv===ex.lv&&s.dp===ex.dp&&s.spec===ex.spec&&
+        s.section===sec&&s.subj===value&&
+        (s.type==='tlc'||s.type==='tlc-remote')
+      ).map(s=>s.tch).filter(Boolean)[0]||'';
+      target.tch=tch;
+    }
+    // القاعات لا تُنسخ أبداً — يُحددها المستخدم يدوياً
   });
 }
 function updateExam(id,field,value){
