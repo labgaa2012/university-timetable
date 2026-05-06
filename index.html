@@ -1494,7 +1494,7 @@ table.occ-matrix td.cell-occ:hover{background:#fee2e2;filter:brightness(.97);}
         <div class="frow">
           <select class="fs" id="tt-year-sel" onchange="onTTYearChange(this.value)"
             style="font-weight:700;min-width:120px;"></select>
-          <button class="btn" onclick="openDaysMgr()" style="background:#059669;color:#fff;padding:7px 12px;font-size:12px;">📅 الأيام</button>
+          <button class="btn" onclick="openRestoreDays()" style="background:#059669;color:#fff;padding:7px 12px;font-size:12px;">🔄 استعادة الأيام</button>
           <button class="btn" onclick="openInstallTT()" style="background:#7c3aed;color:#fff;">⚡ تنصيب جداول</button>
           <button class="btn" onclick="openReinstallGroup()" style="background:#059669;color:#fff;">➕ إنشاء جدول فوج</button>
           <button class="btn" onclick="openCopyGroup()" style="background:#0d8a7d;color:#fff;">📋 نسخ جدول فوج</button>
@@ -2172,7 +2172,50 @@ table.occ-matrix td.cell-occ:hover{background:#fee2e2;filter:brightness(.97);}
   </div>
 </div>
 
-<!-- MODAL: إدارة الأيام -->
+<!-- MODAL: حذف يوم -->
+<div class="mo" id="mDeleteDay">
+  <div class="mb" style="width:380px;text-align:center;">
+    <div class="mt">🗑️ حذف يوم من الجدول</div>
+    <div id="mdd-day-label" style="font-size:18px;font-weight:900;color:var(--navy);
+      background:#fef2f2;border-radius:10px;padding:12px;margin-bottom:16px;"></div>
+    <div style="font-size:12px;color:var(--gray);margin-bottom:18px;">
+      اختر نطاق الحذف — ستُحذف حصص ذلك اليوم نهائياً
+    </div>
+    <div style="display:flex;flex-direction:column;gap:10px;">
+      <button id="mdd-btn-all" onclick="execDeleteDay(false)"
+        style="padding:13px;border-radius:10px;border:none;cursor:pointer;
+          background:linear-gradient(135deg,#dc2626,#ef4444);color:#fff;
+          font-size:13px;font-weight:800;font-family:'Cairo',sans-serif;">
+        🗑️ حذف لكل الأفواج
+      </button>
+      <button id="mdd-btn-one" onclick="execDeleteDay(true)"
+        style="padding:13px;border-radius:10px;border:1.5px solid #fca5a5;cursor:pointer;
+          background:#fef2f2;color:#dc2626;
+          font-size:13px;font-weight:800;font-family:'Cairo',sans-serif;">
+        🗑️ حذف لهذا الفوج فقط
+      </button>
+      <button onclick="closeM('mDeleteDay')"
+        style="padding:10px;border-radius:10px;border:1.5px solid #e0e8f5;cursor:pointer;
+          background:var(--gray-light);color:var(--text-mid);
+          font-size:12px;font-family:'Cairo',sans-serif;">
+        إلغاء
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: استعادة أيام -->
+<!-- MODAL: استعادة أيام -->
+<div class="mo" id="mRestoreDays">
+  <div class="mb" style="width:420px;">
+    <div class="mt">🔄 استعادة الأيام</div>
+    <div id="mrd-content"></div>
+    <div class="ma" style="margin-top:14px;">
+      <button class="btn" style="background:var(--gray-light);color:var(--text-mid);" onclick="closeM('mRestoreDays')">إغلاق</button>
+    </div>
+  </div>
+</div>
+
 <div class="mo" id="mDaysMgr">
   <div class="mb" style="width:480px;">
     <div class="mt">📅 إدارة الأيام — استعادة يوم محذوف</div>
@@ -4719,114 +4762,141 @@ function confirmReinstallGroup(){
   toast(`✅ أُنشئ جدول ${grp} — ${spec}`);
 }
 
-// -- DAYS MANAGER (per group/section) --------------
+// -- DAYS DELETE / RESTORE -------------------------
+let _pendingDeleteDay={day:'',lv:'',dp:'',spec:'',sec:'',grp:''};
 
-function openDaysMgr(){
-  // تعبئة المنسدلات
-  const lvSel=document.getElementById('dm-lv');
-  const spSel=document.getElementById('dm-spec');
-  const secSel=document.getElementById('dm-sec');
-  const grpSel=document.getElementById('dm-grp');
-  if(lvSel)lvSel.innerHTML=S.levels.map(l=>`<option>${l}</option>`).join('');
-  if(spSel){const sp=S.specs.map(s=>s.name);spSel.innerHTML=[...new Set(sp)].map(n=>`<option>${n}</option>`).join('');}
-  if(secSel)secSel.innerHTML=S.sections.map(s=>`<option>${s}</option>`).join('');
-  if(grpSel)grpSel.innerHTML='<option value="">كل الأفواج</option>'+S.groups.map(g=>`<option>${g}</option>`).join('');
-  renderDaysMgr();
-  openM('mDaysMgr');
+function promptDeleteDay(day,lv,dp,spec,sec,grp){
+  _pendingDeleteDay={day,lv,dp,spec,sec,grp};
+  const lbl=document.getElementById('mdd-day-label');
+  if(lbl)lbl.textContent=`📅 يوم ${day} — ${spec} — ${sec}`;
+  // تحديث زر الفوج ليظهر اسمه
+  const btnOne=document.getElementById('mdd-btn-one');
+  if(btnOne)btnOne.textContent=`🗑️ حذف لهذا الفوج فقط (${grp})`;
+  openM('mDeleteDay');
 }
 
-function renderDaysMgr(){
-  const lv=document.getElementById('dm-lv')?.value||'';
-  const spec=document.getElementById('dm-spec')?.value||'';
-  const sec=document.getElementById('dm-sec')?.value||'';
-  const grp=document.getElementById('dm-grp')?.value||'';
-  const el=document.getElementById('dm-hidden-list');
+function execDeleteDay(groupOnly){
+  const {day,lv,dp,spec,sec,grp}=_pendingDeleteDay;
+  if(!day)return;
+  if(!S.hiddenDays)S.hiddenDays={};
+  if(groupOnly){
+    // فوج واحد فقط
+    const key=`${lv}|${dp}|${spec}|${sec}|${grp}`;
+    if(!S.hiddenDays[key])S.hiddenDays[key]=[];
+    if(!S.hiddenDays[key].includes(day))S.hiddenDays[key].push(day);
+    S.sessions=S.sessions.filter(s=>
+      !(s.y===S.ay&&s.lv===lv&&s.dp===dp&&s.spec===spec&&s.section===sec&&s.group===grp&&s.day===day)
+    );
+    toast(`🗑️ حُذف يوم "${day}" للفوج ${grp}`);
+  } else {
+    // كل أفواج الفصيلة
+    const key=`${lv}|${dp}|${spec}|${sec}`;
+    if(!S.hiddenDays[key])S.hiddenDays[key]=[];
+    if(!S.hiddenDays[key].includes(day))S.hiddenDays[key].push(day);
+    S.sessions=S.sessions.filter(s=>
+      !(s.y===S.ay&&s.lv===lv&&s.dp===dp&&s.spec===spec&&s.section===sec&&s.day===day)
+    );
+    toast(`🗑️ حُذف يوم "${day}" لكل أفواج ${sec}`);
+  }
+  save();closeM('mDeleteDay');renderTT();
+}
+
+function openRestoreDays(){
+  // نأخذ السياق من الفلتر النشط حالياً
+  const lv=document.getElementById('tt-lv')?.value||'';
+  const dp=document.getElementById('tt-dp')?.value||'';
+  const spec=document.getElementById('tt-spec')?.value||'';
+  const sec=document.getElementById('tt-sec')?.value||'';
+  const grp=document.getElementById('tt-grp')?.value||'';
+
+  const el=document.getElementById('mrd-content');
   if(!el)return;
 
-  // جمع كل الأيام المخفية ذات الصلة
-  const hidden={};
+  // جمع الأيام المخفية ذات الصلة بالجدول المفتوح
+  const found=[];
   Object.entries(S.hiddenDays||{}).forEach(([key,days])=>{
-    const parts=key.split('|'); // lv|dp|spec|sec|grp  OR  lv|dp|spec|sec
-    if(lv&&parts[0]!==lv)return;
-    if(spec&&parts[2]!==spec)return;
-    if(sec&&parts[3]!==sec)return;
-    if(grp&&parts[4]&&parts[4]!==grp)return;
-    days.forEach(d=>{
-      if(!hidden[d])hidden[d]=[];
-      hidden[d].push({key,scope:parts[4]?`الفوج ${parts[4]}`:(`الفصيلة ${parts[3]||''}`)});
+    const p=key.split('|'); // [lv,dp,spec,sec,grp?]
+    if(lv&&p[0]&&p[0]!==lv)return;
+    if(dp&&p[1]&&p[1]!==dp)return;
+    if(spec&&p[2]&&p[2]!==spec)return;
+    if(sec&&p[3]&&p[3]!==sec)return;
+    days.forEach(day=>{
+      found.push({
+        key,day,
+        scope:p[4]?`الفوج ${p[4]}`:`كل أفواج ${p[3]||''}`
+      });
     });
   });
 
-  if(!Object.keys(hidden).length){
-    el.innerHTML=`<div style="text-align:center;padding:20px;color:var(--gray);font-size:12px;">
-      ✅ لا توجد أيام مخفية لهذا الاختيار
+  if(!found.length){
+    el.innerHTML=`<div style="text-align:center;padding:24px;color:var(--gray);font-size:12px;">
+      ✅ لا توجد أيام محذوفة لهذا الجدول
     </div>`;
-    return;
+    openM('mRestoreDays');return;
   }
 
-  el.innerHTML=`<div style="font-size:12px;font-weight:700;color:var(--navy);margin-bottom:8px;">الأيام المخفية:</div>`
-    +Object.entries(hidden).map(([day,scopes])=>`
-    <div style="display:flex;align-items:center;gap:10px;padding:10px 14px;
-      background:#fef2f2;border:1.5px solid #fecaca;border-radius:10px;margin-bottom:6px;">
-      <span style="font-size:18px;">📅</span>
-      <div style="flex:1;">
-        <div style="font-weight:800;color:var(--navy);">${day}</div>
-        <div style="font-size:10.5px;color:var(--gray);">${[...new Set(scopes.map(s=>s.scope))].join(' · ')}</div>
+  // تجميع حسب اليوم
+  const byDay={};
+  found.forEach(f=>{
+    if(!byDay[f.day])byDay[f.day]=[];
+    byDay[f.day].push(f);
+  });
+
+  el.innerHTML=Object.entries(byDay).map(([day,items])=>`
+    <div style="background:#f0fdf4;border:1.5px solid #86efac;border-radius:11px;padding:14px;margin-bottom:10px;">
+      <div style="font-size:15px;font-weight:900;color:var(--navy);margin-bottom:10px;">📅 ${day}</div>
+      <div style="font-size:11px;color:var(--gray);margin-bottom:12px;">
+        محذوف من: ${[...new Set(items.map(i=>i.scope))].join(' · ')}
       </div>
-      <button onclick="restoreDay('${day.replace(/'/g,"\\'")}',${JSON.stringify(scopes.map(s=>s.key))})"
-        style="background:#f0fdf4;border:1.5px solid #86efac;color:#16a34a;
-          border-radius:8px;cursor:pointer;padding:5px 12px;font-size:12px;font-weight:700;
-          font-family:'Cairo',sans-serif;">
-        🔄 استعادة
-      </button>
+      <div style="display:flex;gap:8px;">
+        <button onclick="execRestoreDay(${JSON.stringify(day)},${JSON.stringify(items.map(i=>i.key))},true)"
+          style="flex:1;padding:9px;border-radius:8px;border:none;cursor:pointer;
+            background:#059669;color:#fff;font-size:12px;font-weight:700;font-family:'Cairo',sans-serif;">
+          🔄 استعادة لهذا الفوج
+        </button>
+        <button onclick="execRestoreDay(${JSON.stringify(day)},${JSON.stringify(items.map(i=>i.key))},false)"
+          style="flex:1;padding:9px;border-radius:8px;border:1.5px solid #86efac;cursor:pointer;
+            background:#f0fdf4;color:#059669;font-size:12px;font-weight:700;font-family:'Cairo',sans-serif;">
+          🔄 استعادة لكل الأفواج
+        </button>
+      </div>
     </div>`).join('');
+
+  openM('mRestoreDays');
 }
 
-function restoreDay(day,keys){
+function execRestoreDay(day,keys,groupOnly){
   if(!S.hiddenDays)return;
-  (typeof keys==='string'?JSON.parse(keys):keys).forEach(k=>{
-    if(S.hiddenDays[k]){
-      S.hiddenDays[k]=S.hiddenDays[k].filter(d=>d!==day);
-      if(!S.hiddenDays[k].length)delete S.hiddenDays[k];
-    }
-  });
-  save();renderDaysMgr();renderTT();
+  const lv=document.getElementById('tt-lv')?.value||'';
+  const dp=document.getElementById('tt-dp')?.value||'';
+  const spec=document.getElementById('tt-spec')?.value||'';
+  const sec=document.getElementById('tt-sec')?.value||'';
+  const grp=document.getElementById('tt-grp')?.value||'';
+
+  if(groupOnly){
+    // استعادة للفوج الحالي فقط — نحذف من مفتاح الفوج أو الفصيلة
+    const grpKey=`${lv}|${dp}|${spec}|${sec}|${grp}`;
+    const secKey=`${lv}|${dp}|${spec}|${sec}`;
+    [grpKey,secKey].forEach(k=>{
+      if(S.hiddenDays[k]){
+        S.hiddenDays[k]=S.hiddenDays[k].filter(d=>d!==day);
+        if(!S.hiddenDays[k].length)delete S.hiddenDays[k];
+      }
+    });
+  } else {
+    // استعادة لكل المفاتيح المرتبطة
+    keys.forEach(k=>{
+      if(S.hiddenDays[k]){
+        S.hiddenDays[k]=S.hiddenDays[k].filter(d=>d!==day);
+        if(!S.hiddenDays[k].length)delete S.hiddenDays[k];
+      }
+    });
+  }
+  save();closeM('mRestoreDays');renderTT();
   toast(`✅ استُعيد يوم "${day}"`);
 }
 
-function promptDeleteDay(day,lv,dp,spec,sec,grp){
-  const choice=confirm(
-    `حذف يوم "${day}" من الجدول\n\n`+
-    `موافق = لهذا الفوج فقط (${grp})\n`+
-    `إلغاء = لجميع أفواج الفصيلة (${sec})`
-  );
-  // موافق = فوج واحد، إلغاء = الفصيلة كلها
-  if(choice){
-    // فوج واحد
-    const key=`${lv}|${dp}|${spec}|${sec}|${grp}`;
-    if(!S.hiddenDays)S.hiddenDays={};
-    if(!S.hiddenDays[key])S.hiddenDays[key]=[];
-    if(!S.hiddenDays[key].includes(day))S.hiddenDays[key].push(day);
-    // حذف حصص هذا الفوج في هذا اليوم
-    S.sessions=S.sessions.filter(s=>
-      !(s.y===S.ay&&s.lv===lv&&s.dp===dp&&s.spec===spec&&
-        s.section===sec&&s.group===grp&&s.day===day)
-    );
-  } else {
-    // كل أفواج الفصيلة
-    const keyS=`${lv}|${dp}|${spec}|${sec}`;
-    if(!S.hiddenDays)S.hiddenDays={};
-    if(!S.hiddenDays[keyS])S.hiddenDays[keyS]=[];
-    if(!S.hiddenDays[keyS].includes(day))S.hiddenDays[keyS].push(day);
-    // حذف حصص كل الأفواج في هذا اليوم
-    S.sessions=S.sessions.filter(s=>
-      !(s.y===S.ay&&s.lv===lv&&s.dp===dp&&s.spec===spec&&
-        s.section===sec&&s.day===day)
-    );
-  }
-  save();renderTT();
-  toast(`🗑️ حُذف يوم "${day}" ${choice?'للفوج '+grp:'لكل الفصيلة'}`);
-}
+function openDaysMgr(){openRestoreDays();}
 
 // -- DELETE & REINSTALL GROUP TT -------------------
 function deleteGroupTT(lv,dp,spec,sec,grp){
