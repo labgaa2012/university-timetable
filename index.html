@@ -1552,7 +1552,6 @@ table.occ-matrix td.cell-occ:hover{background:#fee2e2;filter:brightness(.97);}
         <div class="fg">
           <label class="fl">الفصيلة</label>
           <select class="fs" id="ex-sec" onchange="renderExams()">
-            <option value="">كل الفصائل</option>
           </select>
         </div>
         <div class="fg">
@@ -5433,7 +5432,7 @@ function syncExamFilters(){
   if(dpSel&&dpSel.options.length===0)dpSel.innerHTML=S.depts.map(d=>`<option>${d}</option>`).join('');
   syncExamSpec();
   const secSel=document.getElementById('ex-sec');
-  if(secSel&&secSel.options.length<=1)secSel.innerHTML='<option value="">كل الفصائل</option>'+S.sections.map(s=>`<option value="${s}">${s}</option>`).join('');
+  if(secSel&&secSel.options.length===0)secSel.innerHTML=S.sections.map(s=>`<option value="${s}">${s}</option>`).join('');
   const grpSel=document.getElementById('ex-grp');
   if(grpSel&&grpSel.options.length<=1)grpSel.innerHTML='<option value="">كل الأفواج</option>'+S.groups.map(g=>`<option value="${g}">${g}</option>`).join('');
 }
@@ -5787,37 +5786,63 @@ function syncExamToSections(id,field,value){
 }
 
 function updateExam(id,field,value){
-  const ex=S.exams.find(e=>e.id===id);if(!ex)return;
+  const ex=S.exams.find(e=>e.id===id);
+  if(!ex)return;
+
+  const dn=['الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'];
+
+  // 1. تحديث هذا الامتحان
   ex[field]=value;
+  if(field==='date'&&value) ex.day=dn[new Date(value).getDay()]||'';
+
+  // 2. نسخ فوري لكل الفصائل الأخرى (نفس groupId)
+  if(ex.groupId){
+    S.exams.forEach(e=>{
+      if(e.groupId!==ex.groupId||e.id===id)return;
+      e[field]=value;
+      if(field==='date'&&value) e.day=dn[new Date(value).getDay()]||'';
+      if(field==='subj'){
+        e.tch=S.sessions.filter(s=>
+          s.y===S.ay&&s.lv===e.lv&&s.dp===e.dp&&s.spec===e.spec&&
+          s.section===e.section&&s.subj===value&&
+          (s.type==='tlc'||s.type==='tlc-remote')
+        ).map(s=>s.tch).filter(Boolean)[0]||'';
+      }
+    });
+  }
+
+  // 3. تسلسل التواريخ لنفس الفصيلة (بعد النسخ)
   if(field==='date'&&value){
-    const dn=['الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'];
-    ex.day=dn[new Date(value).getDay()]||'';
-    const f=getExamFilters();
-    const allExams=S.exams.filter(e=>
-      e.round==S.round&&e.y===S.ay&&
-      (!f.lv||e.lv===f.lv)&&(!f.dp||e.dp===f.dp)&&
-      (!f.spec||e.spec===f.spec)&&(!f.sec||e.section===f.sec)
+    const sameSec=S.exams.filter(e=>
+      e.round==S.round&&e.y===S.ay&&e.spec===ex.spec&&
+      e.lv===ex.lv&&e.dp===ex.dp&&e.section===ex.section&&e.sem==ex.sem
     );
-    const idx=allExams.findIndex(e=>e.id===id);
+    const idx=sameSec.findIndex(e=>e.id===id);
     if(idx>=0){
-      let curDate=new Date(value);
-      for(let i=idx+1;i<allExams.length;i++){
-        curDate.setDate(curDate.getDate()+1);
-        if(curDate.getDay()===5)curDate.setDate(curDate.getDate()+1);
-        const y2=curDate.getFullYear();
-        const m2=String(curDate.getMonth()+1).padStart(2,'0');
-        const d2=String(curDate.getDate()).padStart(2,'0');
-        allExams[i].date=`${y2}-${m2}-${d2}`;
-        allExams[i].day=dn[curDate.getDay()]||'';
+      let cur=new Date(value);
+      for(let i=idx+1;i<sameSec.length;i++){
+        cur.setDate(cur.getDate()+1);
+        if(cur.getDay()===5)cur.setDate(cur.getDate()+1);
+        const nd=`${cur.getFullYear()}-${String(cur.getMonth()+1).padStart(2,'0')}-${String(cur.getDate()).padStart(2,'0')}`;
+        sameSec[i].date=nd;
+        sameSec[i].day=dn[cur.getDay()]||'';
+        // تسلسل نفس الشيء في الفصائل الأخرى
+        if(sameSec[i].groupId){
+          S.exams.forEach(e=>{
+            if(e.groupId===sameSec[i].groupId&&e.id!==sameSec[i].id){
+              e.date=nd;e.day=dn[cur.getDay()]||'';
+            }
+          });
+        }
       }
     }
-    syncExamToSections(id,'date',value);
     save();renderExams();return;
   }
-  syncExamToSections(id,field,value);
+
   save();
   if(field==='subj')renderExams();
 }
+
 function delExam(id){S.exams=S.exams.filter(e=>e.id!==id);save();renderExams();toast('🗑️ تم الحذف');}
 
 async function exportExamPDF(){
