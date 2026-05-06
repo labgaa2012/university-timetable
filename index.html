@@ -596,7 +596,16 @@ table.tt td.ec:hover::after{color:var(--teal);}
 }
 .exam-room-input:focus{border-color:var(--navy);background:#f0f4ff;}
 
-/* ROOM COLORS */
+.exam-table th.grp-th{
+  min-width:42px !important;max-width:55px;width:50px;padding:4px 2px !important;
+}
+.exam-table th.grp-th span{
+  writing-mode:vertical-rl;text-orientation:mixed;
+  display:inline-block;white-space:nowrap;font-size:11px;
+  transform:rotate(180deg);line-height:1.2;
+}
+.exam-table td.grp-room-cell{min-width:42px !important;width:50px;padding:4px 2px !important;}
+.exam-table .exam-room-input{width:100%;font-size:11px;padding:2px 3px;}
 .rc-0{background:#dbeafe;}.rc-1{background:#dcfce7;}.rc-2{background:#fed7aa;}
 .rc-3{background:#fce7f3;}.rc-4{background:#ede9fe;}.rc-5{background:#fef9c3;}
 .rc-6{background:#e0f2fe;}.rc-7{background:#fef3c7;}
@@ -5577,7 +5586,7 @@ function renderExams(){
   // خلية لكل فوج مع زر حذف
   groups.forEach((g,gi)=>{
     const canRemove=groups.length>1;
-    h+=`<th class="rc-${gi%8}" style="min-width:100px;position:relative;">
+    h+=`<th class="rc-${gi%8} grp-th" style="position:relative;">
       <span style="unicode-bidi:bidi-override;direction:rtl;">👥 ${g}</span>
       ${canRemove?`<button onclick="removeExamGroup('${g.replace(/'/g,"\\'")}','${extraKey.replace(/'/g,"\\'")}',event)"
         style="position:absolute;top:2px;left:2px;background:rgba(239,68,68,.15);border:none;
