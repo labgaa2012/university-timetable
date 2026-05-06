@@ -6024,85 +6024,108 @@ function applyExamChange(applyAll){
 function delExam(id){S.exams=S.exams.filter(e=>e.id!==id);save();renderExams();toast('🗑️ تم الحذف');}
 
 async function exportExamPDF(){
-  const wrap=document.getElementById('exam-table-wrap');
-  if(!wrap||!wrap.querySelector('table')){toast('⚠️ لا يوجد جدول للتصدير');return;}
-  toast('⏳ جاري تصدير PDF...');
   const f=getExamFilters();
+  const exams=S.exams.filter(e=>e.round==S.round&&e.y===S.ay&&
+    (!f.period||e.sem==f.period)&&(!f.lv||e.lv===f.lv)&&
+    (!f.dp||e.dp===f.dp)&&(!f.spec||e.spec===f.spec)&&
+    (!f.sec||e.section===f.sec)
+  ).sort((a,b)=>a.date?.localeCompare(b.date||'')||0);
+  if(!exams.length){toast('⚠️ لا توجد امتحانات للتصدير');return;}
+  toast('⏳ جاري تصدير PDF...');
+
+  const f2=getExamFilters();
+  // الأفواج من المنسدلة الحالية
+  const wrap=document.getElementById('exam-table-wrap');
+  const ths=[...wrap.querySelectorAll('thead tr:first-child th')];
+  const groups=ths.slice(3,ths.length-2).map(th=>th.querySelector('span')?.textContent?.replace('👥 ','')||th.textContent.replace('👥 ','').trim()).filter(g=>g&&!g.includes('+'));
+
   const period=f.period?S.periods[parseInt(f.period)-1]||'':'';
   const logoHtml=S.settings?.logo?`<img src="${S.settings.logo}" style="width:60px;height:60px;object-fit:contain;">`:'<span style="font-size:36px;">🎓</span>';
+  const RB=['#dbeafe','#dcfce7','#fed7aa','#fce7f3','#ede9fe','#fef9c3','#e0f2fe','#fef3c7'];
+
+  // بناء HTML نظيف للطباعة
+  let rows='';
+  exams.forEach((ex,i)=>{
+    rows+=`<tr style="background:${i%2?'#f0fff4':'#fff'};">
+      <td style="padding:7px 8px;border:1px solid #ccc;font-weight:700;white-space:nowrap;">
+        <div>${ex.day||''}</div>
+        <div style="font-size:9pt;color:#555;">${ex.date||''}</div>
+      </td>
+      <td style="padding:7px 8px;border:1px solid #ccc;white-space:nowrap;">${ex.slot||''}</td>
+      <td style="padding:7px 8px;border:1px solid #ccc;text-align:right;background:#fefce8;">
+        <div style="font-weight:800;">${ex.subj||''}</div>
+        <div style="font-size:9pt;color:#666;">${ex.tch||''}</div>
+      </td>
+      ${groups.map((g,gi)=>`<td style="padding:7px 4px;border:1px solid #ccc;background:${RB[gi%RB.length]};
+        font-weight:800;text-align:center;font-size:11pt;">${ex.rooms?.[g]||'—'}</td>`).join('')}
+    </tr>`;
+  });
+
+  const html=`<!DOCTYPE html><html dir="rtl"><head><meta charset="UTF-8">
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;800;900&display=swap" rel="stylesheet">
+    <style>
+      *{box-sizing:border-box;}
+      body{font-family:'Cairo',Arial,sans-serif;direction:rtl;margin:0;padding:10px;background:#fff;}
+      .hdr{display:flex;align-items:flex-start;justify-content:space-between;border:2px solid #0f1f3d;
+        border-radius:8px;padding:8px 12px;margin-bottom:8px;gap:8px;}
+      .hr{text-align:right;min-width:160px;}
+      .hc{text-align:center;flex:1;}
+      .hl{min-width:90px;text-align:center;}
+      .sep{width:60%;height:2px;background:#0f1f3d;margin:4px auto;}
+      table{width:100%;border-collapse:collapse;font-size:10pt;margin-top:6px;}
+      th{background:#0f1f3d;color:#c9a84c;padding:7px 5px;text-align:center;border:1px solid #334;
+        font-size:10pt;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+      th.grp{width:60px;}
+      .title{text-align:center;font-size:11pt;font-weight:800;color:#0f1f3d;margin-bottom:5px;}
+    </style></head><body>
+    <div class="hdr">
+      <div class="hr">
+        <div style="font-size:10pt;font-weight:800;color:#0f1f3d;">${f.dp||''}</div>
+        <div style="font-size:8pt;color:#333;line-height:1.7;">
+          السنة: ${S.ay}<br>
+          ${period?'الفترة: '+period+'<br>':''}
+          ${f.sec?'الفصيلة: '+f.sec+'<br>':''}
+          الدور: ${S.round===2?'الدورة الاستدراكية':'الدورة العادية'}
+        </div>
+      </div>
+      <div class="hc">
+        <div style="font-size:7pt;color:#555;">${S.settings?.ministry||'وزارة التعليم العالي والبحث العلمي'}</div>
+        <div class="sep"></div>
+        <div style="font-size:11pt;font-weight:800;color:#0f1f3d;">${S.settings?.university||'جامعة عمار ثليجي الأغواط'}</div>
+        <div style="font-size:8pt;color:#333;">${S.settings?.faculty||''}</div>
+      </div>
+      <div class="hl">${logoHtml}<div style="font-size:8pt;font-weight:700;color:#0f1f3d;">${f.spec||f.lv||''}</div></div>
+    </div>
+    <div class="title">جدول امتحانات — ${f.spec||f.lv||''}</div>
+    <table>
+      <thead><tr>
+        <th style="width:100px;">اليوم / التاريخ</th>
+        <th style="width:95px;">التوقيت</th>
+        <th>المقياس / الأستاذ</th>
+        ${groups.map((g,gi)=>`<th class="grp" style="background:${RB[gi%RB.length]};color:#0f1f3d;">
+          ${g}
+        </th>`).join('')}
+      </tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+  </body></html>`;
 
   try{
-    // 1. لقطة للجدول الحالي كما يظهر على الشاشة
-    const tableCanvas=await html2canvas(wrap.querySelector('table'),{
-      scale:2,useCORS:true,backgroundColor:'#ffffff',
-      logging:false
-    });
-
-    // 2. بناء iframe يحتوي البانر + صورة الجدول
     const iframe=document.createElement('iframe');
     iframe.style.cssText='position:fixed;left:-9999px;top:-9999px;width:1200px;background:#fff;border:none;';
     document.body.appendChild(iframe);
     const doc=iframe.contentDocument||iframe.contentWindow.document;
-    const tableImg=tableCanvas.toDataURL('image/png');
-    doc.open();
-    doc.write(`<!DOCTYPE html><html dir="rtl"><head><meta charset="UTF-8">
-      <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;800;900&display=swap" rel="stylesheet">
-      <style>
-        *{box-sizing:border-box;}
-        body{font-family:'Cairo',Arial,sans-serif;direction:rtl;margin:0;padding:8px;background:#fff;}
-        .pdf-header{display:flex;align-items:flex-start;justify-content:space-between;
-          border:2px solid #0f1f3d;border-radius:8px;padding:8px 12px;margin-bottom:10px;gap:8px;}
-        .h-right{text-align:right;min-width:180px;}
-        .h-right .h-dept{font-size:10pt;font-weight:800;color:#0f1f3d;margin-bottom:3px;}
-        .h-right .h-meta{font-size:8.5pt;color:#333;line-height:1.7;}
-        .h-center{text-align:center;flex:1;}
-        .h-center .h-min{font-size:7.5pt;color:#555;margin-bottom:2px;}
-        .h-center .h-univ{font-size:11pt;font-weight:800;color:#0f1f3d;}
-        .h-center .h-fac{font-size:8.5pt;color:#333;margin-top:2px;}
-        .h-center .h-sep{width:60%;height:2px;background:#0f1f3d;margin:5px auto;}
-        .h-left{min-width:100px;display:flex;flex-direction:column;align-items:center;gap:5px;}
-        .tbl-title{text-align:center;font-size:10pt;font-weight:800;color:#0f1f3d;margin-bottom:6px;}
-        .tbl-img{width:100%;height:auto;}
-      </style></head><body>
-      <div class="pdf-header">
-        <div class="h-right">
-          <div class="h-dept">${f.dp||''}</div>
-          <div class="h-meta">
-            السنة: ${S.ay}<br>
-            ${period?'الفترة: '+period+'<br>':''}
-            ${f.sec?'<span style="unicode-bidi:bidi-override;direction:rtl;">الفصيلة: '+f.sec+'</span><br>':''}
-            الدور: ${S.round===2?'الدورة الاستدراكية':'الدورة العادية'}
-          </div>
-        </div>
-        <div class="h-center">
-          <div class="h-min">${S.settings?.ministry||'وزارة التعليم العالي والبحث العلمي'}</div>
-          <div class="h-sep"></div>
-          <div class="h-univ">${S.settings?.university||'جامعة عمار ثليجي الأغواط'}</div>
-          <div class="h-fac">${S.settings?.faculty||'كلية العلوم الاقتصادية والتجارية وعلوم التسيير'}</div>
-        </div>
-        <div class="h-left">
-          ${logoHtml}
-          <div style="font-size:8.5pt;font-weight:700;color:#0f1f3d;text-align:center;">${f.spec||f.lv||''}</div>
-        </div>
-      </div>
-      <div class="tbl-title">جدول امتحانات — ${f.spec||f.lv||''}</div>
-      <img class="tbl-img" src="${tableImg}">
-    </body></html>`);
-    doc.close();
-    await new Promise(r=>setTimeout(r,800));
-
-    // 3. تصوير كامل الصفحة
-    const fullCanvas=await html2canvas(iframe.contentDocument.body,{
+    doc.open();doc.write(html);doc.close();
+    await new Promise(r=>setTimeout(r,1400));
+    const canvas=await html2canvas(iframe.contentDocument.body,{
       scale:2,useCORS:true,backgroundColor:'#ffffff',width:1200,windowWidth:1200
     });
     document.body.removeChild(iframe);
-
     const{jsPDF}=window.jspdf;
     const pdf=new jsPDF({orientation:'landscape',unit:'mm',format:'a4'});
     const pW=pdf.internal.pageSize.getWidth();
-    const pH=pdf.internal.pageSize.getHeight();
-    const imgH=fullCanvas.height*(pW/fullCanvas.width);
-    pdf.addImage(fullCanvas.toDataURL('image/jpeg',0.95),'JPEG',0,0,pW,Math.min(imgH,pH));
+    const imgH=canvas.height*(pW/canvas.width);
+    pdf.addImage(canvas.toDataURL('image/jpeg',0.95),'JPEG',0,0,pW,Math.min(imgH,pdf.internal.pageSize.getHeight()));
     pdf.save(`امتحانات_${(f.spec||f.lv||'').replace(/\s/g,'_')}_${S.ay.replace('/','_')}.pdf`);
     toast('✅ تم تصدير PDF');
   }catch(e){console.error(e);toast('❌ خطأ: '+e.message);}
