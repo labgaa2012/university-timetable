@@ -1534,7 +1534,6 @@ table.occ-matrix td.cell-occ:hover{background:#fee2e2;filter:brightness(.97);}
         <div class="fg">
           <label class="fl">الفترة</label>
           <select class="fs" id="ex-period" onchange="renderExams()">
-            <option value="">كل الفترات</option>
           </select>
         </div>
         <div class="fg">
@@ -1548,13 +1547,11 @@ table.occ-matrix td.cell-occ:hover{background:#fee2e2;filter:brightness(.97);}
         <div class="fg">
           <label class="fl">التخصص</label>
           <select class="fs" id="ex-spec" onchange="renderExams()">
-            <option value="">كل التخصصات</option>
           </select>
         </div>
         <div class="fg">
           <label class="fl">الفصيلة</label>
           <select class="fs" id="ex-sec" onchange="renderExams()">
-            <option value="">كل الفصائل</option>
           </select>
         </div>
         <div class="fg">
@@ -5427,14 +5424,14 @@ function getExamSlotLabel(key){
 
 function syncExamFilters(){
   const pSel=document.getElementById('ex-period');
-  if(pSel&&pSel.options.length<=1){pSel.innerHTML='<option value="">كل الفترات</option>'+S.periods.map((p,i)=>`<option value="${i+1}">${p}</option>`).join('');}
+  if(pSel&&pSel.options.length===0)pSel.innerHTML=S.periods.map((p,i)=>`<option value="${i+1}">${p}</option>`).join('');
   const lvSel=document.getElementById('ex-lv');
   if(lvSel&&lvSel.options.length===0)lvSel.innerHTML=S.levels.map(l=>`<option>${l}</option>`).join('');
   const dpSel=document.getElementById('ex-dp');
   if(dpSel&&dpSel.options.length===0)dpSel.innerHTML=S.depts.map(d=>`<option>${d}</option>`).join('');
   syncExamSpec();
   const secSel=document.getElementById('ex-sec');
-  if(secSel&&secSel.options.length<=1)secSel.innerHTML='<option value="">كل الفصائل</option>'+S.sections.map(s=>`<option value="${s}">${s}</option>`).join('');
+  if(secSel&&secSel.options.length===0)secSel.innerHTML=S.sections.map(s=>`<option value="${s}">${s}</option>`).join('');
   const grpSel=document.getElementById('ex-grp');
   if(grpSel&&grpSel.options.length<=1)grpSel.innerHTML='<option value="">كل الأفواج</option>'+S.groups.map(g=>`<option value="${g}">${g}</option>`).join('');
 }
@@ -5445,7 +5442,7 @@ function syncExamSpec(){
   const specs=S.specs.filter(sp=>(!lv||sp.lv===lv)&&(!dp||sp.dp===dp));
   const el=document.getElementById('ex-spec');if(!el)return;
   const cur=el.value;
-  el.innerHTML='<option value="">كل التخصصات</option>'+specs.map(sp=>`<option value="${sp.name}">${sp.name}</option>`).join('');
+  el.innerHTML=specs.map(sp=>`<option value="${sp.name}">${sp.name}</option>`).join('');
   if(cur&&[...el.options].some(o=>o.value===cur))el.value=cur;
 }
 function getExamFilters(){
