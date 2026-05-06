@@ -5767,41 +5767,44 @@ function syncExamToSections(id,field,value){
   if(!ex)return;
   if(!['date','day','slot','subj'].includes(field))return;
 
-  // الامتحانات في نفس الفصيلة — لمعرفة موضع هذا الامتحان
-  const f=getExamFilters();
+  // موضع هذا الامتحان في قائمة فصيلته
   const sameSecList=S.exams.filter(e=>
-    e.round===ex.round&&e.y===ex.y&&e.lv===ex.lv&&e.dp===ex.dp&&
-    e.spec===ex.spec&&e.sem===ex.sem&&e.section===ex.section
+    e.y===ex.y&&e.lv===ex.lv&&e.dp===ex.dp&&
+    e.spec===ex.spec&&e.sem==ex.sem&&e.round==ex.round&&
+    e.section===ex.section
   );
   const idx=sameSecList.findIndex(e=>e.id===id);
   if(idx<0)return;
 
-  // الفصائل الأخرى لنفس التخصص
+  // الفصائل الأخرى
   const otherSecs=[...new Set(
     S.exams.filter(e=>
-      e.round===ex.round&&e.y===ex.y&&e.lv===ex.lv&&e.dp===ex.dp&&
-      e.spec===ex.spec&&e.sem===ex.sem&&e.section&&e.section!==ex.section
+      e.y===ex.y&&e.lv===ex.lv&&e.dp===ex.dp&&
+      e.spec===ex.spec&&e.sem==ex.sem&&e.round==ex.round&&
+      e.section&&e.section!==ex.section
     ).map(e=>e.section)
   )];
 
+  if(!otherSecs.length)return;
+
   otherSecs.forEach(sec=>{
     const secList=S.exams.filter(e=>
-      e.round===ex.round&&e.y===ex.y&&e.lv===ex.lv&&e.dp===ex.dp&&
-      e.spec===ex.spec&&e.sem===ex.sem&&e.section===sec
+      e.y===ex.y&&e.lv===ex.lv&&e.dp===ex.dp&&
+      e.spec===ex.spec&&e.sem==ex.sem&&e.round==ex.round&&
+      e.section===sec
     );
     const target=secList[idx];
     if(!target)return;
 
     target[field]=value;
 
-    // إذا تغير التاريخ → نُحدِّث اليوم
     if(field==='date'&&value){
       const dn=['الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'];
       target.day=dn[new Date(value).getDay()]||'';
     }
 
-    // إذا تغير المقياس → نجلب أستاذ هذه الفصيلة تحديداً من جدول التوقيت
     if(field==='subj'){
+      // الأستاذ من محاضرات هذه الفصيلة تحديداً
       const tch=S.sessions.filter(s=>
         s.y===S.ay&&s.lv===ex.lv&&s.dp===ex.dp&&s.spec===ex.spec&&
         s.section===sec&&s.subj===value&&
@@ -5809,7 +5812,7 @@ function syncExamToSections(id,field,value){
       ).map(s=>s.tch).filter(Boolean)[0]||'';
       target.tch=tch;
     }
-    // القاعات لا تُنسخ أبداً — يُحددها المستخدم يدوياً
+    // القاعات لا تُنسخ — يُحددها المستخدم يدوياً لكل فصيلة
   });
 }
 function updateExam(id,field,value){
