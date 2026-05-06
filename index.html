@@ -1523,6 +1523,7 @@ table.occ-matrix td.cell-occ:hover{background:#fee2e2;filter:brightness(.97);}
             <button class="vt" onclick="setRound(2,this)">الدورة الاستدراكية</button>
           </div>
           <button class="btn bg" onclick="addExamRow()">➕ إضافة امتحان</button>
+          <button class="btn" onclick="openDuyunTable()" style="background:#0d8a7d;color:#fff;">📋 جدول الديون</button>
           <button class="btn" onclick="exportExamPDF()" style="background:#7c3aed;color:#fff;">📄 PDF</button>
           <button class="btn bn" onclick="expExamsExcel()">📊 Excel</button>
         </div>
@@ -2281,6 +2282,25 @@ table.occ-matrix td.cell-occ:hover{background:#fee2e2;filter:brightness(.97);}
   </div>
 </div>
 
+<!-- MODAL: جدول الديون -->
+<div class="mo" id="mDuyun" style="z-index:2500;">
+  <div class="mb" style="width:92vw;max-width:1100px;">
+    <div class="mt" style="display:flex;align-items:center;justify-content:space-between;">
+      <span>📋 جدول الديون</span>
+      <div style="display:flex;gap:8px;">
+        <button class="btn bg" onclick="addDuyunRow()">➕ إضافة صف</button>
+        <button class="btn" onclick="addDuyunCol()" style="background:#059669;color:#fff;">➕ إضافة عمود</button>
+        <button class="btn" onclick="exportDuyunPDF()" style="background:#7c3aed;color:#fff;">📄 PDF</button>
+        <button class="btn" onclick="closeM('mDuyun')" style="background:var(--gray-light);color:var(--text-mid);">✕ إغلاق</button>
+      </div>
+    </div>
+    <div style="font-size:11px;color:var(--gray);margin:6px 0 12px;">
+      رؤوس الأعمدة قابلة للكتابة — جميع الخلايا قابلة للتعديل
+    </div>
+    <div id="duyun-wrap" style="overflow-x:auto;"></div>
+  </div>
+</div>
+
 <!-- MODAL: نسخ جدول فوج -->
 <div class="mo" id="mCopyGroup">
   <div class="mb" style="width:460px;">
@@ -3036,6 +3056,7 @@ function load(){
   ];
   if(!S.days||!S.days.length)        S.days=['السبت','الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس'];
   if(!S.hiddenDays)                  S.hiddenDays={};
+  if(!S.duyunExams)                  S.duyunExams={}; // key=lv|dp|spec|round → {rows,cols}
   if(!S.sessionTypes||!S.sessionTypes.length) S.sessionTypes=[
     {id:'tlc',       label:'محاضرة',              code:'CM',  icon:'📖'},
     {id:'tlc-remote',label:'محاضرة عن بعد',       code:'CM-E',icon:'🖥️'},
@@ -4760,6 +4781,185 @@ function confirmReinstallGroup(){
   S.registeredTTs.push({period:parseInt(per),lv,dp,spec,section:sec,group:grp,y:S.ay});
   save();closeM('mReinstallGroup');renderTT();
   toast(`✅ أُنشئ جدول ${grp} — ${spec}`);
+}
+
+// -- DUYUN TABLE (جدول الديون) ---------------------
+function getDuyunKey(){
+  const f=getExamFilters();
+  return `${f.lv}|${f.dp}|${f.spec}|${S.round}`;
+}
+function getDuyunData(){
+  const key=getDuyunKey();
+  if(!S.duyunExams)S.duyunExams={};
+  if(!S.duyunExams[key]){
+    // نسخ بنية الامتحانات الحالية كنقطة بداية
+    const f=getExamFilters();
+    const exams=S.exams.filter(e=>
+      e.round==S.round&&e.y===S.ay&&
+      (!f.lv||e.lv===f.lv)&&(!f.dp||e.dp===f.dp)&&
+      (!f.spec||e.spec===f.spec)&&(!f.sec||e.section===f.sec)
+    ).sort((a,b)=>a.date?.localeCompare(b.date||'')||0);
+    // أعمدة افتراضية (فارغة × 4)
+    const cols=['','','',''];
+    // صفوف من الامتحانات الحالية أو فارغة
+    const rows=exams.length
+      ?exams.map(e=>({date:e.date||'',day:e.day||'',slot:e.slot||'',subj:e.subj||'',tch:e.tch||'',cells:Array(cols.length).fill('')}))
+      :[{date:'',day:'',slot:'',subj:'',tch:'',cells:Array(cols.length).fill('')}];
+    S.duyunExams[key]={cols,rows};
+  }
+  return S.duyunExams[key];
+}
+function openDuyunTable(){
+  renderDuyunTable();
+  openM('mDuyun');
+}
+function renderDuyunTable(){
+  const data=getDuyunData();
+  const {cols,rows}=data;
+  const wrap=document.getElementById('duyun-wrap');
+  if(!wrap)return;
+
+  let h=`<table class="exam-table">
+    <thead>
+      <tr>
+        <th style="width:110px;">اليوم / التاريخ</th>
+        <th style="width:95px;">التوقيت</th>
+        <th style="min-width:200px;">المقياس / الأستاذ</th>
+        ${cols.map((c,ci)=>`<th class="rc-${ci%8}" style="min-width:110px;">
+          <input value="${c}" placeholder="اكتب اسم الفوج..."
+            style="width:100%;background:transparent;border:none;text-align:center;
+              font-family:'Cairo',sans-serif;font-size:12px;font-weight:700;color:#0f1f3d;outline:none;"
+            onchange="updateDuyunCol(${ci},this.value)">
+          ${cols.length>1?`<button onclick="removeDuyunCol(${ci})" style="background:none;border:none;cursor:pointer;color:#dc2626;font-size:10px;display:block;margin:2px auto 0;">✕</button>`:''}
+        </th>`).join('')}
+        <th style="width:50px;"></th>
+      </tr>
+    </thead>
+    <tbody>
+      ${rows.map((r,ri)=>`<tr class="${ri%2?'exam-row-even':'exam-row-odd'}">
+        <td class="exam-day-cell">
+          <div style="font-weight:700;">${r.day||'—'}</div>
+          <input class="exam-date-input" type="date" value="${r.date||''}"
+            onchange="updateDuyunRow(${ri},'date',this.value)">
+        </td>
+        <td>
+          <select class="exam-edit-input" onchange="updateDuyunRow(${ri},'slot',this.value)">
+            ${getExamSlots().map(s=>`<option${s===r.slot?' selected':''}>${s}</option>`).join('')}
+          </select>
+        </td>
+        <td class="exam-subj-cell">
+          <input class="exam-edit-input" style="font-weight:800;font-size:13px;text-align:right;width:100%;"
+            value="${r.subj||''}" placeholder="المقياس..."
+            onchange="updateDuyunRow(${ri},'subj',this.value)">
+          <input class="exam-edit-input" style="font-size:11px;color:#555;text-align:right;width:100%;margin-top:4px;"
+            value="${r.tch||''}" placeholder="الأستاذ..."
+            onchange="updateDuyunRow(${ri},'tch',this.value)">
+        </td>
+        ${r.cells.map((c,ci)=>`<td class="rc-${ci%8}" style="text-align:center;padding:6px;">
+          <input class="exam-room-input" style="background:transparent;width:100%;font-size:13px;font-weight:700;"
+            value="${c||''}" placeholder="..."
+            onchange="updateDuyunCell(${ri},${ci},this.value)">
+        </td>`).join('')}
+        <td>
+          <button onclick="removeDuyunRow(${ri})"
+            style="background:none;border:none;cursor:pointer;color:var(--danger);font-size:16px;">🗑️</button>
+        </td>
+      </tr>`).join('')}
+    </tbody>
+  </table>`;
+  wrap.innerHTML=h;
+}
+function updateDuyunCol(ci,val){
+  const data=getDuyunData();
+  data.cols[ci]=val;save();
+}
+function updateDuyunRow(ri,field,val){
+  const data=getDuyunData();
+  if(!data.rows[ri])return;
+  data.rows[ri][field]=val;
+  if(field==='date'&&val){
+    const dn=['الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'];
+    data.rows[ri].day=dn[new Date(val).getDay()]||'';
+    renderDuyunTable();
+  }
+  save();
+}
+function updateDuyunCell(ri,ci,val){
+  const data=getDuyunData();
+  if(!data.rows[ri])return;
+  data.rows[ri].cells[ci]=val;save();
+}
+function addDuyunRow(){
+  const data=getDuyunData();
+  data.rows.push({date:'',day:'',slot:getExamSlots()[0]||'',subj:'',tch:'',cells:Array(data.cols.length).fill('')});
+  save();renderDuyunTable();
+}
+function addDuyunCol(){
+  const data=getDuyunData();
+  data.cols.push('');
+  data.rows.forEach(r=>r.cells.push(''));
+  save();renderDuyunTable();
+}
+function removeDuyunRow(ri){
+  const data=getDuyunData();
+  data.rows.splice(ri,1);save();renderDuyunTable();
+}
+function removeDuyunCol(ci){
+  const data=getDuyunData();
+  if(data.cols.length<=1){toast('⚠️ يجب أن يبقى عمود واحد على الأقل');return;}
+  data.cols.splice(ci,1);
+  data.rows.forEach(r=>r.cells.splice(ci,1));
+  save();renderDuyunTable();
+}
+async function exportDuyunPDF(){
+  const data=getDuyunData();
+  const f=getExamFilters();
+  if(!data.rows.length){toast('⚠️ الجدول فارغ');return;}
+  toast('⏳ جاري تصدير PDF...');
+  const RB=['#dbeafe','#dcfce7','#fed7aa','#fce7f3','#ede9fe','#fef9c3','#e0f2fe','#fef3c7'];
+  const logoHtml=S.settings?.logo?`<img src="${S.settings.logo}" style="width:60px;height:60px;object-fit:contain;">`:'<span style="font-size:36px;">🎓</span>';
+  const rows=data.rows.map((r,i)=>`<tr style="background:${i%2?'#f0fff4':'#fffef0'}">
+    <td style="padding:8px;font-weight:700;border:1.5px solid #999;"><div>${r.day||''}</div><div style="font-size:9.5pt;color:#555;">${r.date||''}</div></td>
+    <td style="padding:8px;border:1.5px solid #999;font-weight:700;">${r.slot||''}</td>
+    <td style="padding:8px;border:1.5px solid #999;text-align:right;background:#fefce8;">
+      <div style="font-size:11pt;font-weight:800;color:#0f1f3d;">${r.subj||''}</div>
+      <div style="font-size:9.5pt;color:#555;">${r.tch||''}</div>
+    </td>
+    ${r.cells.map((c,ci)=>`<td style="padding:8px;border:1.5px solid #999;background:${RB[ci%RB.length]};font-size:13pt;font-weight:800;text-align:center;color:#0f1f3d;">${c||'—'}</td>`).join('')}
+  </tr>`).join('');
+  try{
+    const iframe=document.createElement('iframe');
+    iframe.style.cssText='position:fixed;left:-9999px;top:-9999px;width:1100px;background:#fff;border:none;';
+    document.body.appendChild(iframe);const doc=iframe.contentDocument||iframe.contentWindow.document;
+    doc.open();
+    doc.write(`<!DOCTYPE html><html dir="rtl"><head><meta charset="UTF-8">
+      <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;800;900&display=swap" rel="stylesheet">
+      <style>*{box-sizing:border-box;}body{font-family:'Cairo',Arial,sans-serif;direction:rtl;margin:0;padding:8px;background:#fff;}
+      .pdf-header{display:flex;align-items:flex-start;justify-content:space-between;border:2px solid #0f1f3d;border-radius:8px;padding:8px 12px;margin-bottom:8px;gap:8px;}
+      table{width:100%;border-collapse:collapse;font-size:9pt;}th{background:#0f1f3d;color:#c9a84c;padding:7px;text-align:center;border:1.5px solid #333;-webkit-print-color-adjust:exact;print-color-adjust:exact;}</style>
+      </head><body>
+      <div class="pdf-header">
+        <div style="text-align:right;"><div style="font-size:10pt;font-weight:800;color:#0f1f3d;">${f.dp||''}</div>
+          <div style="font-size:8.5pt;color:#333;">السنة: ${S.ay} | الدور: ${S.round===2?'الدورة الاستدراكية':'الدورة العادية'}</div></div>
+        <div style="text-align:center;flex:1;"><div style="font-size:7.5pt;color:#555;">${S.settings?.ministry||'وزارة التعليم العالي والبحث العلمي'}</div>
+          <div style="font-size:11pt;font-weight:800;color:#0f1f3d;">${S.settings?.university||'جامعة عمار ثليجي الأغواط'}</div>
+          <div style="font-size:8.5pt;color:#333;">${S.settings?.faculty||''}</div></div>
+        <div style="min-width:80px;text-align:center;">${logoHtml}<div style="font-size:8pt;font-weight:700;">${f.spec||''}</div></div>
+      </div>
+      <div style="text-align:center;font-size:10pt;font-weight:800;color:#0f1f3d;margin-bottom:6px;">جدول الديون — ${f.spec||f.lv||''}</div>
+      <table><thead><tr>
+        <th style="width:100px;">اليوم / التاريخ</th><th style="width:95px;">التوقيت</th><th>المقياس / الأستاذ</th>
+        ${data.cols.map((c,ci)=>`<th style="background:${RB[ci%RB.length]};color:#0f1f3d;min-width:80px;">${c||'—'}</th>`).join('')}
+      </tr></thead><tbody>${rows}</tbody></table></body></html>`);
+    doc.close();await new Promise(r=>setTimeout(r,1400));
+    const canvas=await html2canvas(iframe.contentDocument.body,{scale:2,useCORS:true,backgroundColor:'#ffffff',width:1100,windowWidth:1100});
+    document.body.removeChild(iframe);
+    const{jsPDF}=window.jspdf;const pdf=new jsPDF({orientation:'landscape',unit:'mm',format:'a4'});
+    const pW=pdf.internal.pageSize.getWidth();const imgH=canvas.height*(pW/canvas.width);
+    pdf.addImage(canvas.toDataURL('image/jpeg',0.93),'JPEG',0,0,pW,Math.min(imgH,pdf.internal.pageSize.getHeight()));
+    pdf.save(`جدول_الديون_${(f.spec||'').replace(/\s/g,'_')}_${S.ay.replace('/','_')}.pdf`);
+    toast('✅ تم تصدير PDF');
+  }catch(e){console.error(e);toast('❌ خطأ: '+e.message);}
 }
 
 // -- DAYS DELETE / RESTORE -------------------------
