@@ -5193,22 +5193,23 @@ function confirmCopyGroup(){
 // ══ ⑮ كشف تعارض الامتحانات ══
 function detectExamConflicts(){
   const conflicts=[];
-  const exams=S.exams.filter(e=>e.round==S.round&&e.y===S.ay);
-  for(let i=0;i<exams.length;i++){
-    for(let j=i+1;j<exams.length;j++){
-      const e1=exams[i],e2=exams[j];
-      if(!e1.date||!e2.date||e1.date!==e2.date)continue;
-      if(e1.slot!==e2.slot)continue;
-      // نفس الأستاذ في نفس الوقت
-      if(e1.tch&&e2.tch&&e1.tch===e2.tch){
-        conflicts.push({type:'teacher',msg:`⚠️ تعارض أستاذ: ${e1.tch} — ${e1.date} ${e1.slot}`,e1,e2});
-      }
-      // نفس المقياس لنفس التخصص/المستوى مرتين
-      if(e1.spec===e2.spec&&e1.lv===e2.lv&&e1.subj===e2.subj){
-        conflicts.push({type:'dup',msg:`⚠️ تكرار امتحان: ${e1.subj} — ${e1.date}`,e1,e2});
-      }
+  const exams=S.exams.filter(e=>e.round==S.round&&e.y===S.ay&&e.subj);
+  // تكرار نفس المقياس لنفس الفصيلة في نفس الدورة
+  const seen={};
+  exams.forEach(e=>{
+    const key=`${e.spec}|${e.section}|${e.subj}|${e.sem}`;
+    if(!seen[key])seen[key]=[];
+    seen[key].push(e);
+  });
+  Object.values(seen).forEach(group=>{
+    if(group.length>1){
+      const e=group[0];
+      conflicts.push({type:'dup',
+        msg:`⚠️ تكرار: "${e.subj}" — ${e.section||''} — ${e.spec||''}`,
+        ids:group.map(x=>x.id)
+      });
     }
-  }
+  });
   return conflicts;
 }
 function renderExamConflictBanner(){
@@ -5735,21 +5736,22 @@ function addExamRow(){
   const f=getExamFilters();
   if(!f.lv&&!f.spec){toast('⚠️ اختر المستوى والتخصص من الفلتر أولاً');return;}
   const currentSec=f.sec||'';
+  const gid=uid(); // groupId مشترك بين كل الفصائل لهذا الامتحان
   const regSecs=[...new Set(S.registeredTTs.filter(t=>(!t.y||t.y===S.ay)&&t.lv===f.lv&&t.dp===f.dp&&t.spec===f.spec&&t.section).map(t=>t.section))];
-  const allSecs=(regSecs.length>0?regSecs:S.sections).filter(s=>s);
+  const allSecs=(regSecs.length?regSecs:S.sections).filter(s=>s);
+
+  const mkExam=(sec)=>({id:uid(),groupId:gid,y:S.ay,round:S.round||1,lv:f.lv,dp:f.dp,spec:f.spec,
+    section:sec,sem:parseInt(f.period)||1,subj:'',tch:'',day:'السبت',date:'',slot:getExamSlots()[0],rooms:{}});
 
   if(currentSec){
-    // فصيلة محددة → أضف + انسخ للأخريات
-    const baseExam={id:uid(),y:S.ay,round:S.round||1,lv:f.lv,dp:f.dp,spec:f.spec,section:currentSec,sem:parseInt(f.period)||1,subj:'',tch:'',day:'السبت',date:'',slot:getExamSlots()[0],rooms:{}};
-    S.exams.push(baseExam);
+    S.exams.push(mkExam(currentSec));
     const others=allSecs.filter(s=>s!==currentSec);
-    others.forEach(sec=>S.exams.push({...baseExam,id:uid(),section:sec,tch:'',rooms:{}}));
+    others.forEach(sec=>S.exams.push(mkExam(sec)));
     save();renderExams();
     toast(others.length?`✅ أضيف + نُسخ لـ ${others.length} فصيلة`:'✅ أضيف الامتحان');
   } else {
-    // بدون فصيلة → أضف لكل فصيلة مباشرة (بدون امتحان section:'')
     const secsToAdd=allSecs.length?allSecs:[''];
-    secsToAdd.forEach(sec=>S.exams.push({id:uid(),y:S.ay,round:S.round||1,lv:f.lv,dp:f.dp,spec:f.spec,section:sec,sem:parseInt(f.period)||1,subj:'',tch:'',day:'السبت',date:'',slot:getExamSlots()[0],rooms:{}}));
+    secsToAdd.forEach(sec=>S.exams.push(mkExam(sec)));
     save();renderExams();
     toast(`✅ أضيف الامتحان لـ ${secsToAdd.length} فصيلة`);
   }
@@ -5760,55 +5762,33 @@ function syncExamToSections(id,field,value){
   const ex=S.exams.find(e=>e.id===id);
   if(!ex)return;
   if(!['date','day','slot','subj'].includes(field))return;
+  const dn=['الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'];
 
-  // موضع هذا الامتحان في قائمة فصيلته
-  const sameSecList=S.exams.filter(e=>
-    e.y===ex.y&&e.lv===ex.lv&&e.dp===ex.dp&&
-    e.spec===ex.spec&&e.sem==ex.sem&&e.round==ex.round&&
-    e.section===ex.section
-  );
+  const doUpdate=(e)=>{
+    e[field]=value;
+    if(field==='date'&&value)e.day=dn[new Date(value).getDay()]||'';
+    if(field==='subj')e.tch=S.sessions.filter(s=>
+      s.y===S.ay&&s.lv===e.lv&&s.dp===e.dp&&s.spec===e.spec&&
+      s.section===e.section&&s.subj===value&&(s.type==='tlc'||s.type==='tlc-remote')
+    ).map(s=>s.tch).filter(Boolean)[0]||'';
+  };
+
+  // groupId: الطريقة المباشرة والموثوقة
+  if(ex.groupId){
+    S.exams.filter(e=>e.groupId===ex.groupId&&e.id!==id).forEach(doUpdate);
+    return;
+  }
+
+  // fallback للامتحانات القديمة: بحث بالموضع
+  const sameSecList=S.exams.filter(e=>e.y===ex.y&&e.lv===ex.lv&&e.dp===ex.dp&&e.spec===ex.spec&&e.sem==ex.sem&&e.round==ex.round&&e.section===ex.section);
   const idx=sameSecList.findIndex(e=>e.id===id);
   if(idx<0)return;
-
-  // الفصائل الأخرى
-  const otherSecs=[...new Set(
-    S.exams.filter(e=>
-      e.y===ex.y&&e.lv===ex.lv&&e.dp===ex.dp&&
-      e.spec===ex.spec&&e.sem==ex.sem&&e.round==ex.round&&
-      e.section&&e.section!==ex.section
-    ).map(e=>e.section)
-  )];
-
-  if(!otherSecs.length)return;
-
-  otherSecs.forEach(sec=>{
-    const secList=S.exams.filter(e=>
-      e.y===ex.y&&e.lv===ex.lv&&e.dp===ex.dp&&
-      e.spec===ex.spec&&e.sem==ex.sem&&e.round==ex.round&&
-      e.section===sec
-    );
-    const target=secList[idx];
-    if(!target)return;
-
-    target[field]=value;
-
-    if(field==='date'&&value){
-      const dn=['الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'];
-      target.day=dn[new Date(value).getDay()]||'';
-    }
-
-    if(field==='subj'){
-      // الأستاذ من محاضرات هذه الفصيلة تحديداً
-      const tch=S.sessions.filter(s=>
-        s.y===S.ay&&s.lv===ex.lv&&s.dp===ex.dp&&s.spec===ex.spec&&
-        s.section===sec&&s.subj===value&&
-        (s.type==='tlc'||s.type==='tlc-remote')
-      ).map(s=>s.tch).filter(Boolean)[0]||'';
-      target.tch=tch;
-    }
-    // القاعات لا تُنسخ — يُحددها المستخدم يدوياً لكل فصيلة
+  [...new Set(S.exams.filter(e=>e.y===ex.y&&e.lv===ex.lv&&e.dp===ex.dp&&e.spec===ex.spec&&e.sem==ex.sem&&e.round==ex.round&&e.section!==ex.section).map(e=>e.section))].forEach(sec=>{
+    const target=S.exams.filter(e=>e.y===ex.y&&e.lv===ex.lv&&e.dp===ex.dp&&e.spec===ex.spec&&e.sem==ex.sem&&e.round==ex.round&&e.section===sec)[idx];
+    if(target)doUpdate(target);
   });
 }
+
 function updateExam(id,field,value){
   const ex=S.exams.find(e=>e.id===id);if(!ex)return;
   ex[field]=value;
