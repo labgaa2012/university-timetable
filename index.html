@@ -604,8 +604,14 @@ table.tt td.ec:hover::after{color:var(--teal);}
   display:inline-block;white-space:nowrap;font-size:11px;
   transform:rotate(180deg);line-height:1.2;
 }
-.exam-table td.grp-room-cell{min-width:42px !important;width:50px;padding:4px 2px !important;}
-.exam-table .exam-room-input{width:100%;font-size:11px;padding:2px 3px;}
+.exam-table td.grp-room-cell{min-width:42px !important;width:50px;padding:4px 2px !important;vertical-align:middle;text-align:center;}
+.exam-room-display{
+  writing-mode:vertical-rl;text-orientation:mixed;
+  transform:rotate(180deg);font-size:13px;font-weight:800;
+  color:var(--navy);white-space:nowrap;display:inline-block;
+  line-height:1.3;max-height:120px;overflow:hidden;
+}
+.exam-table .exam-room-input{width:100%;font-size:10px;padding:2px 2px;margin-top:3px;}
 .rc-0{background:#dbeafe;}.rc-1{background:#dcfce7;}.rc-2{background:#fed7aa;}
 .rc-3{background:#fce7f3;}.rc-4{background:#ede9fe;}.rc-5{background:#fef9c3;}
 .rc-6{background:#e0f2fe;}.rc-7{background:#fef3c7;}
@@ -5659,19 +5665,13 @@ function renderExams(){
         groups.forEach((g,gi)=>{
           const room=ex.rooms?.[g]||'';
           h+=`<td class="grp-room-cell rc-${gi%8}" rowspan="${exams.length}"
-            style="vertical-align:middle;text-align:center;min-width:110px;padding:6px;">
-            <select class="exam-edit-input" style="width:100%;font-size:11px;font-weight:700;margin-bottom:4px;"
-              onchange="onExamRoomSelect('${ex.id}','${g.replace(/'/g,"\\'")}',this.value,'${extraKey.replace(/'/g,"\\'")}',this)">
-              <option value="">-- اختر قاعة --</option>
-              ${S.rooms.map(r=>`<option value="${r}"${r===room?' selected':''}>${r}</option>`).join('')}
-              <option value="__manual__"${!room||!S.rooms.includes(room)?'':''}>✏️ كتابة يدوية</option>
-            </select>
-            <input class="exam-room-input" id="eri-${ex.id}-${gi}"
-              style="background:rgba(255,255,255,.6);font-size:12px;font-weight:800;width:100%;
-              display:${room&&!S.rooms.includes(room)?'block':'none'};"
-              value="${!S.rooms.includes(room)?room:''}" placeholder="اكتب اسم القاعة..."
-              onchange="updateExamRoom('${ex.id}','${g.replace(/'/g,"\\'")}',this.value,'${extraKey.replace(/'/g,"\\'")}')">
-            <div style="font-size:16pt;font-weight:900;color:var(--navy);margin-top:4px;">${room||'—'}</div>
+            style="vertical-align:middle;text-align:center;padding:6px 2px;cursor:pointer;"
+            onclick="editExamRoom(this,'${ex.id}','${g.replace(/'/g,"\\'")}','${extraKey.replace(/'/g,"\\'")}')">
+            <div class="exam-room-display">${room||'—'}</div>
+            <input class="exam-room-input" style="display:none;background:rgba(255,255,255,.9);"
+              value="${room||''}" placeholder="القاعة..."
+              onchange="updateExamRoom('${ex.id}','${g.replace(/'/g,"\\'")}',this.value,'${extraKey.replace(/'/g,"\\'")}',this)"
+              onblur="finishExamRoomEdit(this)">
           </td>`;
         });
       }
@@ -5709,26 +5709,31 @@ function removeExamGroup(grp,extraKey,event){
 }
 
 // updateExamRoom يحدّث قاعة الفوج في كل الامتحانات المطابقة
-function updateExamRoom(id,grp,room,extraKey){
+function editExamRoom(td,id,grp,extraKey){
+  const disp=td.querySelector('.exam-room-display');
+  const inp=td.querySelector('.exam-room-input');
+  if(!inp)return;
+  disp.style.display='none';
+  inp.style.display='block';
+  inp.focus();inp.select();
+}
+function finishExamRoomEdit(inp){
+  const td=inp.closest('td');
+  if(!td)return;
+  const disp=td.querySelector('.exam-room-display');
+  if(disp){disp.textContent=inp.value||'—';disp.style.display='';}
+  inp.style.display='none';
+}
+function updateExamRoom(id,grp,room,extraKey,inp){
   const f=getExamFilters();
-  // تحديث القاعة لكل الامتحانات في نفس الفصيلة/التخصص (القاعة ثابتة لكل الامتحانات)
   S.exams.forEach(ex=>{
     if(ex.round==S.round&&ex.y===S.ay&&
       (!f.lv||ex.lv===f.lv)&&(!f.dp||ex.dp===f.dp)&&
       (!f.spec||ex.spec===f.spec)&&(!f.sec||ex.section===f.sec)){
-      if(!ex.rooms)ex.rooms={};
-      ex.rooms[grp]=room;
+      if(!ex.rooms)ex.rooms={};ex.rooms[grp]=room;
     }
   });
   save();
-  // تحديث العرض بدون إعادة رسم كامل
-  document.querySelectorAll(`.exam-room-input`).forEach(inp=>{
-    if(inp.getAttribute('onchange')&&inp.getAttribute('onchange').includes(`'${grp}'`)){
-      inp.value=room;
-      const disp=inp.previousElementSibling;
-      if(disp)disp.textContent=room||'—';
-    }
-  });
 }
 
 // الأساتذة الذين درّسوا هذا المقياس في جدول التوقيت
