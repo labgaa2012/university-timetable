@@ -5665,13 +5665,17 @@ function renderExams(){
         groups.forEach((g,gi)=>{
           const room=ex.rooms?.[g]||'';
           h+=`<td class="grp-room-cell rc-${gi%8}" rowspan="${exams.length}"
-            style="vertical-align:middle;text-align:center;padding:6px 2px;cursor:pointer;"
-            onclick="editExamRoom(this,'${ex.id}','${g.replace(/'/g,"\\'")}','${extraKey.replace(/'/g,"\\'")}')">
-            <div class="exam-room-display">${room||'—'}</div>
-            <input class="exam-room-input" style="display:none;background:rgba(255,255,255,.9);"
-              value="${room||''}" placeholder="القاعة..."
-              onchange="updateExamRoom('${ex.id}','${g.replace(/'/g,"\\'")}',this.value,'${extraKey.replace(/'/g,"\\'")}',this)"
-              onblur="finishExamRoomEdit(this)">
+            style="vertical-align:middle;text-align:center;padding:4px 2px;">
+            <div class="exam-room-display" onclick="showRoomEdit(this)">${room||'—'}</div>
+            <select class="exam-edit-input" style="font-size:10px;width:100%;margin-top:3px;display:none;"
+              onchange="onExamRoomSel(this,'${ex.id}','${g.replace(/'/g,"\\'")}','${extraKey.replace(/'/g,"\\'")}')">
+              <option value="">-- اختر قاعة --</option>
+              ${S.rooms.map(r=>`<option value="${r}"${r===room?' selected':''}>${r}</option>`).join('')}
+              <option value="__manual__">✏️ كتابة يدوية</option>
+            </select>
+            <input class="exam-room-input" style="font-size:10px;width:100%;margin-top:2px;display:none;"
+              value="${room}" placeholder="اكتب اسم القاعة..."
+              onblur="saveRoomManual(this,'${ex.id}','${g.replace(/'/g,"\\'")}','${extraKey.replace(/'/g,"\\'")}')">
           </td>`;
         });
       }
@@ -5709,17 +5713,40 @@ function removeExamGroup(grp,extraKey,event){
 }
 
 // updateExamRoom يحدّث قاعة الفوج في كل الامتحانات المطابقة
+function showRoomEdit(disp){
+  const td=disp.closest('td');
+  disp.style.display='none';
+  const sel=td.querySelector('select');
+  if(sel)sel.style.display='block';
+}
+function onExamRoomSel(sel,id,grp,extraKey){
+  const val=sel.value;
+  const td=sel.closest('td');
+  const inp=td.querySelector('.exam-room-input');
+  const disp=td.querySelector('.exam-room-display');
+  if(val==='__manual__'){
+    sel.style.display='none';
+    if(inp){inp.style.display='block';inp.focus();}
+  } else {
+    sel.style.display='none';
+    if(disp){disp.textContent=val||'—';disp.style.display='';}
+    updateExamRoom(id,grp,val,extraKey);
+  }
+}
+function saveRoomManual(inp,id,grp,extraKey){
+  const room=inp.value.trim();
+  const td=inp.closest('td');
+  const disp=td.querySelector('.exam-room-display');
+  inp.style.display='none';
+  if(disp){disp.textContent=room||'—';disp.style.display='';}
+  updateExamRoom(id,grp,room,extraKey);
+}
 function editExamRoom(td,id,grp,extraKey){
   const disp=td.querySelector('.exam-room-display');
-  const inp=td.querySelector('.exam-room-input');
-  if(!inp)return;
-  disp.style.display='none';
-  inp.style.display='block';
-  inp.focus();inp.select();
+  if(disp)showRoomEdit(disp);
 }
 function finishExamRoomEdit(inp){
   const td=inp.closest('td');
-  if(!td)return;
   const disp=td.querySelector('.exam-room-display');
   if(disp){disp.textContent=inp.value||'—';disp.style.display='';}
   inp.style.display='none';
