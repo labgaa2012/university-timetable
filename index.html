@@ -6090,7 +6090,7 @@ async function exportExamPDF(){
   }).join('');
 
   const html=`<!DOCTYPE html><html><head><meta charset="UTF-8">
-    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;800;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;800;900&family=Amiri:wght@700&display=swap" rel="stylesheet">
     <style>
       *{box-sizing:border-box;}
       body{font-family:'Cairo',Arial,sans-serif;direction:rtl;margin:0;padding:12px;background:#fff;}
@@ -6127,7 +6127,7 @@ async function exportExamPDF(){
         <div style="font-size:10pt;font-weight:700;color:#333;margin-bottom:10px;">
           ${S.settings?.faculty||'كلية العلوم الاقتصادية والتجارية وعلوم التسيير'}
         </div>
-        ${f.sec?`<div style="font-size:24pt;font-weight:900;color:#dc2626;letter-spacing:2px;margin-top:4px;">
+        ${f.sec?`<div style="font-size:26pt;font-weight:700;color:#dc2626;letter-spacing:2px;margin-top:4px;font-family:'Amiri',serif;">
           الفصيلة ${f.sec}
         </div>`:''}
       </div>
