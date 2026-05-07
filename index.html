@@ -6033,46 +6033,60 @@ async function exportExamPDF(){
   if(!exams.length){toast('⚠️ لا توجد امتحانات للتصدير');return;}
   toast('⏳ جاري تصدير PDF...');
 
-  // الأفواج من registeredTTs أو rooms keys
-  const regGrps=S.registeredTTs.filter(t=>
-    (!f.lv||t.lv===f.lv)&&(!f.dp||t.dp===f.dp)&&
-    (!f.spec||t.spec===f.spec)&&(!f.sec||t.section===f.sec)&&t.group
-  );
-  let groups=[...new Set(regGrps.map(t=>t.group))].sort((a,b)=>S.groups.indexOf(a)-S.groups.indexOf(b));
+  // الأفواج: نجمع كل المفاتيح الموجودة في rooms + S.groups
+  const allRoomKeys=new Set();
+  exams.forEach(e=>Object.keys(e.rooms||{}).forEach(k=>{if(k)allRoomKeys.add(k);}));
+  // نرتبها حسب S.groups
+  let groups=[...S.groups].filter(g=>allRoomKeys.has(g));
+  if(!groups.length) groups=[...allRoomKeys].slice(0,8);
+  // fallback: من registeredTTs
   if(!groups.length){
-    const roomKeys=new Set();
-    exams.forEach(e=>Object.keys(e.rooms||{}).forEach(k=>roomKeys.add(k)));
-    groups=[...roomKeys].filter(k=>k);
+    const rg=S.registeredTTs.filter(t=>
+      (!f.lv||t.lv===f.lv)&&(!f.dp||t.dp===f.dp)&&
+      (!f.spec||t.spec===f.spec)&&(!f.sec||t.section===f.sec)&&t.group
+    );
+    groups=[...new Set(rg.map(t=>t.group))].sort((a,b)=>S.groups.indexOf(a)-S.groups.indexOf(b));
   }
   if(!groups.length) groups=S.groups.slice(0,8);
+
+  // القاعة: نبحث في كل الامتحانات
+  const getRoom=(g)=>{
+    for(const ex of exams){if(ex.rooms?.[g])return ex.rooms[g];}
+    return '';
+  };
 
   const n=exams.length;
   const period=f.period?S.periods[parseInt(f.period)-1]||'':'';
   const logoHtml=S.settings?.logo?`<img src="${S.settings.logo}" style="width:55px;height:55px;object-fit:contain;">`:'<span style="font-size:32px;">🎓</span>';
   const RB=['#dbeafe','#dcfce7','#fed7aa','#fce7f3','#ede9fe','#fef9c3','#e0f2fe','#fef3c7'];
 
-  // القاعة: من أول امتحان له rooms
-  const exWithRoom=exams.find(e=>e.rooms&&Object.keys(e.rooms).length>0)||exams[0];
-  const getRoom=(g)=>exWithRoom?.rooms?.[g]||'—';
-
-  // بناء صفوف الجدول — القاعة بـ rowspan في الصف الأول فقط
+  // صفوف الجدول — القاعة بـ rowspan + writing-mode عمودي
   let rows='';
   exams.forEach((ex,i)=>{
-    const roomCells = i===0
-      ? groups.map((g,gi)=>`
-          <td rowspan="${n}" style="
-            padding:6px 3px;border:1.5px solid #999;
-            background:${RB[gi%RB.length]};
-            font-weight:900;text-align:center;
-            vertical-align:middle;font-size:11pt;color:#0f1f3d;
-            -webkit-print-color-adjust:exact;print-color-adjust:exact;
-            white-space:pre-wrap;word-break:break-all;">
-            ${getRoom(g).split('').join('\n')}
-          </td>`).join('')
-      : '';
-    rows+=`<tr style="background:${i%2===0?'#fff':'#f8fff8'};">
+    const roomCells=i===0?groups.map((g,gi)=>{
+      const room=getRoom(g);
+      return `<td rowspan="${n}" style="
+        width:52px;padding:4px 2px;
+        border:1.5px solid #999;
+        background:${RB[gi%RB.length]};
+        vertical-align:middle;text-align:center;
+        -webkit-print-color-adjust:exact;print-color-adjust:exact;">
+        <div style="
+          writing-mode:vertical-rl;
+          text-orientation:mixed;
+          transform:rotate(180deg);
+          font-weight:900;font-size:11pt;
+          color:#0f1f3d;
+          white-space:nowrap;
+          display:inline-block;">
+          ${room||'—'}
+        </div>
+      </td>`;
+    }).join(''):'';
+
+    rows+=`<tr style="background:${i%2===0?'#fff':'#f5fff8'};">
       <td style="padding:6px 8px;border:1px solid #ccc;font-weight:700;text-align:center;white-space:nowrap;">
-        <div>${ex.day||''}</div>
+        <div style="font-weight:800;">${ex.day||''}</div>
         <div style="font-size:8.5pt;color:#555;">${ex.date||''}</div>
       </td>
       <td style="padding:6px 8px;border:1px solid #ccc;text-align:center;white-space:nowrap;">${ex.slot||''}</td>
@@ -6084,11 +6098,10 @@ async function exportExamPDF(){
     </tr>`;
   });
 
-  // أسماء الأفواج مقسّمة (نص + رقم) لتجنب bidi
   const grpHeaders=groups.map((g,gi)=>{
     const num=g.replace(/[^\d]/g,'');
     const txt=g.replace(/\d/g,'').trim();
-    return `<th style="width:60px;background:${RB[gi%RB.length]};color:#0f1f3d;
+    return `<th style="width:52px;background:${RB[gi%RB.length]};color:#0f1f3d;
       border:1px solid #334;padding:6px 3px;text-align:center;font-size:9pt;
       -webkit-print-color-adjust:exact;print-color-adjust:exact;">
       <div>${txt}</div><div>${num}</div>
@@ -6105,7 +6118,7 @@ async function exportExamPDF(){
       .sep{width:60%;height:2px;background:#0f1f3d;margin:4px auto;}
       .title{text-align:center;font-size:11pt;font-weight:800;color:#0f1f3d;margin-bottom:5px;}
       table{width:100%;border-collapse:collapse;font-size:9.5pt;}
-      thead th.base{background:#0f1f3d;color:#c9a84c;border:1px solid #334;padding:7px 5px;text-align:center;
+      thead th{background:#0f1f3d;color:#c9a84c;border:1px solid #334;padding:7px 5px;text-align:center;
         -webkit-print-color-adjust:exact;print-color-adjust:exact;}
     </style></head><body>
     <div class="hdr">
@@ -6131,9 +6144,9 @@ async function exportExamPDF(){
     <div class="title">جدول امتحانات - ${f.spec||f.lv||''}</div>
     <table>
       <thead><tr>
-        <th class="base" style="width:100px;">اليوم / التاريخ</th>
-        <th class="base" style="width:90px;">التوقيت</th>
-        <th class="base">المقياس / الاستاذ</th>
+        <th style="width:100px;">اليوم / التاريخ</th>
+        <th style="width:90px;">التوقيت</th>
+        <th>المقياس / الاستاذ</th>
         ${grpHeaders}
       </tr></thead>
       <tbody>${rows}</tbody>
@@ -6146,7 +6159,7 @@ async function exportExamPDF(){
     document.body.appendChild(iframe);
     const doc=iframe.contentDocument||iframe.contentWindow.document;
     doc.open();doc.write(html);doc.close();
-    await new Promise(r=>setTimeout(r,1600));
+    await new Promise(r=>setTimeout(r,1800));
     const canvas=await html2canvas(iframe.contentDocument.body,{
       scale:2,useCORS:true,backgroundColor:'#ffffff',width:1100,windowWidth:1100
     });
