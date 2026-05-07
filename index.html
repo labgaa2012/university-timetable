@@ -6033,7 +6033,6 @@ async function exportExamPDF(){
   if(!exams.length){toast('⚠️ لا توجد امتحانات للتصدير');return;}
   toast('⏳ جاري تصدير PDF...');
 
-  // الأفواج: من registeredTTs أولاً، ثم S.groups كاملاً
   const rg=S.registeredTTs.filter(t=>
     (!f.lv||t.lv===f.lv)&&(!f.dp||t.dp===f.dp)&&
     (!f.spec||t.spec===f.spec)&&(!f.sec||t.section===f.sec)&&t.group
@@ -6041,44 +6040,44 @@ async function exportExamPDF(){
   let groups=[...new Set(rg.map(t=>t.group))].sort((a,b)=>S.groups.indexOf(a)-S.groups.indexOf(b));
   if(!groups.length) groups=S.groups.slice();
 
-  // القاعة: أبحث في كل الامتحانات عن القاعة لكل فوج
-  const getRoom=(g)=>{
-    for(const ex of exams){if(ex.rooms?.[g])return ex.rooms[g];}
-    return '';
-  };
-
-  // نص عمودي بدون writing-mode — حرف واحد في كل سطر
-  const vertText=(txt)=>{
-    if(!txt)return '—';
-    return txt.split('').map(c=>`<div>${c}</div>`).join('');
-  };
-
+  const getRoom=(g)=>{for(const ex of exams){if(ex.rooms?.[g])return ex.rooms[g];}return '';};
   const n=exams.length;
   const period=f.period?S.periods[parseInt(f.period)-1]||'':'';
   const logoHtml=S.settings?.logo?`<img src="${S.settings.logo}" style="width:55px;height:55px;object-fit:contain;">`:'<span style="font-size:32px;">🎓</span>';
   const RB=['#dbeafe','#dcfce7','#fed7aa','#fce7f3','#ede9fe','#fef9c3','#e0f2fe','#fef3c7'];
 
+  // ارتفاع كل صف بالـ px (ثابت) لحساب ارتفاع خلية القاعة
+  const ROW_H=50;
+  const totalH=n*ROW_H;
+
+  // بناء الصفوف — القاعة في كل صف لكن نُخفي الحدود لتبدو خلية واحدة
   let rows='';
   exams.forEach((ex,i)=>{
-    const roomCells=i===0?groups.map((g,gi)=>{
+    const isFirst=i===0, isLast=i===n-1;
+    const roomCells=groups.map((g,gi)=>{
       const room=getRoom(g);
-      return `<td rowspan="${n}" style="
-        width:48px;border:1.5px solid #999;
-        background:${RB[gi%RB.length]};
-        vertical-align:middle;text-align:center;
+      const bg=RB[gi%RB.length];
+      const borderTop=isFirst?`border-top:1.5px solid #999;`:`border-top:none;`;
+      const borderBot=isLast?`border-bottom:1.5px solid #999;`:`border-bottom:none;`;
+      // النص فقط في الصف الأوسط
+      const mid=Math.floor(n/2);
+      const showText=i===mid;
+      return `<td style="width:48px;padding:0;${borderTop}${borderBot}
+        border-right:1.5px solid #999;border-left:1.5px solid #999;
+        background:${bg};height:${ROW_H}px;text-align:center;vertical-align:middle;
         font-weight:900;font-size:10pt;color:#0f1f3d;
         -webkit-print-color-adjust:exact;print-color-adjust:exact;">
-        ${room?vertText(room):'—'}
+        ${showText?(room?room.split('').map(c=>`<div style="line-height:1.1;">${c}</div>`).join(''):'—'):''}
       </td>`;
-    }).join(''):'';
+    }).join('');
 
-    rows+=`<tr style="background:${i%2===0?'#fff':'#f5fff8'};">
-      <td style="padding:6px 8px;border:1px solid #ccc;font-weight:700;text-align:center;white-space:nowrap;">
+    rows+=`<tr style="height:${ROW_H}px;background:${i%2===0?'#fff':'#f5fff8'};">
+      <td style="padding:5px 8px;border:1px solid #ccc;font-weight:700;text-align:center;height:${ROW_H}px;">
         <div style="font-weight:800;">${ex.day||''}</div>
         <div style="font-size:8pt;color:#555;">${ex.date||''}</div>
       </td>
-      <td style="padding:6px 8px;border:1px solid #ccc;text-align:center;white-space:nowrap;">${ex.slot||''}</td>
-      <td style="padding:6px 8px;border:1px solid #ccc;text-align:right;background:#fefce8;">
+      <td style="padding:5px 8px;border:1px solid #ccc;text-align:center;height:${ROW_H}px;white-space:nowrap;">${ex.slot||''}</td>
+      <td style="padding:5px 8px;border:1px solid #ccc;text-align:right;background:#fefce8;height:${ROW_H}px;">
         <div style="font-weight:800;">${ex.subj||''}</div>
         <div style="font-size:8pt;color:#666;">${ex.tch||''}</div>
       </td>
@@ -6092,8 +6091,7 @@ async function exportExamPDF(){
     return `<th style="width:48px;background:${RB[gi%RB.length]};color:#0f1f3d;
       border:1px solid #334;padding:6px 3px;text-align:center;font-size:9pt;
       -webkit-print-color-adjust:exact;print-color-adjust:exact;">
-      <div>${txt}</div><div>${num}</div>
-    </th>`;
+      <div>${txt}</div><div>${num}</div></th>`;
   }).join('');
 
   const html=`<!DOCTYPE html><html><head><meta charset="UTF-8">
@@ -6105,7 +6103,7 @@ async function exportExamPDF(){
         border:2px solid #0f1f3d;border-radius:8px;padding:8px 12px;margin-bottom:8px;gap:8px;}
       .sep{width:60%;height:2px;background:#0f1f3d;margin:4px auto;}
       .ttl{text-align:center;font-size:11pt;font-weight:800;color:#0f1f3d;margin-bottom:5px;}
-      table{width:100%;border-collapse:collapse;font-size:9.5pt;}
+      table{width:100%;border-collapse:collapse;font-size:9.5pt;table-layout:fixed;}
       thead th{background:#0f1f3d;color:#c9a84c;border:1px solid #334;padding:7px 4px;
         text-align:center;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
     </style></head><body>
@@ -6116,8 +6114,7 @@ async function exportExamPDF(){
           السنة: ${S.ay}<br>
           ${period?'الفترة: '+period+'<br>':''}
           ${f.sec?'الفصيلة: '+f.sec+'<br>':''}
-          الدور: ${S.round===2?'الدورة الاستدراكية':'الدورة العادية'}
-        </div>
+          الدور: ${S.round===2?'الدورة الاستدراكية':'الدورة العادية'}</div>
       </div>
       <div style="text-align:center;flex:1;">
         <div style="font-size:7pt;color:#555;">${S.settings?.ministry||'وزارة التعليم العالي والبحث العلمي'}</div>
@@ -6135,8 +6132,7 @@ async function exportExamPDF(){
       <th style="width:90px;">التوقيت</th>
       <th>المقياس / الاستاذ</th>
       ${grpHeaders}
-    </tr></thead>
-    <tbody>${rows}</tbody></table>
+    </tr></thead><tbody>${rows}</tbody></table>
     </body></html>`;
 
   try{
