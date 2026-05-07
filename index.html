@@ -6033,34 +6033,39 @@ async function exportExamPDF(){
   if(!exams.length){toast('⚠️ لا توجد امتحانات للتصدير');return;}
   toast('⏳ جاري تصدير PDF...');
 
-  // الأفواج من الجدول الحالي
-  const wrap=document.getElementById('exam-table-wrap');
-  const ths=[...wrap.querySelectorAll('thead tr:first-child th')];
-  const groups=ths.slice(3,ths.length-2)
-    .map(th=>{
-      const s=th.querySelector('span');
-      return (s?s.textContent:th.textContent).replace(/👥/g,'').replace(/✕/g,'').trim();
-    }).filter(g=>g&&g.length>0&&!g.includes('إضافة')&&!g.includes('+'));
+  // الأفواج: من S.registeredTTs أو S.groups (المصدر الأصلي)
+  const regGrps=S.registeredTTs.filter(t=>
+    (!f.lv||t.lv===f.lv)&&(!f.dp||t.dp===f.dp)&&
+    (!f.spec||t.spec===f.spec)&&(!f.sec||t.section===f.sec)&&t.group
+  );
+  let groups=[...new Set(regGrps.map(t=>t.group))].sort((a,b)=>S.groups.indexOf(a)-S.groups.indexOf(b));
+  // fallback: إذا لم توجد registeredTTs، أخذ من مفاتيح rooms في أول امتحان
+  if(!groups.length&&exams[0]?.rooms){
+    groups=Object.keys(exams[0].rooms).filter(k=>k);
+  }
+  if(!groups.length) groups=S.groups.slice(0,8);
 
   const period=f.period?S.periods[parseInt(f.period)-1]||'':'';
   const logoHtml=S.settings?.logo?`<img src="${S.settings.logo}" style="width:60px;height:60px;object-fit:contain;">`:'<span style="font-size:36px;">🎓</span>';
   const RB=['#dbeafe','#dcfce7','#fed7aa','#fce7f3','#ede9fe','#fef9c3','#e0f2fe','#fef3c7'];
-  const firstEx=exams[0];
 
-  // صف القاعات
-  const roomRow=`<tr style="background:#f1f5ff;">
-    <td colspan="3" style="padding:6px 10px;border:1px solid #ccc;font-weight:800;color:#0f1f3d;font-size:10pt;">🏫 القاعات</td>
-    ${groups.map((g,gi)=>`<td style="padding:6px 4px;border:1px solid #ccc;background:${RB[gi%RB.length]};
-      font-weight:900;text-align:center;font-size:12pt;color:#0f1f3d;
+  // القاعة: من أول امتحان له rooms
+  const exWithRoom=exams.find(e=>e.rooms&&Object.keys(e.rooms).length)||exams[0];
+
+  // صف القاعات: يظهر مرة واحدة
+  const roomRow=`<tr style="background:#e8eeff;">
+    <td colspan="3" style="padding:6px 10px;border:1.5px solid #aaa;font-weight:800;color:#0f1f3d;">🏫 القاعات</td>
+    ${groups.map((g,gi)=>`<td style="padding:8px 4px;border:1.5px solid #aaa;background:${RB[gi%RB.length]};
+      font-weight:900;text-align:center;font-size:13pt;color:#0f1f3d;
       -webkit-print-color-adjust:exact;print-color-adjust:exact;">
-      ${firstEx?.rooms?.[g]||'—'}
+      ${exWithRoom?.rooms?.[g]||'—'}
     </td>`).join('')}
   </tr>`;
 
-  // صفوف الامتحانات بدون قاعات
+  // صفوف الامتحانات
   let rows='';
   exams.forEach((ex,i)=>{
-    rows+=`<tr style="background:${i%2===0?'#fff':'#f8fff8'};">
+    rows+=`<tr style="background:${i%2===0?'#fff':'#f5fff5'};">
       <td style="padding:7px 8px;border:1px solid #ccc;font-weight:700;text-align:center;">
         <div>${ex.day||''}</div>
         <div style="font-size:9pt;color:#555;">${ex.date||''}</div>
@@ -6075,28 +6080,38 @@ async function exportExamPDF(){
     </tr>`;
   });
 
+  // أسماء الأفواج: نكتبها بشكل يدوي لتجنب مشكلة bidi
+  const grpHeaders=groups.map((g,gi)=>{
+    // نعزل الأرقام عن النص العربي
+    const num=g.replace(/[^\d]/g,'');
+    const txt=g.replace(/\d/g,'');
+    return `<th style="width:65px;background:${RB[gi%RB.length]};color:#0f1f3d;border:1px solid #334;
+      padding:7px 3px;text-align:center;
+      -webkit-print-color-adjust:exact;print-color-adjust:exact;">
+      <span style="display:block;">${txt}</span><span style="display:block;">${num}</span>
+    </th>`;
+  }).join('');
+
   const html=`<!DOCTYPE html><html><head><meta charset="UTF-8">
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;800;900&display=swap" rel="stylesheet">
     <style>
       *{box-sizing:border-box;}
       body{font-family:'Cairo',Arial,sans-serif;direction:rtl;margin:0;padding:10px;background:#fff;}
-      .hdr{display:flex;align-items:flex-start;justify-content:space-between;border:2px solid #0f1f3d;
-        border-radius:8px;padding:8px 12px;margin-bottom:8px;gap:8px;}
+      .hdr{display:flex;align-items:flex-start;justify-content:space-between;
+        border:2px solid #0f1f3d;border-radius:8px;padding:8px 12px;margin-bottom:8px;gap:8px;}
       .sep{width:60%;height:2px;background:#0f1f3d;margin:4px auto;}
       .title{text-align:center;font-size:11pt;font-weight:800;color:#0f1f3d;margin-bottom:5px;}
       table{width:100%;border-collapse:collapse;font-size:10pt;}
-      th{background:#0f1f3d !important;color:#c9a84c !important;padding:8px 5px;
-        text-align:center;border:1px solid #334;
-        -webkit-print-color-adjust:exact;print-color-adjust:exact;}
+      thead th{background:#0f1f3d;color:#c9a84c;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
     </style></head><body>
     <div class="hdr">
       <div style="text-align:right;min-width:160px;">
         <div style="font-size:10pt;font-weight:800;color:#0f1f3d;">${f.dp||''}</div>
         <div style="font-size:8pt;color:#333;line-height:1.8;">
-          <span>السنة: ${S.ay}</span><br>
-          ${period?`<span>الفترة: ${period}</span><br>`:''}
-          ${f.sec?`<span>الفصيلة: ${f.sec}</span><br>`:''}
-          <span>الدور: ${S.round===2?'الدورة الاستدراكية':'الدورة العادية'}</span>
+          السنة: ${S.ay}<br>
+          ${period?'الفترة: '+period+'<br>':''}
+          ${f.sec?'الفصيلة: '+f.sec+'<br>':''}
+          الدور: ${S.round===2?'الدورة الاستدراكية':'الدورة العادية'}
         </div>
       </div>
       <div style="text-align:center;flex:1;">
@@ -6106,19 +6121,16 @@ async function exportExamPDF(){
         <div style="font-size:8pt;color:#333;">${S.settings?.faculty||''}</div>
       </div>
       <div style="min-width:90px;text-align:center;">${logoHtml}
-        <div style="font-size:8pt;font-weight:700;color:#0f1f3d;">${f.spec||f.lv||''}</div>
+        <div style="font-size:8pt;font-weight:700;">${f.spec||f.lv||''}</div>
       </div>
     </div>
-    <div class="title">جدول امتحانات &mdash; ${f.spec||f.lv||''}</div>
+    <div class="title">جدول امتحانات - ${f.spec||f.lv||''}</div>
     <table>
       <thead><tr>
-        <th style="width:100px;">اليوم / التاريخ</th>
-        <th style="width:95px;">التوقيت</th>
-        <th>المقياس / الأستاذ</th>
-        ${groups.map((g,gi)=>`<th style="width:65px;background:${RB[gi%RB.length]} !important;
-          color:#0f1f3d !important;-webkit-print-color-adjust:exact;print-color-adjust:exact;">
-          ${g}
-        </th>`).join('')}
+        <th style="width:100px;border:1px solid #334;padding:7px;">اليوم / التاريخ</th>
+        <th style="width:95px;border:1px solid #334;padding:7px;">التوقيت</th>
+        <th style="border:1px solid #334;padding:7px;">المقياس / الاستاذ</th>
+        ${grpHeaders}
       </tr></thead>
       <tbody>${roomRow}${rows}</tbody>
     </table>
@@ -6132,8 +6144,7 @@ async function exportExamPDF(){
     doc.open();doc.write(html);doc.close();
     await new Promise(r=>setTimeout(r,1600));
     const canvas=await html2canvas(iframe.contentDocument.body,{
-      scale:2,useCORS:true,backgroundColor:'#ffffff',width:1200,windowWidth:1200,
-      onclone:(d)=>{d.querySelectorAll('select,input,button').forEach(el=>el.style.display='none');}
+      scale:2,useCORS:true,backgroundColor:'#ffffff',width:1200,windowWidth:1200
     });
     document.body.removeChild(iframe);
     const{jsPDF}=window.jspdf;
@@ -6141,9 +6152,9 @@ async function exportExamPDF(){
     const pW=pdf.internal.pageSize.getWidth();
     const imgH=canvas.height*(pW/canvas.width);
     pdf.addImage(canvas.toDataURL('image/jpeg',0.95),'JPEG',0,0,pW,Math.min(imgH,pdf.internal.pageSize.getHeight()));
-    pdf.save(`امتحانات_${(f.spec||f.lv||'').replace(/\s/g,'_')}_${S.ay.replace('/','_')}.pdf`);
-    toast('✅ تم تصدير PDF');
-  }catch(e){console.error(e);toast('❌ خطأ: '+e.message);}
+    pdf.save('امتحانات_'+((f.spec||f.lv||'').replace(/\s/g,'_'))+'_'+(S.ay.replace('/','_'))+'.pdf');
+    toast('تم تصدير PDF');
+  }catch(e){console.error(e);toast('خطا: '+e.message);}
 }
 
 function setRound(r,btn){
