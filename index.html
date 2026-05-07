@@ -6127,9 +6127,18 @@ async function exportExamPDF(){
         <div style="font-size:10pt;font-weight:700;color:#333;margin-bottom:10px;">
           ${S.settings?.faculty||'كلية العلوم الاقتصادية والتجارية وعلوم التسيير'}
         </div>
-        ${f.sec?`<div style="font-size:26pt;font-weight:900;color:#dc2626;letter-spacing:1px;margin-top:4px;font-family:'Cairo',sans-serif;">
-          ${f.sec}
-        </div>`:''}
+        ${f.sec?`<img id="sec-name-img" style="height:60px;margin-top:4px;" src="${(()=>{
+          const c=document.createElement('canvas');
+          c.width=400;c.height=70;
+          const x=c.getContext('2d');
+          x.clearRect(0,0,400,70);
+          x.font='900 42px Cairo, Arial, sans-serif';
+          x.fillStyle='#dc2626';
+          x.textAlign='center';
+          x.textBaseline='middle';
+          x.fillText(f.sec,200,38);
+          return c.toDataURL('image/png');
+        })()}">`:''}
       </div>
 
       <!-- اليسار: اللوغو + السنة الدراسية + التخصص -->
