@@ -6037,40 +6037,45 @@ async function exportExamPDF(){
   const wrap=document.getElementById('exam-table-wrap');
   const ths=[...wrap.querySelectorAll('thead tr:first-child th')];
   const groups=ths.slice(3,ths.length-2)
-    .map(th=>th.querySelector('span')?.textContent?.replace(/👥\s*/,'').trim()||th.textContent.replace(/👥\s*/,'').trim())
-    .filter(g=>g&&g!=='إضافة'&&!g.includes('+'));
+    .map(th=>{
+      const s=th.querySelector('span');
+      return (s?s.textContent:th.textContent).replace(/👥/g,'').replace(/✕/g,'').trim();
+    }).filter(g=>g&&g.length>0&&!g.includes('إضافة')&&!g.includes('+'));
 
   const period=f.period?S.periods[parseInt(f.period)-1]||'':'';
   const logoHtml=S.settings?.logo?`<img src="${S.settings.logo}" style="width:60px;height:60px;object-fit:contain;">`:'<span style="font-size:36px;">🎓</span>';
   const RB=['#dbeafe','#dcfce7','#fed7aa','#fce7f3','#ede9fe','#fef9c3','#e0f2fe','#fef3c7'];
-  const n=exams.length;
+  const firstEx=exams[0];
 
-  // بناء صفوف الجدول مع rowspan للقاعات
+  // صف القاعات
+  const roomRow=`<tr style="background:#f1f5ff;">
+    <td colspan="3" style="padding:6px 10px;border:1px solid #ccc;font-weight:800;color:#0f1f3d;font-size:10pt;">🏫 القاعات</td>
+    ${groups.map((g,gi)=>`<td style="padding:6px 4px;border:1px solid #ccc;background:${RB[gi%RB.length]};
+      font-weight:900;text-align:center;font-size:12pt;color:#0f1f3d;
+      -webkit-print-color-adjust:exact;print-color-adjust:exact;">
+      ${firstEx?.rooms?.[g]||'—'}
+    </td>`).join('')}
+  </tr>`;
+
+  // صفوف الامتحانات بدون قاعات
   let rows='';
   exams.forEach((ex,i)=>{
-    const roomCells=i===0
-      ? groups.map((g,gi)=>`<td rowspan="${n}" style="
-          padding:6px 4px;border:1px solid #ccc;background:${RB[gi%RB.length]};
-          font-weight:800;text-align:center;font-size:12pt;vertical-align:middle;
-          -webkit-print-color-adjust:exact;print-color-adjust:exact;">
-          ${ex.rooms?.[g]||'—'}
-        </td>`).join('')
-      : '';
-    rows+=`<tr style="background:${i%2?'#f0fff4':'#fff'};">
-      <td style="padding:7px 8px;border:1px solid #ccc;font-weight:700;white-space:nowrap;text-align:center;">
+    rows+=`<tr style="background:${i%2===0?'#fff':'#f8fff8'};">
+      <td style="padding:7px 8px;border:1px solid #ccc;font-weight:700;text-align:center;">
         <div>${ex.day||''}</div>
         <div style="font-size:9pt;color:#555;">${ex.date||''}</div>
       </td>
-      <td style="padding:7px 8px;border:1px solid #ccc;text-align:center;white-space:nowrap;">${ex.slot||''}</td>
+      <td style="padding:7px 8px;border:1px solid #ccc;text-align:center;">${ex.slot||''}</td>
       <td style="padding:7px 8px;border:1px solid #ccc;text-align:right;background:#fefce8;">
         <div style="font-weight:800;">${ex.subj||''}</div>
         <div style="font-size:9pt;color:#666;">${ex.tch||''}</div>
       </td>
-      ${roomCells}
+      ${groups.map((_,gi)=>`<td style="border:1px solid #ccc;background:${RB[gi%RB.length]};
+        -webkit-print-color-adjust:exact;print-color-adjust:exact;"></td>`).join('')}
     </tr>`;
   });
 
-  const html=`<!DOCTYPE html><html dir="rtl"><head><meta charset="UTF-8">
+  const html=`<!DOCTYPE html><html><head><meta charset="UTF-8">
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;800;900&display=swap" rel="stylesheet">
     <style>
       *{box-sizing:border-box;}
@@ -6080,18 +6085,18 @@ async function exportExamPDF(){
       .sep{width:60%;height:2px;background:#0f1f3d;margin:4px auto;}
       .title{text-align:center;font-size:11pt;font-weight:800;color:#0f1f3d;margin-bottom:5px;}
       table{width:100%;border-collapse:collapse;font-size:10pt;}
-      th{background:#0f1f3d;color:#c9a84c;padding:7px 5px;text-align:center;border:1px solid #334;
+      th{background:#0f1f3d !important;color:#c9a84c !important;padding:8px 5px;
+        text-align:center;border:1px solid #334;
         -webkit-print-color-adjust:exact;print-color-adjust:exact;}
-      th .grp-name{unicode-bidi:bidi-override;direction:rtl;display:inline-block;}
     </style></head><body>
     <div class="hdr">
       <div style="text-align:right;min-width:160px;">
         <div style="font-size:10pt;font-weight:800;color:#0f1f3d;">${f.dp||''}</div>
-        <div style="font-size:8pt;color:#333;line-height:1.7;">
-          السنة: ${S.ay}<br>
-          ${period?'الفترة: '+period+'<br>':''}
-          ${f.sec?'الفصيلة: '+f.sec+'<br>':''}
-          الدور: ${S.round===2?'الدورة الاستدراكية':'الدورة العادية'}
+        <div style="font-size:8pt;color:#333;line-height:1.8;">
+          <span>السنة: ${S.ay}</span><br>
+          ${period?`<span>الفترة: ${period}</span><br>`:''}
+          ${f.sec?`<span>الفصيلة: ${f.sec}</span><br>`:''}
+          <span>الدور: ${S.round===2?'الدورة الاستدراكية':'الدورة العادية'}</span>
         </div>
       </div>
       <div style="text-align:center;flex:1;">
@@ -6104,18 +6109,18 @@ async function exportExamPDF(){
         <div style="font-size:8pt;font-weight:700;color:#0f1f3d;">${f.spec||f.lv||''}</div>
       </div>
     </div>
-    <div class="title">جدول امتحانات — ${f.spec||f.lv||''}</div>
+    <div class="title">جدول امتحانات &mdash; ${f.spec||f.lv||''}</div>
     <table>
       <thead><tr>
         <th style="width:100px;">اليوم / التاريخ</th>
         <th style="width:95px;">التوقيت</th>
         <th>المقياس / الأستاذ</th>
-        ${groups.map((g,gi)=>`<th style="width:65px;background:${RB[gi%RB.length]};color:#0f1f3d;
-          -webkit-print-color-adjust:exact;print-color-adjust:exact;">
-          <span class="grp-name">👥 ${g}</span>
+        ${groups.map((g,gi)=>`<th style="width:65px;background:${RB[gi%RB.length]} !important;
+          color:#0f1f3d !important;-webkit-print-color-adjust:exact;print-color-adjust:exact;">
+          ${g}
         </th>`).join('')}
       </tr></thead>
-      <tbody>${rows}</tbody>
+      <tbody>${roomRow}${rows}</tbody>
     </table>
   </body></html>`;
 
@@ -6125,9 +6130,10 @@ async function exportExamPDF(){
     document.body.appendChild(iframe);
     const doc=iframe.contentDocument||iframe.contentWindow.document;
     doc.open();doc.write(html);doc.close();
-    await new Promise(r=>setTimeout(r,1400));
+    await new Promise(r=>setTimeout(r,1600));
     const canvas=await html2canvas(iframe.contentDocument.body,{
-      scale:2,useCORS:true,backgroundColor:'#ffffff',width:1200,windowWidth:1200
+      scale:2,useCORS:true,backgroundColor:'#ffffff',width:1200,windowWidth:1200,
+      onclone:(d)=>{d.querySelectorAll('select,input,button').forEach(el=>el.style.display='none');}
     });
     document.body.removeChild(iframe);
     const{jsPDF}=window.jspdf;
