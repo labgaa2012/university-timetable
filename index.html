@@ -2364,11 +2364,15 @@ table.occ-matrix td.cell-occ:hover{background:#fee2e2;filter:brightness(.97);}
 <div class="mo" id="mDuyun" style="z-index:2500;">
   <div class="mb" style="width:92vw;max-width:1100px;">
     <div class="mt" style="display:flex;align-items:center;justify-content:space-between;">
-      <span>📋 جدول الديون</span>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <span>📋 جدول الديون</span>
+        <select class="fs" id="duyun-sem" onchange="renderDuyunTable()" style="font-size:11px;padding:4px 8px;min-width:110px;"></select>
+      </div>
       <div style="display:flex;gap:8px;">
         <button class="btn bg" onclick="addDuyunRow()">➕ إضافة صف</button>
         <button class="btn" onclick="addDuyunCol()" style="background:#059669;color:#fff;">➕ إضافة عمود</button>
         <button class="btn" onclick="exportDuyunPDF()" style="background:#7c3aed;color:#fff;">📄 PDF</button>
+        <button class="btn" onclick="exportDuyunPNG()" style="background:#059669;color:#fff;">🖼️ PNG</button>
         <button class="btn" onclick="closeM('mDuyun')" style="background:var(--gray-light);color:var(--text-mid);">✕ إغلاق</button>
       </div>
     </div>
@@ -4862,24 +4866,25 @@ function confirmReinstallGroup(){
 }
 
 // -- DUYUN TABLE (جدول الديون) ---------------------
+function getDuyunSem(){
+  return document.getElementById('duyun-sem')?.value||'1';
+}
 function getDuyunKey(){
   const f=getExamFilters();
-  return `${f.lv}|${f.dp}|${f.spec}|${S.round}`;
+  return `${f.lv}|${f.dp}|${f.spec}|${S.round}|${getDuyunSem()}`;
 }
 function getDuyunData(){
   const key=getDuyunKey();
   if(!S.duyunExams)S.duyunExams={};
   if(!S.duyunExams[key]){
-    // نسخ بنية الامتحانات الحالية كنقطة بداية
     const f=getExamFilters();
+    const sem=parseInt(getDuyunSem())||1;
     const exams=S.exams.filter(e=>
-      e.round==S.round&&e.y===S.ay&&
+      e.round==S.round&&e.y===S.ay&&e.sem==sem&&
       (!f.lv||e.lv===f.lv)&&(!f.dp||e.dp===f.dp)&&
       (!f.spec||e.spec===f.spec)&&(!f.sec||e.section===f.sec)
     ).sort((a,b)=>a.date?.localeCompare(b.date||'')||0);
-    // أعمدة افتراضية (فارغة × 4)
     const cols=['','','',''];
-    // صفوف من الامتحانات الحالية أو فارغة
     const rows=exams.length
       ?exams.map(e=>({date:e.date||'',day:e.day||'',slot:e.slot||'',subj:e.subj||'',tch:e.tch||'',cells:Array(cols.length).fill('')}))
       :[{date:'',day:'',slot:'',subj:'',tch:'',cells:Array(cols.length).fill('')}];
@@ -4888,8 +4893,28 @@ function getDuyunData(){
   return S.duyunExams[key];
 }
 function openDuyunTable(){
+  // تعبئة منسدلة السداسي
+  const semSel=document.getElementById('duyun-sem');
+  if(semSel){
+    semSel.innerHTML=S.periods.map((p,i)=>`<option value="${i+1}">${p}</option>`).join('');
+  }
   renderDuyunTable();
   openM('mDuyun');
+}
+async function exportDuyunPNG(){
+  const wrap=document.getElementById('duyun-wrap');
+  const table=wrap?.querySelector('table');
+  if(!table){toast('⚠️ لا يوجد جدول');return;}
+  toast('⏳ جاري تصدير PNG...');
+  try{
+    const canvas=await html2canvas(table,{scale:2,useCORS:true,backgroundColor:'#ffffff'});
+    const link=document.createElement('a');
+    const f=getExamFilters();
+    link.download='ديون_'+((f.spec||'').replace(/\s/g,'_'))+'_سداسي'+getDuyunSem()+'.png';
+    link.href=canvas.toDataURL('image/png');
+    link.click();
+    toast('✅ تم تصدير PNG');
+  }catch(e){toast('❌ خطأ: '+e.message);}
 }
 function renderDuyunTable(){
   const data=getDuyunData();
