@@ -2367,6 +2367,10 @@ table.occ-matrix td.cell-occ:hover{background:#fee2e2;filter:brightness(.97);}
       <div style="display:flex;align-items:center;gap:10px;">
         <span>📋 جدول الديون</span>
         <select class="fs" id="duyun-sem" onchange="renderDuyunTable()" style="font-size:11px;padding:4px 8px;min-width:110px;"></select>
+        <select class="fs" id="duyun-round" onchange="renderDuyunTable()" style="font-size:11px;padding:4px 8px;min-width:140px;">
+          <option value="1">الدورة العادية</option>
+          <option value="2">الدورة الاستدراكية</option>
+        </select>
       </div>
       <div style="display:flex;gap:8px;">
         <button class="btn bg" onclick="addDuyunRow()">➕ إضافة صف</button>
@@ -4869,9 +4873,12 @@ function confirmReinstallGroup(){
 function getDuyunSem(){
   return document.getElementById('duyun-sem')?.value||'1';
 }
+function getDuyunRound(){
+  return parseInt(document.getElementById('duyun-round')?.value||'1');
+}
 function getDuyunKey(){
   const f=getExamFilters();
-  return `${f.lv}|${f.dp}|${f.spec}|${S.round}|${getDuyunSem()}`;
+  return `${f.lv}|${f.dp}|${f.spec}|${getDuyunRound()}|${getDuyunSem()}`;
 }
 function getDuyunData(){
   const key=getDuyunKey();
@@ -4879,8 +4886,9 @@ function getDuyunData(){
   if(!S.duyunExams[key]){
     const f=getExamFilters();
     const sem=parseInt(getDuyunSem())||1;
+    const round=getDuyunRound();
     const exams=S.exams.filter(e=>
-      e.round==S.round&&e.y===S.ay&&e.sem==sem&&
+      e.round==round&&e.y===S.ay&&e.sem==sem&&
       (!f.lv||e.lv===f.lv)&&(!f.dp||e.dp===f.dp)&&
       (!f.spec||e.spec===f.spec)&&(!f.sec||e.section===f.sec)
     ).sort((a,b)=>a.date?.localeCompare(b.date||'')||0);
@@ -4910,7 +4918,7 @@ async function exportDuyunPNG(){
     const canvas=await html2canvas(table,{scale:2,useCORS:true,backgroundColor:'#ffffff'});
     const link=document.createElement('a');
     const f=getExamFilters();
-    link.download='ديون_'+((f.spec||'').replace(/\s/g,'_'))+'_سداسي'+getDuyunSem()+'.png';
+    link.download='ديون_'+((f.spec||'').replace(/\s/g,'_'))+'_سداسي'+getDuyunSem()+'_'+(getDuyunRound()===2?'استدراكية':'عادية')+'.png';
     link.href=canvas.toDataURL('image/png');
     link.click();
     toast('✅ تم تصدير PNG');
