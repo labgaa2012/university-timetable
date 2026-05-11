@@ -2374,6 +2374,7 @@ table.occ-matrix td.cell-occ:hover{background:#fee2e2;filter:brightness(.97);}
       </div>
       <div style="display:flex;gap:8px;">
         <button class="btn bg" onclick="addDuyunRow()">➕ إضافة صف</button>
+        <button class="btn" onclick="addDuyunCol()" style="background:#059669;color:#fff;">➕ إضافة عمود</button>
         <button class="btn" onclick="exportDuyunPDF()" style="background:#7c3aed;color:#fff;">📄 PDF</button>
         <button class="btn" onclick="exportDuyunPNG()" style="background:#059669;color:#fff;">🖼️ PNG</button>
         <button class="btn" onclick="closeM('mDuyun')" style="background:var(--gray-light);color:var(--text-mid);">✕ إغلاق</button>
@@ -4915,6 +4916,7 @@ function openDuyunTable(){
 function renderDuyunTable(){
   const data=getDuyunData();
   const {rows}=data;
+  const extraCols=data.extraCols||[];
   const wrap=document.getElementById('duyun-wrap');
   if(!wrap)return;
 
@@ -4925,6 +4927,14 @@ function renderDuyunTable(){
         <th style="width:95px;background:#e8f0fe;color:#0f1f3d;border:1.5px solid #c5d3f0;">التوقيت</th>
         <th style="background:#e8f0fe;color:#0f1f3d;border:1.5px solid #c5d3f0;">المقياس / الأستاذ</th>
         <th style="width:120px;background:#e8f0fe;color:#0f1f3d;border:1.5px solid #c5d3f0;">القاعة</th>
+        ${extraCols.map((c,ci)=>`<th style="min-width:100px;background:#e8f0fe;color:#0f1f3d;border:1.5px solid #c5d3f0;">
+          <input value="${c}" placeholder="عنوان العمود..."
+            style="width:100%;background:transparent;border:none;text-align:center;
+              font-family:'Cairo',sans-serif;font-size:12px;font-weight:700;color:#0f1f3d;outline:none;"
+            onchange="updateDuyunCol(${ci},this.value)">
+          <button onclick="removeDuyunCol(${ci})"
+            style="background:none;border:none;cursor:pointer;color:#dc2626;font-size:10px;display:block;margin:2px auto 0;">✕</button>
+        </th>`).join('')}
         <th style="width:40px;background:#e8f0fe;border:1.5px solid #c5d3f0;"></th>
       </tr>
     </thead>
@@ -4953,6 +4963,11 @@ function renderDuyunTable(){
             value="${r.room||''}" placeholder="القاعة..."
             onchange="updateDuyunRow(${ri},'room',this.value)">
         </td>
+        ${extraCols.map((_,ci)=>`<td style="text-align:center;padding:6px;">
+          <input class="exam-room-input" style="width:100%;font-size:12px;text-align:center;"
+            value="${r.extra?.[ci]||''}" placeholder="..."
+            onchange="updateDuyunCell(${ri},${ci},this.value)">
+        </td>`).join('')}
         <td>
           <button onclick="removeDuyunRow(${ri})"
             style="background:none;border:none;cursor:pointer;color:var(--danger);font-size:15px;">🗑️</button>
@@ -4973,14 +4988,40 @@ function updateDuyunRow(ri,field,val){
   }
   save();
 }
+function updateDuyunCell(ri,ci,val){
+  const data=getDuyunData();
+  if(!data.rows[ri])return;
+  if(!data.rows[ri].extra)data.rows[ri].extra=[];
+  data.rows[ri].extra[ci]=val;save();
+}
+function updateDuyunCol(ci,val){
+  const data=getDuyunData();
+  if(!data.extraCols)data.extraCols=[];
+  data.extraCols[ci]=val;save();
+}
 function addDuyunRow(){
   const data=getDuyunData();
-  data.rows.push({date:'',day:'',slot:getExamSlots()[0]||'',subj:'',tch:'',room:''});
+  const nc=(data.extraCols||[]).length;
+  data.rows.push({date:'',day:'',slot:getExamSlots()[0]||'',subj:'',tch:'',room:'',extra:Array(nc).fill('')});
+  save();renderDuyunTable();
+}
+function addDuyunCol(){
+  const data=getDuyunData();
+  if(!data.extraCols)data.extraCols=[];
+  data.extraCols.push('');
+  data.rows.forEach(r=>{if(!r.extra)r.extra=[];r.extra.push('');});
   save();renderDuyunTable();
 }
 function removeDuyunRow(ri){
   const data=getDuyunData();
   data.rows.splice(ri,1);save();renderDuyunTable();
+}
+function removeDuyunCol(ci){
+  const data=getDuyunData();
+  if(!data.extraCols||data.extraCols.length===0)return;
+  data.extraCols.splice(ci,1);
+  data.rows.forEach(r=>{if(r.extra)r.extra.splice(ci,1);});
+  save();renderDuyunTable();
 }
 function _buildDuyunBanner(f){
   const sem=getDuyunSem();
