@@ -4926,7 +4926,6 @@ function renderDuyunTable(){
         <th style="width:110px;background:#e8f0fe;color:#0f1f3d;border:1.5px solid #c5d3f0;">اليوم / التاريخ</th>
         <th style="width:95px;background:#e8f0fe;color:#0f1f3d;border:1.5px solid #c5d3f0;">التوقيت</th>
         <th style="background:#e8f0fe;color:#0f1f3d;border:1.5px solid #c5d3f0;">المقياس / الأستاذ</th>
-        <th style="width:120px;background:#e8f0fe;color:#0f1f3d;border:1.5px solid #c5d3f0;">القاعة</th>
         ${extraCols.map((c,ci)=>`<th style="min-width:100px;background:#e8f0fe;color:#0f1f3d;border:1.5px solid #c5d3f0;">
           <input value="${c}" placeholder="عنوان العمود..."
             style="width:100%;background:transparent;border:none;text-align:center;
@@ -4957,11 +4956,6 @@ function renderDuyunTable(){
           <input class="exam-edit-input" style="font-size:11px;color:#555;text-align:right;width:100%;margin-top:4px;"
             value="${r.tch||''}" placeholder="الأستاذ..."
             onchange="updateDuyunRow(${ri},'tch',this.value)">
-        </td>
-        <td style="text-align:center;padding:6px;">
-          <input class="exam-room-input" style="width:100%;font-size:12px;font-weight:700;text-align:center;"
-            value="${r.room||''}" placeholder="القاعة..."
-            onchange="updateDuyunRow(${ri},'room',this.value)">
         </td>
         ${extraCols.map((_,ci)=>`<td style="text-align:center;padding:6px;">
           <input class="exam-room-input" style="width:100%;font-size:12px;text-align:center;"
