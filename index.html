@@ -4917,18 +4917,18 @@ function renderDuyunTable(){
 
   let h=`<table class="exam-table">
     <thead>
-      <tr>
-        <th style="width:110px;">اليوم / التاريخ</th>
-        <th style="width:95px;">التوقيت</th>
-        <th style="min-width:200px;">المقياس / الأستاذ</th>
-        ${cols.map((c,ci)=>`<th class="rc-${ci%8}" style="min-width:110px;">
+      <tr style="background:#e8f0fe;">
+        <th style="width:110px;background:#e8f0fe;color:#0f1f3d;border:1.5px solid #c5d3f0;">اليوم / التاريخ</th>
+        <th style="width:95px;background:#e8f0fe;color:#0f1f3d;border:1.5px solid #c5d3f0;">التوقيت</th>
+        <th style="min-width:200px;background:#e8f0fe;color:#0f1f3d;border:1.5px solid #c5d3f0;">المقياس / الأستاذ</th>
+        ${cols.map((c,ci)=>`<th class="rc-${ci%8}" style="min-width:110px;border:1.5px solid #c5d3f0;">
           <input value="${c}" placeholder="اكتب اسم الفوج..."
             style="width:100%;background:transparent;border:none;text-align:center;
               font-family:'Cairo',sans-serif;font-size:12px;font-weight:700;color:#0f1f3d;outline:none;"
             onchange="updateDuyunCol(${ci},this.value)">
           ${cols.length>1?`<button onclick="removeDuyunCol(${ci})" style="background:none;border:none;cursor:pointer;color:#dc2626;font-size:10px;display:block;margin:2px auto 0;">✕</button>`:''}
         </th>`).join('')}
-        <th style="width:50px;"></th>
+        <th style="width:50px;background:#e8f0fe;border:1.5px solid #c5d3f0;"></th>
       </tr>
     </thead>
     <tbody>
