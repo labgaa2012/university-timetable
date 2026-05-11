@@ -4957,11 +4957,16 @@ function renderDuyunTable(){
             value="${r.tch||''}" placeholder="الأستاذ..."
             onchange="updateDuyunRow(${ri},'tch',this.value)">
         </td>
-        ${extraCols.map((_,ci)=>`<td style="text-align:center;padding:6px;">
-          <input class="exam-room-input" style="width:100%;font-size:12px;text-align:center;"
-            value="${r.extra?.[ci]||''}" placeholder="..."
-            onchange="updateDuyunCell(${ri},${ci},this.value)">
-        </td>`).join('')}
+        ${ri===0?extraCols.map((_,ci)=>`<td rowspan="${rows.length}"
+          style="vertical-align:middle;text-align:center;padding:6px;border:1.5px solid #c5d3f0;
+            background:${['#dbeafe','#dcfce7','#fed7aa','#fce7f3','#ede9fe','#fef9c3','#e0f2fe','#fef3c7'][ci%8]};">
+          <textarea style="width:100%;min-height:${Math.max(60,rows.length*35)}px;border:none;
+            background:transparent;font-family:'Cairo',sans-serif;font-size:12px;
+            font-weight:700;text-align:center;resize:none;outline:none;"
+            onchange="updateDuyunCell(0,${ci},this.value)"
+            oninput="updateDuyunCell(0,${ci},this.value)"
+            placeholder="...">${(data.extraData||[])[ci]||''}</textarea>
+        </td>`).join(''):''}
         <td>
           <button onclick="removeDuyunRow(${ri})"
             style="background:none;border:none;cursor:pointer;color:var(--danger);font-size:15px;">🗑️</button>
@@ -4984,9 +4989,10 @@ function updateDuyunRow(ri,field,val){
 }
 function updateDuyunCell(ri,ci,val){
   const data=getDuyunData();
-  if(!data.rows[ri])return;
-  if(!data.rows[ri].extra)data.rows[ri].extra=[];
-  data.rows[ri].extra[ci]=val;save();
+  // الخلية المدمجة تُخزَّن في extraData مستقل
+  if(!data.extraData)data.extraData=[];
+  data.extraData[ci]=val;
+  save();
 }
 function updateDuyunCol(ci,val){
   const data=getDuyunData();
