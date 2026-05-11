@@ -4909,21 +4909,6 @@ function openDuyunTable(){
   renderDuyunTable();
   openM('mDuyun');
 }
-async function exportDuyunPNG(){
-  const wrap=document.getElementById('duyun-wrap');
-  const table=wrap?.querySelector('table');
-  if(!table){toast('⚠️ لا يوجد جدول');return;}
-  toast('⏳ جاري تصدير PNG...');
-  try{
-    const canvas=await html2canvas(table,{scale:2,useCORS:true,backgroundColor:'#ffffff'});
-    const link=document.createElement('a');
-    const f=getExamFilters();
-    link.download='ديون_'+((f.spec||'').replace(/\s/g,'_'))+'_سداسي'+getDuyunSem()+'_'+(getDuyunRound()===2?'استدراكية':'عادية')+'.png';
-    link.href=canvas.toDataURL('image/png');
-    link.click();
-    toast('✅ تم تصدير PNG');
-  }catch(e){toast('❌ خطأ: '+e.message);}
-}
 function renderDuyunTable(){
   const data=getDuyunData();
   const {cols,rows}=data;
@@ -5022,54 +5007,140 @@ function removeDuyunCol(ci){
   data.rows.forEach(r=>r.cells.splice(ci,1));
   save();renderDuyunTable();
 }
+function _buildDuyunBanner(f){
+  const sem=getDuyunSem();
+  const round=getDuyunRound();
+  const semLabel=S.periods[parseInt(sem)-1]||`السداسي ${sem}`;
+  const roundLabel=round===2?'الدورة الاستدراكية':'الدورة العادية';
+  const logoHtml=S.settings?.logo?`<img src="${S.settings.logo}" style="width:55px;height:55px;object-fit:contain;">`:'<span style="font-size:32px;">🎓</span>';
+  // كلمة "الديون" بـ Canvas
+  const c=document.createElement('canvas');
+  c.width=300;c.height=70;
+  const x=c.getContext('2d');
+  x.clearRect(0,0,300,70);
+  x.font='900 44px Cairo, Arial, sans-serif';
+  x.fillStyle='#dc2626';
+  x.textAlign='center';
+  x.textBaseline='middle';
+  x.fillText('الديون',150,38);
+  const duyunImg=c.toDataURL('image/png');
+  return `<div class="hdr">
+    <div style="text-align:right;min-width:190px;border-right:3px solid #0f1f3d;padding-right:14px;">
+      <div style="font-size:12pt;font-weight:900;color:#0f1f3d;margin-bottom:8px;">${f.dp||''}</div>
+      <div style="font-size:9.5pt;color:#333;line-height:2.2;">
+        <span style="font-weight:800;">الفترة:</span> ${semLabel}<br>
+        <span style="font-weight:800;">الدور:</span> ${roundLabel}
+      </div>
+    </div>
+    <div style="text-align:center;flex:1;">
+      <div style="font-size:9.5pt;font-weight:700;color:#444;">${S.settings?.ministry||'وزارة التعليم العالي والبحث العلمي'}</div>
+      <div style="width:70%;height:3px;background:#0f1f3d;margin:5px auto;"></div>
+      <div style="font-size:14pt;font-weight:900;color:#0f1f3d;">${S.settings?.university||'جامعة عمار ثليجي الأغواط'}</div>
+      <div style="font-size:10pt;font-weight:700;color:#333;margin-bottom:6px;">${S.settings?.faculty||''}</div>
+      <img src="${duyunImg}" style="height:56px;">
+    </div>
+    <div style="min-width:130px;text-align:center;border-left:3px solid #0f1f3d;padding-left:14px;">
+      ${logoHtml}
+      <div style="font-size:10pt;font-weight:900;color:#0f1f3d;margin-top:6px;">${S.ay}</div>
+      <div style="font-size:9pt;font-weight:700;color:#555;margin-top:4px;">${f.spec||f.lv||''}</div>
+    </div>
+  </div>`;
+}
+
 async function exportDuyunPDF(){
   const data=getDuyunData();
   const f=getExamFilters();
   if(!data.rows.length){toast('⚠️ الجدول فارغ');return;}
   toast('⏳ جاري تصدير PDF...');
   const RB=['#dbeafe','#dcfce7','#fed7aa','#fce7f3','#ede9fe','#fef9c3','#e0f2fe','#fef3c7'];
-  const logoHtml=S.settings?.logo?`<img src="${S.settings.logo}" style="width:60px;height:60px;object-fit:contain;">`:'<span style="font-size:36px;">🎓</span>';
-  const rows=data.rows.map((r,i)=>`<tr style="background:${i%2?'#f0fff4':'#fffef0'}">
-    <td style="padding:8px;font-weight:700;border:1.5px solid #999;"><div>${r.day||''}</div><div style="font-size:9.5pt;color:#555;">${r.date||''}</div></td>
-    <td style="padding:8px;border:1.5px solid #999;font-weight:700;">${r.slot||''}</td>
-    <td style="padding:8px;border:1.5px solid #999;text-align:right;background:#fefce8;">
-      <div style="font-size:11pt;font-weight:800;color:#0f1f3d;">${r.subj||''}</div>
-      <div style="font-size:9.5pt;color:#555;">${r.tch||''}</div>
+  const banner=_buildDuyunBanner(f);
+  const rows=data.rows.map((r,i)=>`<tr style="background:${i%2?'#f5fff8':'#fff'}">
+    <td style="padding:7px 8px;border:1.5px solid #999;font-weight:700;text-align:center;"><div>${r.day||''}</div><div style="font-size:8pt;color:#555;">${r.date||''}</div></td>
+    <td style="padding:7px 8px;border:1.5px solid #999;text-align:center;">${r.slot||''}</td>
+    <td style="padding:7px 8px;border:1.5px solid #999;text-align:right;background:#fefce8;">
+      <div style="font-weight:800;">${r.subj||''}</div>
+      <div style="font-size:8.5pt;color:#555;">${r.tch||''}</div>
     </td>
-    ${r.cells.map((c,ci)=>`<td style="padding:8px;border:1.5px solid #999;background:${RB[ci%RB.length]};font-size:13pt;font-weight:800;text-align:center;color:#0f1f3d;">${c||'—'}</td>`).join('')}
+    ${r.cells.map((c,ci)=>`<td style="padding:7px;border:1.5px solid #999;background:${RB[ci%RB.length]};font-size:12pt;font-weight:800;text-align:center;color:#0f1f3d;-webkit-print-color-adjust:exact;">${c||'—'}</td>`).join('')}
   </tr>`).join('');
   try{
     const iframe=document.createElement('iframe');
     iframe.style.cssText='position:fixed;left:-9999px;top:-9999px;width:1100px;background:#fff;border:none;';
-    document.body.appendChild(iframe);const doc=iframe.contentDocument||iframe.contentWindow.document;
+    document.body.appendChild(iframe);
+    const doc=iframe.contentDocument||iframe.contentWindow.document;
     doc.open();
-    doc.write(`<!DOCTYPE html><html dir="rtl"><head><meta charset="UTF-8">
+    doc.write(`<!DOCTYPE html><html><head><meta charset="UTF-8">
       <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;800;900&display=swap" rel="stylesheet">
-      <style>*{box-sizing:border-box;}body{font-family:'Cairo',Arial,sans-serif;direction:rtl;margin:0;padding:8px;background:#fff;}
-      .pdf-header{display:flex;align-items:flex-start;justify-content:space-between;border:2px solid #0f1f3d;border-radius:8px;padding:8px 12px;margin-bottom:8px;gap:8px;}
-      table{width:100%;border-collapse:collapse;font-size:9pt;}th{background:#0f1f3d;color:#c9a84c;padding:7px;text-align:center;border:1.5px solid #333;-webkit-print-color-adjust:exact;print-color-adjust:exact;}</style>
+      <style>*{box-sizing:border-box;}body{font-family:'Cairo',Arial,sans-serif;direction:rtl;margin:0;padding:12px;background:#fff;}
+      .hdr{display:flex;align-items:center;justify-content:space-between;border:3px solid #0f1f3d;border-radius:10px;padding:12px 16px;margin-bottom:10px;gap:12px;}
+      .ttl{text-align:center;font-size:12pt;font-weight:900;color:#0f1f3d;margin-bottom:6px;border-bottom:2.5px solid #0f1f3d;padding-bottom:4px;}
+      table{width:100%;border-collapse:collapse;font-size:9.5pt;}
+      thead th{background:#0f1f3d;color:#c9a84c;border:2px solid #334;padding:8px;text-align:center;-webkit-print-color-adjust:exact;}</style>
       </head><body>
-      <div class="pdf-header">
-        <div style="text-align:right;"><div style="font-size:10pt;font-weight:800;color:#0f1f3d;">${f.dp||''}</div>
-          <div style="font-size:8.5pt;color:#333;">السنة: ${S.ay} | الدور: ${S.round===2?'الدورة الاستدراكية':'الدورة العادية'}</div></div>
-        <div style="text-align:center;flex:1;"><div style="font-size:7.5pt;color:#555;">${S.settings?.ministry||'وزارة التعليم العالي والبحث العلمي'}</div>
-          <div style="font-size:11pt;font-weight:800;color:#0f1f3d;">${S.settings?.university||'جامعة عمار ثليجي الأغواط'}</div>
-          <div style="font-size:8.5pt;color:#333;">${S.settings?.faculty||''}</div></div>
-        <div style="min-width:80px;text-align:center;">${logoHtml}<div style="font-size:8pt;font-weight:700;">${f.spec||''}</div></div>
-      </div>
-      <div style="text-align:center;font-size:10pt;font-weight:800;color:#0f1f3d;margin-bottom:6px;">جدول الديون — ${f.spec||f.lv||''}</div>
+      ${banner}
+      <div class="ttl">جدول الديون — ${f.spec||f.lv||''}</div>
       <table><thead><tr>
-        <th style="width:100px;">اليوم / التاريخ</th><th style="width:95px;">التوقيت</th><th>المقياس / الأستاذ</th>
-        ${data.cols.map((c,ci)=>`<th style="background:${RB[ci%RB.length]};color:#0f1f3d;min-width:80px;">${c||'—'}</th>`).join('')}
+        <th style="width:100px;">اليوم / التاريخ</th><th style="width:90px;">التوقيت</th><th>المقياس / الأستاذ</th>
+        ${data.cols.map((c,ci)=>`<th style="background:${RB[ci%RB.length]};color:#0f1f3d;min-width:70px;">${c||'—'}</th>`).join('')}
       </tr></thead><tbody>${rows}</tbody></table></body></html>`);
-    doc.close();await new Promise(r=>setTimeout(r,1400));
+    doc.close();await new Promise(r=>setTimeout(r,1600));
     const canvas=await html2canvas(iframe.contentDocument.body,{scale:2,useCORS:true,backgroundColor:'#ffffff',width:1100,windowWidth:1100});
     document.body.removeChild(iframe);
-    const{jsPDF}=window.jspdf;const pdf=new jsPDF({orientation:'landscape',unit:'mm',format:'a4'});
-    const pW=pdf.internal.pageSize.getWidth();const imgH=canvas.height*(pW/canvas.width);
-    pdf.addImage(canvas.toDataURL('image/jpeg',0.93),'JPEG',0,0,pW,Math.min(imgH,pdf.internal.pageSize.getHeight()));
+    const{jsPDF}=window.jspdf;
+    const pdf=new jsPDF({orientation:'landscape',unit:'mm',format:'a4'});
+    const pW=pdf.internal.pageSize.getWidth(),pH=pdf.internal.pageSize.getHeight(),m=10;
+    const imgW=pW-m*2,imgH=canvas.height*(imgW/canvas.width);
+    pdf.addImage(canvas.toDataURL('image/jpeg',0.95),'JPEG',m,m,imgW,Math.min(imgH,pH-m*2));
     pdf.save(`جدول_الديون_${(f.spec||'').replace(/\s/g,'_')}_${S.ay.replace('/','_')}.pdf`);
     toast('✅ تم تصدير PDF');
+  }catch(e){console.error(e);toast('❌ خطأ: '+e.message);}
+}
+
+async function exportDuyunPNG(){
+  const data=getDuyunData();
+  const f=getExamFilters();
+  if(!data.rows.length){toast('⚠️ الجدول فارغ');return;}
+  toast('⏳ جاري تصدير PNG...');
+  const RB=['#dbeafe','#dcfce7','#fed7aa','#fce7f3','#ede9fe','#fef9c3','#e0f2fe','#fef3c7'];
+  const banner=_buildDuyunBanner(f);
+  const rows=data.rows.map((r,i)=>`<tr style="background:${i%2?'#f5fff8':'#fff'}">
+    <td style="padding:7px 8px;border:1.5px solid #999;font-weight:700;text-align:center;"><div>${r.day||''}</div><div style="font-size:8pt;color:#555;">${r.date||''}</div></td>
+    <td style="padding:7px 8px;border:1.5px solid #999;text-align:center;">${r.slot||''}</td>
+    <td style="padding:7px 8px;border:1.5px solid #999;text-align:right;background:#fefce8;">
+      <div style="font-weight:800;">${r.subj||''}</div>
+      <div style="font-size:8.5pt;color:#555;">${r.tch||''}</div>
+    </td>
+    ${r.cells.map((c,ci)=>`<td style="padding:7px;border:1.5px solid #999;background:${RB[ci%RB.length]};font-size:12pt;font-weight:800;text-align:center;color:#0f1f3d;-webkit-print-color-adjust:exact;">${c||'—'}</td>`).join('')}
+  </tr>`).join('');
+  try{
+    const iframe=document.createElement('iframe');
+    iframe.style.cssText='position:fixed;left:-9999px;top:-9999px;width:1100px;background:#fff;border:none;';
+    document.body.appendChild(iframe);
+    const doc=iframe.contentDocument||iframe.contentWindow.document;
+    doc.open();
+    doc.write(`<!DOCTYPE html><html><head><meta charset="UTF-8">
+      <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;800;900&display=swap" rel="stylesheet">
+      <style>*{box-sizing:border-box;}body{font-family:'Cairo',Arial,sans-serif;direction:rtl;margin:0;padding:12px;background:#fff;}
+      .hdr{display:flex;align-items:center;justify-content:space-between;border:3px solid #0f1f3d;border-radius:10px;padding:12px 16px;margin-bottom:10px;gap:12px;}
+      .ttl{text-align:center;font-size:12pt;font-weight:900;color:#0f1f3d;margin-bottom:6px;border-bottom:2.5px solid #0f1f3d;padding-bottom:4px;}
+      table{width:100%;border-collapse:collapse;font-size:9.5pt;}
+      thead th{background:#0f1f3d;color:#c9a84c;border:2px solid #334;padding:8px;text-align:center;-webkit-print-color-adjust:exact;}</style>
+      </head><body>
+      ${banner}
+      <div class="ttl">جدول الديون — ${f.spec||f.lv||''}</div>
+      <table><thead><tr>
+        <th style="width:100px;">اليوم / التاريخ</th><th style="width:90px;">التوقيت</th><th>المقياس / الأستاذ</th>
+        ${data.cols.map((c,ci)=>`<th style="background:${RB[ci%RB.length]};color:#0f1f3d;min-width:70px;">${c||'—'}</th>`).join('')}
+      </tr></thead><tbody>${rows}</tbody></table></body></html>`);
+    doc.close();await new Promise(r=>setTimeout(r,1600));
+    const canvas=await html2canvas(iframe.contentDocument.body,{scale:2,useCORS:true,backgroundColor:'#ffffff',width:1100,windowWidth:1100});
+    document.body.removeChild(iframe);
+    const link=document.createElement('a');
+    const sem=getDuyunSem(),round=getDuyunRound();
+    link.download=`جدول_الديون_${(f.spec||'').replace(/\s/g,'_')}_${round===2?'استدراكية':'عادية'}.png`;
+    link.href=canvas.toDataURL('image/png');
+    link.click();
+    toast('✅ تم تصدير PNG');
   }catch(e){console.error(e);toast('❌ خطأ: '+e.message);}
 }
 
