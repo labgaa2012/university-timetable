@@ -4950,9 +4950,12 @@ function renderDuyunTable(){
           </select>
         </td>
         <td class="exam-subj-cell">
-          <input class="exam-edit-input" style="font-weight:800;font-size:13px;text-align:right;width:100%;"
-            value="${r.subj||''}" placeholder="المقياس..."
+          <select class="exam-edit-input" style="font-weight:800;font-size:12px;width:100%;"
             onchange="updateDuyunRow(${ri},'subj',this.value)">
+            <option value="">-- المقياس --</option>
+            ${S.subjects.map(s=>`<option value="${s.name}"${s.name===r.subj?' selected':''}>${s.name}</option>`).join('')}
+            ${r.subj&&!S.subjects.find(s=>s.name===r.subj)?`<option value="${r.subj}" selected>${r.subj}</option>`:''}
+          </select>
           <select class="exam-edit-input" style="font-size:11px;width:100%;margin-top:4px;"
             onchange="updateDuyunRow(${ri},'tch',this.value)">
             <option value="">-- الأستاذ --</option>
