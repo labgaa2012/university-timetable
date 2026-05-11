@@ -2374,7 +2374,6 @@ table.occ-matrix td.cell-occ:hover{background:#fee2e2;filter:brightness(.97);}
       </div>
       <div style="display:flex;gap:8px;">
         <button class="btn bg" onclick="addDuyunRow()">➕ إضافة صف</button>
-        <button class="btn" onclick="addDuyunCol()" style="background:#059669;color:#fff;">➕ إضافة عمود</button>
         <button class="btn" onclick="exportDuyunPDF()" style="background:#7c3aed;color:#fff;">📄 PDF</button>
         <button class="btn" onclick="exportDuyunPNG()" style="background:#059669;color:#fff;">🖼️ PNG</button>
         <button class="btn" onclick="closeM('mDuyun')" style="background:var(--gray-light);color:var(--text-mid);">✕ إغلاق</button>
@@ -4887,16 +4886,20 @@ function getDuyunData(){
     const f=getExamFilters();
     const sem=parseInt(getDuyunSem())||1;
     const round=getDuyunRound();
+    // نسخ من جدول الامتحانات الأصلي
     const exams=S.exams.filter(e=>
       e.round==round&&e.y===S.ay&&e.sem==sem&&
       (!f.lv||e.lv===f.lv)&&(!f.dp||e.dp===f.dp)&&
       (!f.spec||e.spec===f.spec)&&(!f.sec||e.section===f.sec)
     ).sort((a,b)=>a.date?.localeCompare(b.date||'')||0);
-    const cols=['','','',''];
     const rows=exams.length
-      ?exams.map(e=>({date:e.date||'',day:e.day||'',slot:e.slot||'',subj:e.subj||'',tch:e.tch||'',cells:Array(cols.length).fill('')}))
-      :[{date:'',day:'',slot:'',subj:'',tch:'',cells:Array(cols.length).fill('')}];
-    S.duyunExams[key]={cols,rows};
+      ?exams.map(e=>({date:e.date||'',day:e.day||'',slot:e.slot||'',subj:e.subj||'',tch:e.tch||'',room:''}))
+      :[{date:'',day:'',slot:'',subj:'',tch:'',room:''}];
+    S.duyunExams[key]={rows};
+  }
+  // تأكد من وجود حقل room في كل صف
+  if(S.duyunExams[key].rows){
+    S.duyunExams[key].rows.forEach(r=>{if(r.room===undefined)r.room='';});
   }
   return S.duyunExams[key];
 }
@@ -4911,7 +4914,7 @@ function openDuyunTable(){
 }
 function renderDuyunTable(){
   const data=getDuyunData();
-  const {cols,rows}=data;
+  const {rows}=data;
   const wrap=document.getElementById('duyun-wrap');
   if(!wrap)return;
 
@@ -4920,15 +4923,9 @@ function renderDuyunTable(){
       <tr style="background:#e8f0fe;">
         <th style="width:110px;background:#e8f0fe;color:#0f1f3d;border:1.5px solid #c5d3f0;">اليوم / التاريخ</th>
         <th style="width:95px;background:#e8f0fe;color:#0f1f3d;border:1.5px solid #c5d3f0;">التوقيت</th>
-        <th style="min-width:200px;background:#e8f0fe;color:#0f1f3d;border:1.5px solid #c5d3f0;">المقياس / الأستاذ</th>
-        ${cols.map((c,ci)=>`<th style="min-width:110px;background:#e8f0fe;color:#0f1f3d;border:1.5px solid #c5d3f0;">
-          <input value="${c}" placeholder="اكتب اسم الفوج..."
-            style="width:100%;background:transparent;border:none;text-align:center;
-              font-family:'Cairo',sans-serif;font-size:12px;font-weight:700;color:#0f1f3d;outline:none;"
-            onchange="updateDuyunCol(${ci},this.value)">
-          ${cols.length>1?`<button onclick="removeDuyunCol(${ci})" style="background:none;border:none;cursor:pointer;color:#dc2626;font-size:10px;display:block;margin:2px auto 0;">✕</button>`:''}
-        </th>`).join('')}
-        <th style="width:50px;background:#e8f0fe;border:1.5px solid #c5d3f0;"></th>
+        <th style="background:#e8f0fe;color:#0f1f3d;border:1.5px solid #c5d3f0;">المقياس / الأستاذ</th>
+        <th style="width:120px;background:#e8f0fe;color:#0f1f3d;border:1.5px solid #c5d3f0;">القاعة</th>
+        <th style="width:40px;background:#e8f0fe;border:1.5px solid #c5d3f0;"></th>
       </tr>
     </thead>
     <tbody>
@@ -4951,23 +4948,19 @@ function renderDuyunTable(){
             value="${r.tch||''}" placeholder="الأستاذ..."
             onchange="updateDuyunRow(${ri},'tch',this.value)">
         </td>
-        ${r.cells.map((c,ci)=>`<td class="rc-${ci%8}" style="text-align:center;padding:6px;">
-          <input class="exam-room-input" style="background:transparent;width:100%;font-size:13px;font-weight:700;"
-            value="${c||''}" placeholder="..."
-            onchange="updateDuyunCell(${ri},${ci},this.value)">
-        </td>`).join('')}
+        <td style="text-align:center;padding:6px;">
+          <input class="exam-room-input" style="width:100%;font-size:12px;font-weight:700;text-align:center;"
+            value="${r.room||''}" placeholder="القاعة..."
+            onchange="updateDuyunRow(${ri},'room',this.value)">
+        </td>
         <td>
           <button onclick="removeDuyunRow(${ri})"
-            style="background:none;border:none;cursor:pointer;color:var(--danger);font-size:16px;">🗑️</button>
+            style="background:none;border:none;cursor:pointer;color:var(--danger);font-size:15px;">🗑️</button>
         </td>
       </tr>`).join('')}
     </tbody>
   </table>`;
   wrap.innerHTML=h;
-}
-function updateDuyunCol(ci,val){
-  const data=getDuyunData();
-  data.cols[ci]=val;save();
 }
 function updateDuyunRow(ri,field,val){
   const data=getDuyunData();
@@ -4980,32 +4973,14 @@ function updateDuyunRow(ri,field,val){
   }
   save();
 }
-function updateDuyunCell(ri,ci,val){
-  const data=getDuyunData();
-  if(!data.rows[ri])return;
-  data.rows[ri].cells[ci]=val;save();
-}
 function addDuyunRow(){
   const data=getDuyunData();
-  data.rows.push({date:'',day:'',slot:getExamSlots()[0]||'',subj:'',tch:'',cells:Array(data.cols.length).fill('')});
-  save();renderDuyunTable();
-}
-function addDuyunCol(){
-  const data=getDuyunData();
-  data.cols.push('');
-  data.rows.forEach(r=>r.cells.push(''));
+  data.rows.push({date:'',day:'',slot:getExamSlots()[0]||'',subj:'',tch:'',room:''});
   save();renderDuyunTable();
 }
 function removeDuyunRow(ri){
   const data=getDuyunData();
   data.rows.splice(ri,1);save();renderDuyunTable();
-}
-function removeDuyunCol(ci){
-  const data=getDuyunData();
-  if(data.cols.length<=1){toast('⚠️ يجب أن يبقى عمود واحد على الأقل');return;}
-  data.cols.splice(ci,1);
-  data.rows.forEach(r=>r.cells.splice(ci,1));
-  save();renderDuyunTable();
 }
 function _buildDuyunBanner(f){
   const sem=getDuyunSem();
@@ -5061,7 +5036,7 @@ async function exportDuyunPDF(){
       <div style="font-weight:800;">${r.subj||''}</div>
       <div style="font-size:8.5pt;color:#555;">${r.tch||''}</div>
     </td>
-    ${r.cells.map((c,ci)=>`<td style="padding:7px;border:1.5px solid #999;background:${RB[ci%RB.length]};font-size:12pt;font-weight:800;text-align:center;color:#0f1f3d;-webkit-print-color-adjust:exact;">${c||'—'}</td>`).join('')}
+    <td style="padding:7px 10px;border:1.5px solid #999;background:#dbeafe;font-size:11pt;font-weight:800;text-align:center;color:#0f1f3d;">${r.room||'—'}</td>
   </tr>`).join('');
   try{
     const iframe=document.createElement('iframe');
@@ -5081,7 +5056,7 @@ async function exportDuyunPDF(){
       <div class="ttl">جدول الديون — ${f.spec||f.lv||''}</div>
       <table><thead><tr>
         <th style="width:100px;">اليوم / التاريخ</th><th style="width:90px;">التوقيت</th><th>المقياس / الأستاذ</th>
-        ${data.cols.map((c,ci)=>`<th style="background:${RB[ci%RB.length]};color:#0f1f3d;min-width:70px;">${c||'—'}</th>`).join('')}
+        <th style="width:100px;background:#e8f0fe;color:#0f1f3d;">القاعة</th>
       </tr></thead><tbody>${rows}</tbody></table></body></html>`);
     doc.close();await new Promise(r=>setTimeout(r,1600));
     const canvas=await html2canvas(iframe.contentDocument.body,{scale:2,useCORS:true,backgroundColor:'#ffffff',width:1100,windowWidth:1100});
@@ -5110,7 +5085,7 @@ async function exportDuyunPNG(){
       <div style="font-weight:800;">${r.subj||''}</div>
       <div style="font-size:8.5pt;color:#555;">${r.tch||''}</div>
     </td>
-    ${r.cells.map((c,ci)=>`<td style="padding:7px;border:1.5px solid #999;background:${RB[ci%RB.length]};font-size:12pt;font-weight:800;text-align:center;color:#0f1f3d;-webkit-print-color-adjust:exact;">${c||'—'}</td>`).join('')}
+    <td style="padding:7px 10px;border:1.5px solid #999;background:#dbeafe;font-size:11pt;font-weight:800;text-align:center;color:#0f1f3d;">${r.room||'—'}</td>
   </tr>`).join('');
   try{
     const iframe=document.createElement('iframe');
@@ -5130,7 +5105,7 @@ async function exportDuyunPNG(){
       <div class="ttl">جدول الديون — ${f.spec||f.lv||''}</div>
       <table><thead><tr>
         <th style="width:100px;">اليوم / التاريخ</th><th style="width:90px;">التوقيت</th><th>المقياس / الأستاذ</th>
-        ${data.cols.map((c,ci)=>`<th style="background:${RB[ci%RB.length]};color:#0f1f3d;min-width:70px;">${c||'—'}</th>`).join('')}
+        <th style="width:100px;background:#e8f0fe;color:#0f1f3d;">القاعة</th>
       </tr></thead><tbody>${rows}</tbody></table></body></html>`);
     doc.close();await new Promise(r=>setTimeout(r,1600));
     const canvas=await html2canvas(iframe.contentDocument.body,{scale:2,useCORS:true,backgroundColor:'#ffffff',width:1100,windowWidth:1100});
