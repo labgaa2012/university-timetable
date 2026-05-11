@@ -4958,14 +4958,23 @@ function renderDuyunTable(){
             onchange="updateDuyunRow(${ri},'tch',this.value)">
         </td>
         ${ri===0?extraCols.map((_,ci)=>`<td rowspan="${rows.length}"
-          style="vertical-align:middle;text-align:center;padding:6px;border:1.5px solid #c5d3f0;
+          style="vertical-align:middle;text-align:center;padding:8px;border:1.5px solid #c5d3f0;
             background:${['#dbeafe','#dcfce7','#fed7aa','#fce7f3','#ede9fe','#fef9c3','#e0f2fe','#fef3c7'][ci%8]};">
-          <textarea style="width:100%;min-height:${Math.max(60,rows.length*35)}px;border:none;
-            background:transparent;font-family:'Cairo',sans-serif;font-size:12px;
-            font-weight:700;text-align:center;resize:none;outline:none;"
-            onchange="updateDuyunCell(0,${ci},this.value)"
-            oninput="updateDuyunCell(0,${ci},this.value)"
-            placeholder="...">${(data.extraData||[])[ci]||''}</textarea>
+          <div style="font-size:14pt;font-weight:900;color:#0f1f3d;margin-bottom:6px;">
+            ${(data.extraData||[])[ci]||'—'}
+          </div>
+          <select class="exam-edit-input" style="font-size:11px;width:100%;"
+            onchange="onDuyunRoomSel(${ci},this)">
+            <option value="">-- اختر قاعة --</option>
+            ${S.rooms.map(r=>`<option value="${r}"${r===(data.extraData||[])[ci]?' selected':''}>${r}</option>`).join('')}
+            <option value="__manual__">✏️ كتابة يدوية</option>
+          </select>
+          <input style="font-size:11px;width:100%;margin-top:4px;padding:4px;border:1px solid #e0e8f5;
+            border-radius:6px;font-family:'Cairo',sans-serif;text-align:center;
+            display:${(data.extraData||[])[ci]&&!S.rooms.includes((data.extraData||[])[ci])?'block':'none'};"
+            value="${(data.extraData||[])[ci]&&!S.rooms.includes((data.extraData||[])[ci])?(data.extraData||[])[ci]:''}"
+            placeholder="اكتب اسم القاعة..."
+            onblur="saveDuyunRoomManual(${ci},this)">
         </td>`).join(''):''}
         <td>
           <button onclick="removeDuyunRow(${ri})"
@@ -4987,6 +4996,28 @@ function updateDuyunRow(ri,field,val){
   }
   save();
 }
+function onDuyunRoomSel(ci,sel){
+  const val=sel.value;
+  const td=sel.closest('td');
+  const inp=td.querySelector('input');
+  const disp=td.querySelector('div');
+  if(val==='__manual__'){
+    if(inp)inp.style.display='block';
+    sel.value='';
+  } else {
+    if(inp)inp.style.display='none';
+    if(disp)disp.textContent=val||'—';
+    updateDuyunCell(0,ci,val);
+  }
+}
+function saveDuyunRoomManual(ci,inp){
+  const room=inp.value.trim();
+  const td=inp.closest('td');
+  const disp=td.querySelector('div');
+  if(disp)disp.textContent=room||'—';
+  updateDuyunCell(0,ci,room);
+}
+
 function updateDuyunCell(ri,ci,val){
   const data=getDuyunData();
   // الخلية المدمجة تُخزَّن في extraData مستقل
