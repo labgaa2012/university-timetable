@@ -1445,6 +1445,7 @@ table.occ-matrix td.cell-occ:hover{background:#fee2e2;filter:brightness(.97);}
         </div>
         <button class="btn bg" onclick="addYearManual()" style="white-space:nowrap;align-self:flex-end;">➕ إضافة</button>
         <button class="btn bn" onclick="addNextYear()" style="white-space:nowrap;align-self:flex-end;">⚡ التالية تلقائياً</button>
+        <button class="btn" onclick="impExcel('years')" style="background:#0d8a7d;color:#fff;white-space:nowrap;align-self:flex-end;">📥 استيراد Excel</button>
       </div>
       <div style="font-size:11px;color:var(--gray);margin-bottom:14px;">
         💡 انقر على سنة لتفعيلها (السنة النشطة = السنة التي تعمل عليها الآن)
@@ -1460,6 +1461,7 @@ table.occ-matrix td.cell-occ:hover{background:#fee2e2;filter:brightness(.97);}
         <div class="mct"><div class="mcti">🎓</div>إدارة المستويات</div>
         <div class="frow">
           <button class="btn bn" onclick="expLevelsExcel()">📊 تصدير</button>
+          <button class="btn" onclick="impExcel('levels')" style="background:#0d8a7d;color:#fff;">📥 استيراد</button>
           <button class="btn bp bsm" onclick="showPg('timetable',document.querySelector('.nav-tab'))">← العودة</button>
         </div>
       </div>
@@ -1484,6 +1486,7 @@ table.occ-matrix td.cell-occ:hover{background:#fee2e2;filter:brightness(.97);}
         <div class="mct"><div class="mcti">🏛️</div>إدارة الأقسام</div>
         <div class="frow">
           <button class="btn bn" onclick="expDeptsExcel()">📊 تصدير</button>
+          <button class="btn" onclick="impExcel('depts')" style="background:#0d8a7d;color:#fff;">📥 استيراد</button>
           <button class="btn bp bsm" onclick="showPg('timetable',document.querySelector('.nav-tab'))">← العودة</button>
         </div>
       </div>
@@ -1788,7 +1791,11 @@ table.occ-matrix td.cell-occ:hover{background:#fee2e2;filter:brightness(.97);}
     <div class="mc">
       <div class="mgmt-header">
         <div class="mct"><div class="mcti">📅</div>الفترات الدراسية</div>
-        <button class="btn bp bsm" onclick="showPg('timetable',document.querySelector('.nav-tab'))">← العودة</button>
+        <div class="frow">
+          <button class="btn bn" onclick="expSimpleExcel('periods','الفترة')">📊 تصدير</button>
+          <button class="btn" onclick="impExcel('periods')" style="background:#0d8a7d;color:#fff;">📥 استيراد</button>
+          <button class="btn bp bsm" onclick="showPg('timetable',document.querySelector('.nav-tab'))">← العودة</button>
+        </div>
       </div>
       <div class="mgmt-add-bar">
         <div class="fg" style="flex:1;">
@@ -1809,7 +1816,11 @@ table.occ-matrix td.cell-occ:hover{background:#fee2e2;filter:brightness(.97);}
     <div class="mc">
       <div class="mgmt-header">
         <div class="mct"><div class="mcti">🎯</div>أنواع التدريس</div>
-        <button class="btn bp bsm" onclick="showPg('timetable',document.querySelector('.nav-tab'))">← العودة</button>
+        <div class="frow">
+          <button class="btn bn" onclick="expSTypesExcel()">📊 تصدير</button>
+          <button class="btn" onclick="impExcel('stypes')" style="background:#0d8a7d;color:#fff;">📥 استيراد</button>
+          <button class="btn bp bsm" onclick="showPg('timetable',document.querySelector('.nav-tab'))">← العودة</button>
+        </div>
       </div>
       <!-- Add bar -->
       <div class="mgmt-add-bar">
@@ -1838,6 +1849,8 @@ table.occ-matrix td.cell-occ:hover{background:#fee2e2;filter:brightness(.97);}
         <div class="mct"><div class="mcti">🗂️</div>إدارة الفصائل</div>
         <div class="frow">
           <span class="filter-count" id="sec-count-lbl"></span>
+          <button class="btn bn" onclick="expSimpleExcel('sections','الفصيلة')">📊 تصدير</button>
+          <button class="btn" onclick="impExcel('sections')" style="background:#0d8a7d;color:#fff;">📥 استيراد</button>
           <button class="btn bp bsm" onclick="showPg('timetable',document.querySelector('.nav-tab'))">← العودة</button>
         </div>
       </div>
@@ -1862,6 +1875,8 @@ table.occ-matrix td.cell-occ:hover{background:#fee2e2;filter:brightness(.97);}
         <div class="mct"><div class="mcti">👥</div>إدارة الأفواج</div>
         <div class="frow">
           <span class="filter-count" id="grp-count-lbl"></span>
+          <button class="btn bn" onclick="expSimpleExcel('groups','الفوج')">📊 تصدير</button>
+          <button class="btn" onclick="impExcel('groups')" style="background:#0d8a7d;color:#fff;">📥 استيراد</button>
           <button class="btn bp bsm" onclick="showPg('timetable',document.querySelector('.nav-tab'))">← العودة</button>
         </div>
       </div>
@@ -3402,6 +3417,85 @@ function expDeptsExcel(){
   const ws=XLSX.utils.aoa_to_sheet(data);ws['!cols']=[{wch:30},{wch:12},{wch:16},{wch:8}];
   XLSX.utils.book_append_sheet(wb,ws,'الأقسام');XLSX.writeFile(wb,'depts.xlsx');toast('📊 تم التصدير');
 }
+// -- IMPORT/EXPORT HELPERS ---------------------------
+function expSimpleExcel(key, colName){
+  const wb=XLSX.utils.book_new();
+  const arr=S[key]||[];
+  const data=[[colName],...arr.map(v=>[v])];
+  const ws=XLSX.utils.aoa_to_sheet(data);
+  ws['!cols']=[{wch:30}];
+  XLSX.utils.book_append_sheet(wb,ws,colName);
+  XLSX.writeFile(wb,key+'.xlsx');
+  toast('📊 تم التصدير');
+}
+
+function expSTypesExcel(){
+  const wb=XLSX.utils.book_new();
+  const data=[['الاسم','الرمز','الأيقونة']];
+  (S.sessionTypes||[]).forEach(t=>data.push([t.name||'',t.code||'',t.icon||'']));
+  const ws=XLSX.utils.aoa_to_sheet(data);
+  ws['!cols']=[{wch:30},{wch:10},{wch:8}];
+  XLSX.utils.book_append_sheet(wb,ws,'أنواع التدريس');
+  XLSX.writeFile(wb,'session_types.xlsx');
+  toast('📊 تم التصدير');
+}
+
+function impExcel(key){
+  const inp=document.createElement('input');
+  inp.type='file';inp.accept='.xlsx,.xls,.csv';
+  inp.onchange=async e=>{
+    const file=e.target.files[0];if(!file)return;
+    const buf=await file.arrayBuffer();
+    const wb=XLSX.read(buf,{type:'array'});
+    const ws=wb.Sheets[wb.SheetNames[0]];
+    const rows=XLSX.utils.sheet_to_json(ws,{header:1}).filter(r=>r.length&&r[0]);
+    // تخطي السطر الأول (عنوان)
+    const data=rows.slice(1).map(r=>r[0]?.toString().trim()).filter(Boolean);
+    if(!data.length){toast('⚠️ الملف فارغ أو غير صالح');return;}
+
+    if(key==='years'){
+      let added=0;
+      data.forEach(v=>{if(!S.years.includes(v)){S.years.push(v);added++;}});
+      if(!S.ay&&S.years.length)S.ay=S.years[0];
+      save();renderYrGrid();toast(`✅ استُورد ${added} سنة`);
+    } else if(key==='levels'){
+      let added=0;
+      data.forEach(v=>{if(!S.levels.includes(v)){S.levels.push(v);added++;}});
+      save();renderLvGrid();toast(`✅ استُورد ${added} مستوى`);
+    } else if(key==='depts'){
+      let added=0;
+      data.forEach(v=>{if(!S.depts.includes(v)){S.depts.push(v);added++;}});
+      save();renderDptGrid();toast(`✅ استُورد ${added} قسم`);
+    } else if(key==='periods'){
+      let added=0;
+      data.forEach(v=>{if(!S.periods.includes(v)){S.periods.push(v);added++;}});
+      save();renderPeriods();toast(`✅ استُورد ${added} فترة`);
+    } else if(key==='sections'){
+      let added=0;
+      data.forEach(v=>{if(!S.sections.includes(v)){S.sections.push(v);added++;}});
+      save();renderSections();toast(`✅ استُورد ${added} فصيلة`);
+    } else if(key==='groups'){
+      let added=0;
+      data.forEach(v=>{if(!S.groups.includes(v)){S.groups.push(v);added++;}});
+      save();renderGroups();toast(`✅ استُورد ${added} فوج`);
+    } else if(key==='stypes'){
+      // أنواع التدريس: 3 أعمدة (اسم، رمز، أيقونة)
+      const allRows=rows.slice(1).filter(r=>r[0]?.toString().trim());
+      let added=0;
+      allRows.forEach(r=>{
+        const name=(r[0]||'').toString().trim();
+        const code=(r[1]||'').toString().trim();
+        const icon=(r[2]||'').toString().trim();
+        if(name&&!S.sessionTypes.find(t=>t.name===name)){
+          S.sessionTypes.push({name,code,icon,id:uid()});added++;
+        }
+      });
+      save();renderSTypes();toast(`✅ استُورد ${added} نوع تدريس`);
+    }
+  };
+  inp.click();
+}
+
 // -- SUBJECTS (المقاييس) ---------------------------
 let subjSemTab=0;
 
