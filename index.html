@@ -4953,9 +4953,12 @@ function renderDuyunTable(){
           <input class="exam-edit-input" style="font-weight:800;font-size:13px;text-align:right;width:100%;"
             value="${r.subj||''}" placeholder="المقياس..."
             onchange="updateDuyunRow(${ri},'subj',this.value)">
-          <input class="exam-edit-input" style="font-size:11px;color:#555;text-align:right;width:100%;margin-top:4px;"
-            value="${r.tch||''}" placeholder="الأستاذ..."
+          <select class="exam-edit-input" style="font-size:11px;width:100%;margin-top:4px;"
             onchange="updateDuyunRow(${ri},'tch',this.value)">
+            <option value="">-- الأستاذ --</option>
+            ${S.teachers.map(t=>`<option value="${t.name}"${t.name===r.tch?' selected':''}>${t.name}</option>`).join('')}
+            ${r.tch&&!S.teachers.find(t=>t.name===r.tch)?`<option value="${r.tch}" selected>${r.tch}</option>`:''}
+          </select>
         </td>
         ${ri===0?extraCols.map((_,ci)=>`<td rowspan="${rows.length}"
           style="vertical-align:middle;text-align:center;padding:8px;border:1.5px solid #c5d3f0;
