@@ -7665,13 +7665,28 @@ function pickPDF(choice){
 
 // -- GROUP PNG EXPORT ----------------------------------
 async function exportGroupPNG(lv,dp,spec,sec,grp,style){
+  if(style==='classic'){
+    await exportGroupPNGClassic(lv,dp,spec,sec,grp);
+    return;
+  }
+  // الشكل الحالي: لقطة مباشرة من الشاشة
   toast('⏳ جاري تصدير PNG...');
   try{
-    let canvas;
-    if(style==='classic'){
-      // نفس كود exportGroupPDFClassic بالضبط — فقط نحفظ PNG بدل PDF
+    const allBlocks=[...document.querySelectorAll('.tt-block')];
+    const block=allBlocks[0];
+    if(!block){toast('⚠️ لم يُعثر على الجدول');return;}
+    const canvas=await html2canvas(block,{scale:2,useCORS:true,backgroundColor:'#ffffff'});
+    const a=document.createElement('a');
+    a.download=`جدول_${(spec||dp).replace(/\s/g,'_')}_${(grp||'').replace(/\s/g,'_')}_${S.ay.replace('/','_')}.png`;
+    a.href=canvas.toDataURL('image/png');a.click();
+    toast('✅ تم تصدير PNG');
+  }catch(e){console.error(e);toast('❌ خطأ: '+e.message);}
+}
+
+// -- CLASSIC PDF (فترات أعمدة / أيام صفوف) --------
+async function exportGroupPNGClassic(lv,dp,spec,sec,grp){
   try{
-    toast('⏳ جاري تصدير PDF الكلاسيكي...');
+    toast('⏳ جاري تصدير PNG الكلاسيكي...');
     const period=S.activeTT?.period?S.periods[S.activeTT.period-1]||'':'';
     const grpLabel=[sec&&sec,grp&&grp].filter(Boolean).join(' — ') || '—';
 
@@ -7804,21 +7819,15 @@ async function exportGroupPNG(lv,dp,spec,sec,grp,style){
     });
     document.body.removeChild(iframe);
 
-      document.body.removeChild(iframe);
-      // PNG بدل PDF
-    } else {
-      const allBlocks=[...document.querySelectorAll('.tt-block')];
-      const block=allBlocks[0];
-      if(!block){toast('⚠️ لم يُعثر على الجدول');return;}
-      canvas=await html2canvas(block,{scale:2,useCORS:true,backgroundColor:'#ffffff'});
-    }
-    if(!canvas){toast('⚠️ لا توجد بيانات');return;}
     const a=document.createElement('a');
-    a.download=`جدول_${style}_${(spec||dp).replace(/\s/g,'_')}_${(grp||'').replace(/\s/g,'_')}_${S.ay.replace('/','_')}.png`;
+    a.download=`جدول_كلاسيكي_${(spec||dp).replace(/\s/g,'_')}_${(grp||'').replace(/\s/g,'_')}_${S.ay.replace('/','_')}.png`;
     a.href=canvas.toDataURL('image/png');a.click();
-    toast('✅ تم تصدير PNG');
-  }catch(e){console.error(e);toast('❌ خطأ: '+e.message);}
+    toast('✅ تم تصدير PNG الكلاسيكي');
+  } catch(e){
+    console.error(e);toast('❌ خطأ: '+e.message);
+  }
 }
+
 // -- CLASSIC PDF (فترات أعمدة / أيام صفوف) --------
 async function exportGroupPDFClassic(lv,dp,spec,sec,grp){
   try{
