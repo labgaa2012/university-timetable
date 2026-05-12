@@ -2599,57 +2599,23 @@ table.occ-matrix td.cell-occ:hover{background:#fee2e2;filter:brightness(.97);}
 
 <!-- MODAL: اختيار شكل PDF -->
 <div class="mo" id="mPDFChoice">
-  <div class="mb" style="width:480px;">
-    <div class="mt" id="pdfchoice-title">📄 اختر شكل التصدير</div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:4px;">
-      <!-- الخيار 1: الشكل الحالي -->
-      <div class="pdf-choice-card" onclick="pickPDF(1)" id="pdc-1">
-        <div class="pdc-preview">
-          <div style="display:flex;gap:3px;flex-direction:column;">
-            <div style="display:flex;gap:2px;">
-              <div style="width:28px;background:#0f1f3d;border-radius:2px;height:10px;"></div>
-              ${[1,2,3,4,5].map(()=>`<div style="flex:1;background:#dbeafe;border-radius:2px;height:10px;"></div>`).join('')}
-            </div>
-            ${[1,2,3,4,5,6].map(i=>`
-            <div style="display:flex;gap:2px;">
-              <div style="width:28px;background:#e2e8f0;border-radius:2px;height:14px;font-size:5px;display:flex;align-items:center;justify-content:center;color:#334;">يوم${i}</div>
-              <div style="flex:1;background:${i%3===0?'#dcfce7':i%3===1?'#dbeafe':'transparent'};border-radius:2px;height:14px;border:1px solid #e2e8f0;"></div>
-              <div style="flex:1;background:transparent;border-radius:2px;height:14px;border:1px solid #e2e8f0;"></div>
-              <div style="flex:1;background:${i%2===0?'#fed7aa':'transparent'};border-radius:2px;height:14px;border:1px solid #e2e8f0;"></div>
-              <div style="flex:1;background:transparent;border-radius:2px;height:14px;border:1px solid #e2e8f0;"></div>
-              <div style="flex:1;background:${i===2?'#dbeafe':'transparent'};border-radius:2px;height:14px;border:1px solid #e2e8f0;"></div>
-            </div>`).join('')}
-          </div>
-        </div>
-        <div class="pdc-label">الشكل الحالي</div>
-        <div class="pdc-sub">الأيام عمودياً · الفترات أفقياً</div>
-      </div>
-      <!-- الخيار 2: الشكل الكلاسيكي -->
-      <div class="pdf-choice-card" onclick="pickPDF(2)" id="pdc-2">
-        <div class="pdc-preview">
-          <div style="display:flex;gap:3px;flex-direction:column;">
-            <div style="display:flex;gap:2px;">
-              <div style="width:22px;background:#0f1f3d;border-radius:2px;height:10px;"></div>
-              ${[1,2,3,4,5,6].map(i=>`<div style="flex:1;background:#c9a84c;border-radius:2px;height:10px;font-size:4px;display:flex;align-items:center;justify-content:center;color:#fff;">ف${i}</div>`).join('')}
-            </div>
-            ${['أحد','اثن','ثلا','أرب','خمس'].map(d=>`
-            <div style="display:flex;gap:2px;">
-              <div style="width:22px;background:#f0f4f8;border-radius:2px;height:14px;font-size:5px;display:flex;align-items:center;justify-content:center;color:#0f1f3d;">${d}</div>
-              <div style="flex:1;background:#fef9c3;border-radius:2px;height:14px;border:1px solid #e2e8f0;"></div>
-              <div style="flex:1;background:transparent;border-radius:2px;height:14px;border:1px solid #e2e8f0;"></div>
-              <div style="flex:1;background:#dcfce7;border-radius:2px;height:14px;border:1px solid #e2e8f0;"></div>
-              <div style="flex:1;background:transparent;border-radius:2px;height:14px;border:1px solid #e2e8f0;"></div>
-              <div style="flex:1;background:#fef9c3;border-radius:2px;height:14px;border:1px solid #e2e8f0;"></div>
-              <div style="flex:1;background:transparent;border-radius:2px;height:14px;border:1px solid #e2e8f0;"></div>
-            </div>`).join('')}
-          </div>
-        </div>
-        <div class="pdc-label">الشكل الكلاسيكي</div>
-        <div class="pdc-sub">الفترات أعمدة · الأيام صفوف</div>
-      </div>
-    </div>
-    <div class="ma" style="margin-top:14px;">
-      <button class="btn" style="background:var(--gray-light);color:var(--text-mid);" onclick="closeM('mPDFChoice')">إلغاء</button>
+  <div class="mb" style="width:300px;">
+    <div class="mt" id="pdfchoice-title" style="font-size:14px;">📄 اختر شكل التصدير</div>
+    <div style="display:flex;flex-direction:column;gap:10px;margin-top:12px;">
+      <button onclick="pickPDF(1)" style="padding:12px;border-radius:9px;border:2px solid #0f1f3d;
+        background:#f0f4ff;color:#0f1f3d;font-size:13px;font-weight:800;cursor:pointer;
+        font-family:'Cairo',sans-serif;">
+        الشكل الحالي
+      </button>
+      <button onclick="pickPDF(2)" style="padding:12px;border-radius:9px;border:2px solid #c9a84c;
+        background:#fffbeb;color:#0f1f3d;font-size:13px;font-weight:800;cursor:pointer;
+        font-family:'Cairo',sans-serif;">
+        الشكل الكلاسيكي
+      </button>
+      <button onclick="closeM('mPDFChoice')" style="padding:8px;border-radius:9px;border:1px solid #e0e8f5;
+        background:#f8fafc;color:#888;font-size:12px;cursor:pointer;font-family:'Cairo',sans-serif;">
+        إلغاء
+      </button>
     </div>
   </div>
 </div>
