@@ -2079,6 +2079,7 @@ table.occ-matrix td.cell-occ:hover{background:#fee2e2;filter:brightness(.97);}
             <option value="">-- جميع الأساتذة --</option>
           </select>
           <button class="btn bn" onclick="expOvertimeExcel()">📊 تصدير Excel</button>
+          <button class="btn" onclick="impOvertimeExcel()" style="background:#0d8a7d;color:#fff;">📥 استيراد Excel</button>
           <button class="btn bp" onclick="printOvertime()">🖨️ طباعة</button>
         </div>
       </div>
@@ -7261,7 +7262,69 @@ function impArcExcel(){
   inp.click();
 }
 function rmArc(i){if(!confirm('حذف الأرشيف؟'))return;S.archive.splice(i,1);save();renderArchive();}
-function expArcJSON(i){
+function impOvertimeExcel(){
+  const inp=document.createElement('input');
+  inp.type='file';inp.accept='.xlsx,.xls';
+  inp.onchange=async e=>{
+    const file=e.target.files[0];if(!file)return;
+    try{
+      const buf=await file.arrayBuffer();
+      const wb=XLSX.read(buf,{type:'array'});
+      // نقرأ من ورقة التفصيل (الثانية) إن وجدت، وإلا الأولى
+      const wsName=wb.SheetNames.length>1?wb.SheetNames[1]:wb.SheetNames[0];
+      const ws=wb.Sheets[wsName];
+      const rows=XLSX.utils.sheet_to_json(ws,{defval:''});
+      if(!rows.length){toast('⚠️ الملف فارغ');return;}
+
+      // خريطة أنواع التدريس المعروفة
+      const typeMap={
+        'محاضرة':'tlc','tlc':'tlc','cours':'tlc',
+        'أعمال موجهة':'td','td':'td',
+        'أعمال تطبيقية':'tp','tp':'tp',
+        'محاضرة عن بعد':'tlc-remote','remote':'tlc-remote',
+      };
+      const slots=Object.keys(SL);
+      const dn=['السبت','الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس'];
+      let added=0,skipped=0;
+
+      rows.forEach(r=>{
+        const tch=(r['الأستاذ']||r['teacher']||'').toString().trim();
+        const subj=(r['المادة']||r['subject']||'').toString().trim();
+        const day=(r['اليوم']||r['day']||'').toString().trim();
+        const rawType=(r['النوع']||r['type']||'').toString().trim().toLowerCase();
+        const rawSlot=(r['الفترة']||r['slot']||'').toString().trim();
+        if(!tch||!subj)return;
+
+        // تحديد نوع الجلسة
+        let type='tlc';
+        for(const [k,v] of Object.entries(typeMap)){
+          if(rawType.includes(k.toLowerCase())){type=v;break;}
+        }
+
+        // تحديد الحصة
+        let slot=slots[0];
+        for(const s of slots){if(SL[s]===rawSlot||s===rawSlot){slot=s;break;}}
+
+        // التحقق من وجود الحصة مسبقاً
+        const exists=S.sessions.some(s=>
+          s.tch===tch&&s.subj===subj&&s.day===day&&s.slot===slot&&s.y===S.ay
+        );
+        if(exists){skipped++;return;}
+
+        S.sessions.push({
+          id:uid(),y:S.ay,tch,subj,type,day,slot,
+          lv:S.al||'',dp:S.ad||'',spec:'',section:'',group:'',
+          sem:1,firstLec:added===0?0:1
+        });
+        added++;
+      });
+
+      save();renderOvertime();
+      toast(`✅ استُورد ${added} حصة — تُجاهل ${skipped} مكرر`);
+    }catch(err){toast('❌ خطأ: '+err.message);}
+  };
+  inp.click();
+}
   const blob=new Blob([JSON.stringify(S.archive[i],null,2)],{type:'application/json'});
   dl(blob,'archive-'+S.archive[i].yr.replace('/','_')+'.json');toast('📄 تم تصدير JSON');
 }
