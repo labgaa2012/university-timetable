@@ -3523,59 +3523,77 @@ async function runBulkExport(){
 async function _generateGroupCanvas(reg){
   const att=reg;
   const period=att.period?S.periods[att.period-1]||'':'';
-  const logoHtml=S.settings?.logo?`<img src="${S.settings.logo}" style="width:55px;height:55px;object-fit:contain;">`:'<span style="font-size:30px;">🎓</span>';
-  const days=S.days||['السبت','الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس'];
-  const slots=S.slots||[];
+  const logoHtml=S.settings?.logo?`<img src="${S.settings.logo}" style="width:55px;height:55px;object-fit:contain;">`:'<span style="font-size:28px;">🎓</span>';
+
+  // نفس منطق exportPDF — مقارنة s.slot بمفتاح الوقت
   const sessions=S.sessions.filter(s=>
-    s.y===S.ay&&s.lv===att.lv&&s.dp===att.dp&&s.spec===att.spec&&
-    s.section===att.section&&s.group===att.group
+    s.y===S.ay&&s.lv===att.lv&&s.dp===att.dp&&
+    (s.spec||'')===(att.spec||'')&&
+    (s.section||'')===(att.section||'')&&
+    (s.group||'')===(att.group||'')
   );
-  const typeColors={tlc:'#dbeafe','tlc-remote':'#e0f2fe',td:'#dcfce7',tp:'#fed7aa','td-remote':'#fce7f3'};
-  const TL2={tlc:'محاضرة','tlc-remote':'عن بعد',td:'أعمال موجهة',tp:'أعمال تطبيقية'};
+  const mp={};
+  sessions.forEach(s=>{
+    if(!mp[s.day])mp[s.day]={};
+    if(!mp[s.day][s.slot])mp[s.day][s.slot]=[];
+    mp[s.day][s.slot].push(s);
+  });
 
-  // اسم الفصيلة بـ Canvas
-  const sc=document.createElement('canvas');sc.width=400;sc.height=65;
-  const sx=sc.getContext('2d');sx.clearRect(0,0,400,65);
-  sx.font='900 40px Cairo,Arial,sans-serif';sx.fillStyle='#dc2626';
-  sx.textAlign='center';sx.textBaseline='middle';
-  sx.fillText(att.section||att.spec||'',200,35);
-  const secImg=sc.toDataURL('image/png');
+  // اسم الفصيلة والفوج بـ Canvas API
+  function makeTextImg(txt,color,size){
+    const c=document.createElement('canvas');c.width=380;c.height=62;
+    const x=c.getContext('2d');x.clearRect(0,0,380,62);
+    x.font=size+'px Cairo,Arial,sans-serif';x.fillStyle=color;
+    x.textAlign='center';x.textBaseline='middle';x.fillText(txt,190,34);
+    return c.toDataURL('image/png');
+  }
+  const secImg=makeTextImg(att.section||att.spec||'','#dc2626','900 34');
+  const grpImg=makeTextImg(att.group||'','#0f1f3d','800 26');
 
-  let tHead=`<th style="width:50px;background:#0f1f3d;color:#c9a84c;border:1px solid #999;padding:5px;-webkit-print-color-adjust:exact;">اليوم</th>`;
-  slots.forEach(sl=>tHead+=`<th style="background:#0f1f3d;color:#c9a84c;border:1px solid #999;padding:4px;font-size:7.5pt;-webkit-print-color-adjust:exact;">${sl.name||''}<br><small style="font-weight:400;">${sl.from}–${sl.to}</small></th>`);
+  let tHead=`<th style="width:52px;background:#0f1f3d;color:#c9a84c;border:1px solid #888;padding:5px;-webkit-print-color-adjust:exact;">اليوم</th>`;
+  SLOTS.forEach(sl=>tHead+=`<th style="background:#0f1f3d;color:#c9a84c;border:1px solid #888;padding:4px;font-size:7.5pt;-webkit-print-color-adjust:exact;">${(SL[sl]||sl).replace(' - ','<br>')}</th>`);
+
   let tBody='';
-  days.forEach(day=>{
+  DAYS.forEach(day=>{
     tBody+=`<tr><td style="background:#f0f4f8;font-weight:700;text-align:center;border:1px solid #ccc;padding:4px;font-size:9pt;">${day}</td>`;
-    slots.forEach(sl=>{
-      const sess=sessions.filter(s=>s.day===day&&s.slot===sl.name);
-      let cell=sess.map(s=>`<div style="background:${typeColors[s.type]||'#f8f8f8'};border-radius:4px;padding:3px;margin:1px;font-size:7pt;line-height:1.4;">
-        <strong style="font-size:8.5pt;">${s.subj||''}</strong><br>
-        <span style="color:#555;">${s.tch||''}</span>
+    SLOTS.forEach(sl=>{
+      const cells=(mp[day]&&mp[day][sl])||[];
+      let cell=cells.map(s=>`<div class="sc-p ${s.type}">
+        <strong>${s.subj||''}</strong>
+        <span>${[s.tch,TL[s.type]||''].filter(Boolean).join(' · ')}</span>
       </div>`).join('');
-      tBody+=`<td style="border:1px solid #ccc;padding:2px;vertical-align:top;min-height:48px;">${cell}</td>`;
+      tBody+=`<td style="border:1px solid #ccc;padding:2px;vertical-align:top;min-height:45px;">${cell}</td>`;
     });
     tBody+='</tr>';
   });
 
+  const css=`*{box-sizing:border-box;}body{font-family:'Cairo',Arial,sans-serif;direction:rtl;margin:0;padding:10px;background:#fff;}
+  .hdr{display:flex;align-items:center;justify-content:space-between;border:3px solid #0f1f3d;border-radius:10px;padding:10px 14px;margin-bottom:8px;gap:10px;}
+  .sep{width:70%;height:3px;background:#0f1f3d;margin:4px auto;}
+  .ttl{text-align:center;font-size:11pt;font-weight:900;color:#0f1f3d;margin-bottom:5px;border-bottom:2px solid #0f1f3d;padding-bottom:3px;}
+  table{width:100%;border-collapse:collapse;font-size:8pt;}
+  .sc-p{border-radius:4px;padding:3px 5px;margin:2px 0;line-height:1.4;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+  .sc-p strong{display:block;font-size:9.5pt;font-weight:800;}
+  .sc-p span{font-size:9pt;color:#333;}
+  .tlc{background:#dbeafe;}.tlc-remote{background:#e0f2fe;}
+  .td{background:#dcfce7;}.tp{background:#fed7aa;}.td-remote{background:#fce7f3;}`;
+
   const html=`<!DOCTYPE html><html><head><meta charset="UTF-8">
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;800;900&display=swap" rel="stylesheet">
-    <style>*{box-sizing:border-box;}body{font-family:'Cairo',Arial,sans-serif;direction:rtl;margin:0;padding:10px;background:#fff;}
-    .hdr{display:flex;align-items:center;justify-content:space-between;border:3px solid #0f1f3d;border-radius:10px;padding:10px 14px;margin-bottom:8px;gap:10px;}
-    .sep{width:70%;height:3px;background:#0f1f3d;margin:4px auto;}
-    .ttl{text-align:center;font-size:11pt;font-weight:900;color:#0f1f3d;margin-bottom:5px;border-bottom:2px solid #0f1f3d;padding-bottom:3px;}
-    table{width:100%;border-collapse:collapse;font-size:8pt;}
-    </style></head><body>
+    <style>${css}</style></head><body>
     <div class="hdr">
       <div style="text-align:right;min-width:150px;border-right:3px solid #0f1f3d;padding-right:12px;">
         <div style="font-size:11pt;font-weight:900;color:#0f1f3d;">${att.dp||''}</div>
-        <div style="font-size:8.5pt;color:#333;line-height:2;">${period?'الفترة: '+period+'<br>':''}الفوج: <strong>${att.group||'—'}</strong></div>
+        <div style="font-size:8.5pt;color:#333;line-height:2;">${period?'الفترة: '+period+'<br>':''}
+          <img src="${grpImg}" style="height:28px;vertical-align:middle;">
+        </div>
       </div>
       <div style="text-align:center;flex:1;">
         <div style="font-size:8pt;color:#555;">${S.settings?.ministry||'وزارة التعليم العالي والبحث العلمي'}</div>
         <div class="sep"></div>
         <div style="font-size:13pt;font-weight:900;color:#0f1f3d;">${S.settings?.university||'جامعة عمار ثليجي الأغواط'}</div>
         <div style="font-size:9pt;color:#333;margin-bottom:4px;">${S.settings?.faculty||''}</div>
-        <img src="${secImg}" style="height:48px;">
+        <img src="${secImg}" style="height:46px;">
       </div>
       <div style="min-width:120px;text-align:center;border-left:3px solid #0f1f3d;padding-left:12px;">
         ${logoHtml}
@@ -3583,17 +3601,19 @@ async function _generateGroupCanvas(reg){
         <div style="font-size:8pt;color:#555;">${att.spec||''}</div>
       </div>
     </div>
-    <div class="ttl">جدول التوقيت — ${att.section||att.spec||''} — ${att.group||''}</div>
+    <div class="ttl">جدول التوقيت الأسبوعي</div>
     <table><thead><tr>${tHead}</tr></thead><tbody>${tBody}</tbody></table>
     </body></html>`;
 
   const iframe=document.createElement('iframe');
-  iframe.style.cssText='position:fixed;left:-9999px;top:-9999px;width:1250px;background:#fff;border:none;';
+  iframe.style.cssText='position:fixed;left:-9999px;top:-9999px;width:1150px;background:#fff;border:none;';
   document.body.appendChild(iframe);
   const doc=iframe.contentDocument||iframe.contentWindow.document;
   doc.open();doc.write(html);doc.close();
-  await new Promise(r=>setTimeout(r,1500));
-  const canvas=await html2canvas(iframe.contentDocument.body,{scale:2,useCORS:true,backgroundColor:'#ffffff',width:1250,windowWidth:1250});
+  await new Promise(r=>setTimeout(r,1600));
+  const canvas=await html2canvas(iframe.contentDocument.body,{
+    scale:1.6,useCORS:true,backgroundColor:'#ffffff',width:1150,windowWidth:1150
+  });
   document.body.removeChild(iframe);
   return canvas;
 }
@@ -3605,7 +3625,7 @@ async function _exportBulkPDF(canvases,label){
   canvases.forEach(({canvas},i)=>{
     if(i>0)pdf.addPage();
     const imgW=pW-m*2,imgH=canvas.height*(imgW/canvas.width);
-    pdf.addImage(canvas.toDataURL('image/jpeg',0.92),'JPEG',m,m,imgW,Math.min(imgH,pH-m*2));
+    pdf.addImage(canvas.toDataURL('image/jpeg',0.75),'JPEG',m,m,imgW,Math.min(imgH,pH-m*2));
   });
   pdf.save(`جداول_${label.replace(/\s/g,'_')}_${S.ay.replace('/','_')}.pdf`);
   toast(`✅ تم تصدير PDF (${canvases.length} صفحة)`);
