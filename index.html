@@ -3521,98 +3521,125 @@ async function runBulkExport(){
 }
 
 async function _generateGroupCanvas(reg){
-  const att=reg;
-  const period=att.period?S.periods[att.period-1]||'':'';
-  const logoHtml=S.settings?.logo?`<img src="${S.settings.logo}" style="width:55px;height:55px;object-fit:contain;">`:'<span style="font-size:28px;">🎓</span>';
+  // نفس الشكل الكلاسيكي من exportGroupPDF بالضبط
+  const lv=reg.lv,dp=reg.dp,spec=reg.spec||'',sec=reg.section||'',grp=reg.group||'';
+  const period=reg.period?S.periods[reg.period-1]||'':'';
 
-  // نفس منطق exportPDF — مقارنة s.slot بمفتاح الوقت
-  const sessions=S.sessions.filter(s=>
-    s.y===S.ay&&s.lv===att.lv&&s.dp===att.dp&&
-    (s.spec||'')===(att.spec||'')&&
-    (s.section||'')===(att.section||'')&&
-    (s.group||'')===(att.group||'')
+  const ss=S.sessions.filter(s=>
+    s.y===S.ay&&s.lv===lv&&s.dp===dp&&
+    (s.spec||'')===spec&&(s.section||'')===sec&&(s.group||'')===grp
   );
   const mp={};
-  sessions.forEach(s=>{
+  ss.forEach(s=>{
     if(!mp[s.day])mp[s.day]={};
     if(!mp[s.day][s.slot])mp[s.day][s.slot]=[];
     mp[s.day][s.slot].push(s);
   });
 
-  // اسم الفصيلة والفوج بـ Canvas API
-  function makeTextImg(txt,color,size){
-    const c=document.createElement('canvas');c.width=380;c.height=62;
-    const x=c.getContext('2d');x.clearRect(0,0,380,62);
-    x.font=size+'px Cairo,Arial,sans-serif';x.fillStyle=color;
-    x.textAlign='center';x.textBaseline='middle';x.fillText(txt,190,34);
+  // رسم الفصيلة والفوج بـ Canvas API (تجنب bidi)
+  function canvasText(txt,color,fontSize){
+    const c=document.createElement('canvas');c.width=400;c.height=50;
+    const x=c.getContext('2d');x.clearRect(0,0,400,50);
+    x.font=fontSize+'px Cairo,Arial,sans-serif';x.fillStyle=color;
+    x.textAlign='right';x.textBaseline='middle';
+    x.fillText(txt,390,28);
     return c.toDataURL('image/png');
   }
-  const secImg=makeTextImg(att.section||att.spec||'','#dc2626','900 34');
-  const grpImg=makeTextImg(att.group||'','#0f1f3d','800 26');
+  const secImgSrc=sec?canvasText('الفصيلة: '+sec,'#0f1f3d','700 16'):'';
+  const grpImgSrc=grp?canvasText('الفوج: '+grp,'#0f1f3d','700 16'):'';
 
-  let tHead=`<th style="width:52px;background:#0f1f3d;color:#c9a84c;border:1px solid #888;padding:5px;-webkit-print-color-adjust:exact;">اليوم</th>`;
-  SLOTS.forEach(sl=>tHead+=`<th style="background:#0f1f3d;color:#c9a84c;border:1px solid #888;padding:4px;font-size:7.5pt;-webkit-print-color-adjust:exact;">${(SL[sl]||sl).replace(' - ','<br>')}</th>`);
+  const logoHtml=S.settings?.logo
+    ?`<img class="h-logo" src="${S.settings.logo}">`
+    :`<div style="width:60px;height:60px;border:1.5px dashed #ccc;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:22px;">🎓</div>`;
 
-  let tBody='';
+  const css=`
+    *{box-sizing:border-box;font-family:'Cairo',Arial,sans-serif;}
+    body{direction:rtl;margin:0;padding:10px;background:#fff;color:#111;}
+    .pdf-header{display:flex;align-items:flex-start;justify-content:space-between;
+      border:2px solid #0f1f3d;border-radius:8px;padding:8px 12px;margin-bottom:10px;gap:8px;}
+    .h-right{text-align:right;min-width:180px;}
+    .h-right .h-dept{font-size:10pt;font-weight:800;color:#0f1f3d;margin-bottom:3px;}
+    .h-right .h-meta{font-size:8.5pt;color:#333;line-height:1.8;}
+    .h-center{text-align:center;flex:1;}
+    .h-center .h-min{font-size:7.5pt;color:#555;margin-bottom:2px;}
+    .h-center .h-univ{font-size:11pt;font-weight:800;color:#0f1f3d;}
+    .h-center .h-fac{font-size:8.5pt;color:#333;margin-top:2px;}
+    .h-center .h-sep{width:60%;height:2px;background:#0f1f3d;margin:5px auto;}
+    .h-left{text-align:left;min-width:120px;display:flex;flex-direction:column;align-items:center;gap:5px;}
+    .h-left .h-logo{width:60px;height:60px;object-fit:contain;}
+    .h-left .h-spec{font-size:8.5pt;font-weight:700;color:#0f1f3d;text-align:center;}
+    table{width:100%;border-collapse:collapse;font-size:8pt;}
+    th{background:#0f1f3d;color:#c9a84c;padding:6px 4px;text-align:center;border:1px solid #888;
+      -webkit-print-color-adjust:exact;print-color-adjust:exact;}
+    td{border:1px solid #ccc;padding:3px;vertical-align:top;min-height:45px;}
+    .day-cell{background:#f0f4f8;font-weight:700;text-align:center;font-size:8.5pt;width:52px;color:#0f1f3d;}
+    .sc-p{border-radius:4px;padding:3px 5px;margin:2px 0;line-height:1.4;-webkit-print-color-adjust:exact;}
+    .sc-p strong{display:block;font-size:10pt;font-weight:800;}
+    .sc-p span{font-size:10pt;color:#333;font-weight:700;}
+    .tlc{background:#dbeafe;}.tlc-remote{background:#e0f2fe;}
+    .ttd{background:#dcfce7;}.ttp{background:#fed7aa;}.ttd-remote{background:#fce7f3;}`;
+
+  let rows='';
   DAYS.forEach(day=>{
-    tBody+=`<tr><td style="background:#f0f4f8;font-weight:700;text-align:center;border:1px solid #ccc;padding:4px;font-size:9pt;">${day}</td>`;
-    SLOTS.forEach(sl=>{
-      const cells=(mp[day]&&mp[day][sl])||[];
-      let cell=cells.map(s=>`<div class="sc-p ${s.type}">
-        <strong>${s.subj||''}</strong>
-        <span>${[s.tch,TL[s.type]||''].filter(Boolean).join(' · ')}</span>
-      </div>`).join('');
-      tBody+=`<td style="border:1px solid #ccc;padding:2px;vertical-align:top;min-height:45px;">${cell}</td>`;
+    rows+=`<tr><td class="day-cell">${day}</td>`;
+    SLOTS.forEach(slot=>{
+      const cells=(mp[day]&&mp[day][slot])||[];
+      rows+=`<td>`;
+      cells.forEach(s=>{
+        rows+=`<div class="sc-p ${s.type}">
+          <strong>${s.subj}</strong>
+          <span>${[s.tch,s.rm,TL[s.type]||''].filter(Boolean).join(' · ')}</span>
+        </div>`;
+      });
+      rows+=`</td>`;
     });
-    tBody+='</tr>';
+    rows+=`</tr>`;
   });
 
-  const css=`*{box-sizing:border-box;}body{font-family:'Cairo',Arial,sans-serif;direction:rtl;margin:0;padding:10px;background:#fff;}
-  .hdr{display:flex;align-items:center;justify-content:space-between;border:3px solid #0f1f3d;border-radius:10px;padding:10px 14px;margin-bottom:8px;gap:10px;}
-  .sep{width:70%;height:3px;background:#0f1f3d;margin:4px auto;}
-  .ttl{text-align:center;font-size:11pt;font-weight:900;color:#0f1f3d;margin-bottom:5px;border-bottom:2px solid #0f1f3d;padding-bottom:3px;}
-  table{width:100%;border-collapse:collapse;font-size:8pt;}
-  .sc-p{border-radius:4px;padding:3px 5px;margin:2px 0;line-height:1.4;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
-  .sc-p strong{display:block;font-size:9.5pt;font-weight:800;}
-  .sc-p span{font-size:9pt;color:#333;}
-  .tlc{background:#dbeafe;}.tlc-remote{background:#e0f2fe;}
-  .td{background:#dcfce7;}.tp{background:#fed7aa;}.td-remote{background:#fce7f3;}`;
-
-  const html=`<!DOCTYPE html><html><head><meta charset="UTF-8">
-    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;800;900&display=swap" rel="stylesheet">
+  const html=`<!DOCTYPE html><html dir="rtl"><head><meta charset="UTF-8">
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;800&display=swap" rel="stylesheet">
     <style>${css}</style></head><body>
-    <div class="hdr">
-      <div style="text-align:right;min-width:150px;border-right:3px solid #0f1f3d;padding-right:12px;">
-        <div style="font-size:11pt;font-weight:900;color:#0f1f3d;">${att.dp||''}</div>
-        <div style="font-size:8.5pt;color:#333;line-height:2;">${period?'الفترة: '+period+'<br>':''}
-          <img src="${grpImg}" style="height:28px;vertical-align:middle;">
+    <div class="pdf-header">
+      <div class="h-right">
+        <div class="h-dept">${dp}</div>
+        <div class="h-meta">
+          السنة الدراسية: ${S.ay}<br>
+          ${period?'الفترة: '+period+'<br>':''}
+          ${secImgSrc?`<img src="${secImgSrc}" style="height:22px;display:block;margin:2px 0;">`:''}
+          ${grpImgSrc?`<img src="${grpImgSrc}" style="height:22px;display:block;margin:2px 0;">`:''}
         </div>
       </div>
-      <div style="text-align:center;flex:1;">
-        <div style="font-size:8pt;color:#555;">${S.settings?.ministry||'وزارة التعليم العالي والبحث العلمي'}</div>
-        <div class="sep"></div>
-        <div style="font-size:13pt;font-weight:900;color:#0f1f3d;">${S.settings?.university||'جامعة عمار ثليجي الأغواط'}</div>
-        <div style="font-size:9pt;color:#333;margin-bottom:4px;">${S.settings?.faculty||''}</div>
-        <img src="${secImg}" style="height:46px;">
+      <div class="h-center">
+        <div class="h-min">${S.settings?.ministry||'وزارة التعليم العالي والبحث العلمي'}</div>
+        <div class="h-sep"></div>
+        <div class="h-univ">${S.settings?.university||'جامعة عمار ثليجي الأغواط'}</div>
+        <div class="h-fac">${S.settings?.faculty||'كلية العلوم الاقتصادية والتجارية وعلوم التسيير'}</div>
       </div>
-      <div style="min-width:120px;text-align:center;border-left:3px solid #0f1f3d;padding-left:12px;">
+      <div class="h-left">
         ${logoHtml}
-        <div style="font-size:9pt;font-weight:900;color:#0f1f3d;margin-top:4px;">${S.ay}</div>
-        <div style="font-size:8pt;color:#555;">${att.spec||''}</div>
+        <div class="h-spec">${spec||'—'}</div>
       </div>
     </div>
-    <div class="ttl">جدول التوقيت الأسبوعي</div>
-    <table><thead><tr>${tHead}</tr></thead><tbody>${tBody}</tbody></table>
+    <div style="text-align:center;font-size:9pt;font-weight:800;color:#0f1f3d;margin-bottom:6px;">
+      جدول التوقيت الأسبوعي — ${lv}
+    </div>
+    <table>
+      <thead><tr>
+        <th style="width:52px;">اليوم</th>
+        ${SLOTS.map(sl=>`<th>${SL[sl].replace(' - ','<br>')}</th>`).join('')}
+      </tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
     </body></html>`;
 
   const iframe=document.createElement('iframe');
-  iframe.style.cssText='position:fixed;left:-9999px;top:-9999px;width:1150px;background:#fff;border:none;';
+  iframe.style.cssText='position:fixed;left:-9999px;top:-9999px;width:1100px;background:#fff;border:none;';
   document.body.appendChild(iframe);
   const doc=iframe.contentDocument||iframe.contentWindow.document;
   doc.open();doc.write(html);doc.close();
   await new Promise(r=>setTimeout(r,1600));
   const canvas=await html2canvas(iframe.contentDocument.body,{
-    scale:1.6,useCORS:true,backgroundColor:'#ffffff',width:1150,windowWidth:1150
+    scale:2,useCORS:true,backgroundColor:'#ffffff',width:1100,windowWidth:1100
   });
   document.body.removeChild(iframe);
   return canvas;
