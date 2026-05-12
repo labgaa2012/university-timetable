@@ -1181,21 +1181,8 @@ table.occ-matrix td.cell-occ:hover{background:#fee2e2;filter:brightness(.97);}
   </div>
 </div>
 
-<!-- ══ ACCOUNTS PAGE ══ -->
-<div class="pg" id="pg-accounts" style="display:none;">
-  <div class="mc">
-    <div class="mgmt-header">
-      <div class="mct"><div class="mcti">👥</div>إدارة الحسابات</div>
-      <button class="btn bg" onclick="openAddAccount()">➕ حساب جديد</button>
-    </div>
-    <div id="acc-list"></div>
-  </div>
-</div>
 
-<!-- MODAL: تغيير كلمة المرور -->
-<div class="mo" id="mChangePass">
-  <div class="mb" style="width:380px;">
-    <div class="mt">🔑 تغيير كلمة المرور</div>
+
     <input type="hidden" id="chpass-id">
     <div id="chpass-user" style="text-align:center;font-size:13px;font-weight:700;color:var(--navy);
       background:#f0f4ff;padding:8px;border-radius:8px;margin-bottom:14px;"></div>
@@ -1247,6 +1234,18 @@ table.occ-matrix td.cell-occ:hover{background:#fee2e2;filter:brightness(.97);}
 
 <!-- MAIN -->
 <main id="main">
+
+  <!-- ══ ACCOUNTS PAGE ══ -->
+  <div class="pg" id="pg-accounts">
+    <div class="mc">
+      <div class="mgmt-header">
+        <div class="mct"><div class="mcti">👥</div>إدارة الحسابات</div>
+        <button class="btn bg" onclick="openAddAccount()">➕ حساب جديد</button>
+      </div>
+      <div id="acc-list"></div>
+    </div>
+  </div>
+
   <div class="stats-row">
     <div class="stat s1"><div class="sval" id="st1">51</div><div class="slbl">القاعات والمدرجات</div></div>
     <div class="stat s2"><div class="sval" id="st2">0</div><div class="slbl">الأساتذة</div></div>
