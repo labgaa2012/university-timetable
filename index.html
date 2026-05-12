@@ -4305,13 +4305,15 @@ function onTTFilterChange(field, value){
 
 // -- INSTALL TIMETABLES ----------------------------
 function openInstallTT(){
-  // populate selects
   const perOpts='<option value="">-- كل الفترات --</option>'
     +S.periods.map((p,i)=>`<option value="${i+1}">${p}</option>`).join('');
   document.getElementById('it-period').innerHTML=perOpts;
   const lvOpts=S.levels.map(l=>`<option>${l}</option>`).join('');
   document.getElementById('it-lv').innerHTML=lvOpts;
-  const dpOpts=S.depts.map(d=>`<option>${d}</option>`).join('');
+  // قسم: يرى قسمه فقط
+  const isAdmin=!CURRENT_USER||CURRENT_USER.role==='admin';
+  const depts=isAdmin?S.depts:[CURRENT_USER.dept];
+  const dpOpts=depts.map(d=>`<option>${d}</option>`).join('');
   document.getElementById('it-dp').innerHTML=dpOpts;
   onItLvChange();
   updateItPreview();
@@ -4386,16 +4388,16 @@ function confirmInstallTT(){
 
 // -- ADD TIMETABLE MODAL ---------------------------
 function openAddTimetable(){
-  // populate selects
   const lvOpts=S.levels.map(l=>`<option>${l}</option>`).join('');
   const el=document.getElementById('att-lv');if(el)el.innerHTML=lvOpts;
-  const dpOpts=S.depts.map(d=>`<option>${d}</option>`).join('');
+  // قسم: يرى قسمه فقط
+  const isAdmin=!CURRENT_USER||CURRENT_USER.role==='admin';
+  const depts=isAdmin?S.depts:[CURRENT_USER.dept];
+  const dpOpts=depts.map(d=>`<option>${d}</option>`).join('');
   const ed=document.getElementById('att-dp');if(ed)ed.innerHTML=dpOpts;
-  // sections
   const secEl=document.getElementById('att-section');
   if(secEl)secEl.innerHTML='<option value="">-- كل الفصائل --</option>'
     +S.sections.map(s=>`<option value="${s}">${s}</option>`).join('');
-  // groups
   const grpEl=document.getElementById('att-group');
   if(grpEl)grpEl.innerHTML='<option value="">-- كل الأفواج --</option>'
     +S.groups.map(g=>`<option value="${g}">${g}</option>`).join('');
@@ -4902,6 +4904,8 @@ function onDropWithKey(e,day,slot,lv,dp,spec,sec,grp){
   e.currentTarget.classList.remove('drop-over');
   if(!dragId)return;
   const s=S.sessions.find(x=>x.id===dragId);if(!s)return;
+  // صلاحية التعديل
+  if(!canEditDept(s.dp)){toast('⚠️ لا تملك صلاحية تعديل جداول هذا القسم');dragId=null;return;}
   const conflict=S.sessions.find(x=>
     x.id!==dragId&&x.day===day&&x.slot===slot&&
     x.lv===lv&&x.dp===dp&&x.spec===spec&&
@@ -4946,6 +4950,7 @@ function onDrop(e,day,slot){
   e.currentTarget.classList.remove('drop-over');
   if(!dragId)return;
   const s=S.sessions.find(x=>x.id===dragId);if(!s)return;
+  if(!canEditDept(s.dp)){toast('⚠️ لا تملك صلاحية تعديل جداول هذا القسم');dragId=null;return;}
   const conflict=S.sessions.find(x=>x.id!==dragId&&x.day===day&&x.slot===slot&&x.lv===s.lv&&x.dp===s.dp);
   if(conflict){toast('⚠️ تعارض: توجد حصة في هذه الخلية');dragId=null;return;}
   s.day=day;s.slot=slot;
@@ -5699,6 +5704,7 @@ function openDaysMgr(){openRestoreDays();}
 
 // -- DELETE & REINSTALL GROUP TT -------------------
 function deleteGroupTT(lv,dp,spec,sec,grp){
+  if(!canEditDept(dp)){toast('⚠️ لا تملك صلاحية حذف جداول هذا القسم');return;}
   const sessCount=S.sessions.filter(s=>
     s.y===S.ay&&s.lv===lv&&s.dp===dp&&s.spec===spec&&s.section===sec&&s.group===grp
   ).length;
