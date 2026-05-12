@@ -2127,7 +2127,11 @@ table.occ-matrix td.cell-occ:hover{background:#fee2e2;filter:brightness(.97);}
     <div class="mc">
       <div class="mch">
         <div class="mct"><div class="mcti">📦</div>الأرشيف</div>
-        <button class="btn bg" onclick="doArchive()">📦 أرشفة السنة الحالية</button>
+        <div class="frow" style="gap:8px;">
+          <button class="btn bg" onclick="doArchive()">📦 أرشفة السنة الحالية</button>
+          <button class="btn" onclick="impArcJSON()" style="background:#0d8a7d;color:#fff;">📥 استيراد JSON</button>
+          <button class="btn" onclick="impArcExcel()" style="background:#0d8a7d;color:#fff;">📥 استيراد Excel</button>
+        </div>
       </div>
       <div id="arcList"></div>
     </div>
@@ -7203,6 +7207,58 @@ function doArchive(){
     teachers:[...S.teachers],rooms:[...S.rooms]
   });
   save();renderArchive();toast('📦 تمت الأرشفة: '+S.ay);
+}
+function impArcJSON(){
+  const inp=document.createElement('input');
+  inp.type='file';inp.accept='.json';
+  inp.onchange=async e=>{
+    const file=e.target.files[0];if(!file)return;
+    try{
+      const txt=await file.text();
+      const arc=JSON.parse(txt);
+      if(!arc.yr||!arc.sessions){toast('⚠️ ملف JSON غير صالح');return;}
+      if(S.archive.find(a=>a.yr===arc.yr)){
+        if(!confirm(`الأرشيف (${arc.yr}) موجود مسبقاً. هل تريد استبداله؟`))return;
+        S.archive=S.archive.filter(a=>a.yr!==arc.yr);
+      }
+      S.archive.unshift(arc);
+      save();renderArchive();toast('✅ تم استيراد أرشيف: '+arc.yr);
+    }catch(err){toast('❌ خطأ في قراءة الملف');}
+  };
+  inp.click();
+}
+function impArcExcel(){
+  const inp=document.createElement('input');
+  inp.type='file';inp.accept='.xlsx,.xls';
+  inp.onchange=async e=>{
+    const file=e.target.files[0];if(!file)return;
+    try{
+      const buf=await file.arrayBuffer();
+      const wb=XLSX.read(buf,{type:'array'});
+      // الورقة الأولى: الحصص
+      const wsSessions=wb.Sheets[wb.SheetNames[0]];
+      const sessions=XLSX.utils.sheet_to_json(wsSessions,{defval:''});
+      // الورقة الثانية: الامتحانات (اختيارية)
+      let exams=[];
+      if(wb.SheetNames[1]){
+        const wsExams=wb.Sheets[wb.SheetNames[1]];
+        exams=XLSX.utils.sheet_to_json(wsExams,{defval:''});
+      }
+      // استخراج السنة الدراسية من البيانات
+      const yr=sessions[0]?.y||sessions[0]?.['السنة']||new Date().getFullYear()+'/'+(new Date().getFullYear()+1);
+      if(S.archive.find(a=>a.yr===yr)){
+        if(!confirm(`الأرشيف (${yr}) موجود مسبقاً. هل تريد استبداله؟`))return;
+        S.archive=S.archive.filter(a=>a.yr!==yr);
+      }
+      S.archive.unshift({
+        yr,date:new Date().toLocaleDateString('ar-DZ'),
+        sc:sessions.length,ec:exams.length,tc:0,
+        sessions,exams,teachers:[],rooms:[]
+      });
+      save();renderArchive();toast('✅ تم استيراد '+sessions.length+' حصة من Excel');
+    }catch(err){toast('❌ خطأ في قراءة الملف: '+err.message);}
+  };
+  inp.click();
 }
 function rmArc(i){if(!confirm('حذف الأرشيف؟'))return;S.archive.splice(i,1);save();renderArchive();}
 function expArcJSON(i){
