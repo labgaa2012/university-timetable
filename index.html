@@ -1461,12 +1461,12 @@ table.occ-matrix td.cell-occ:hover{background:#fee2e2;filter:brightness(.97);}
       <div class="mgmt-header">
         <div class="mct"><div class="mcti">🎓</div>إدارة المستويات</div>
         <div class="frow">
-          <button class="btn bn" onclick="expLevelsExcel()">📊 تصدير</button>
-          <button class="btn" onclick="impExcel('levels')" style="background:#0d8a7d;color:#fff;">📥 استيراد</button>
+          <button class="btn bn admin-only" onclick="expLevelsExcel()">📊 تصدير</button>
+          <button class="btn admin-only" onclick="impExcel('levels')" style="background:#0d8a7d;color:#fff;">📥 استيراد</button>
           <button class="btn bp bsm" onclick="showPg('timetable',document.querySelector('.nav-tab'))">← العودة</button>
         </div>
       </div>
-      <div class="mgmt-add-bar">
+      <div class="mgmt-add-bar" id="lv-add-bar">
         <div class="fg" style="flex:1;">
           <label class="fl">اسم المستوى الجديد</label>
           <input class="fi" id="lvIn" placeholder="مثال: سنة ثالثة ماستر...">
@@ -3335,7 +3335,7 @@ function renderLvGrid(){
           </div>
         </div>
         <div class="yl-actions" onclick="event.stopPropagation()">
-          <button class="icb idl" onclick="rmLv(${i})">🗑️</button>
+          ${(!CURRENT_USER||CURRENT_USER.role==='admin')?`<button class="icb idl" onclick="rmLv(${i})">🗑️</button>`:''}
         </div>
       </div>`;
     }).join('');
@@ -9502,18 +9502,24 @@ function applyPermissions(){
   const btnAcc=document.getElementById('btn-accounts');
   if(btnAcc)btnAcc.style.display=isAdmin?'flex':'none';
 
+  // إخفاء/إظهار عناصر admin فقط
+  document.querySelectorAll('.admin-only').forEach(el=>{
+    el.style.display=isAdmin?'':'none';
+  });
+
+  // شريط إضافة المستويات
+  const lvAddBar=document.getElementById('lv-add-bar');
+  if(lvAddBar)lvAddBar.style.display=isAdmin?'':'none';
+
   if(isAdmin){
-    // admin: كل شيء ظاهر
     document.querySelectorAll('.sb-nav-btn,.nav-tab').forEach(b=>b.style.display='');
   } else {
-    // قسم: إخفاء الأزرار المحظورة
     const hideMgmt=['snb-settings','snb-years','snb-depts','snb-periods',
       'snb-stypes','snb-sections','snb-groups','snb-specs','snb-rooms-manage'];
     hideMgmt.forEach(id=>{
       const el=document.getElementById(id);
       if(el)el.style.display='none';
     });
-    // إظهار ما يُسمح به
     const showMgmt=['snb-levels','snb-teachers','snb-subjects',
       'snb-tchtimetable','snb-dashboard'];
     showMgmt.forEach(id=>{
