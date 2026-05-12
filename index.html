@@ -7921,10 +7921,9 @@ async function exportGroupPDFClassic(lv,dp,spec,sec,grp){
 
     const{jsPDF}=window.jspdf;
     const pdf=new jsPDF({orientation:'landscape',unit:'mm',format:'a4'});
-    const pW=pdf.internal.pageSize.getWidth();
-    const imgH=canvas.height*(pW/canvas.width);
-    pdf.addImage(canvas.toDataURL('image/jpeg',0.95),'JPEG',0,0,pW,
-      Math.min(imgH,pdf.internal.pageSize.getHeight()));
+    const pW=pdf.internal.pageSize.getWidth(),pH=pdf.internal.pageSize.getHeight(),m=10;
+    const imgW=pW-m*2,imgH=canvas.height*(imgW/canvas.width);
+    pdf.addImage(canvas.toDataURL('image/jpeg',0.95),'JPEG',m,m,imgW,Math.min(imgH,pH-m*2));
 
     const fname=`جدول_كلاسيكي_${(spec||dp).replace(/\s/g,'_')}_${(grp||'').replace(/\s/g,'_')}_${S.ay.replace('/','_')}.pdf`;
     pdf.save(fname);
@@ -8068,9 +8067,9 @@ async function exportGroupPDF(lv,dp,spec,sec,grp){
 
     const{jsPDF}=window.jspdf;
     const pdf=new jsPDF({orientation:'landscape',unit:'mm',format:'a4'});
-    const pW=pdf.internal.pageSize.getWidth();
-    const imgH=canvas.height*(pW/canvas.width);
-    pdf.addImage(canvas.toDataURL('image/jpeg',0.93),'JPEG',0,0,pW,Math.min(imgH,pdf.internal.pageSize.getHeight()));
+    const pW=pdf.internal.pageSize.getWidth(),pH=pdf.internal.pageSize.getHeight(),m=10;
+    const imgW=pW-m*2,imgH=canvas.height*(imgW/canvas.width);
+    pdf.addImage(canvas.toDataURL('image/jpeg',0.93),'JPEG',m,m,imgW,Math.min(imgH,pH-m*2));
 
     const fname=`جدول_${(spec||dp).replace(/\s/g,'_')}_${(sec||'').replace(/\s/g,'_')}_${(grp||'').replace(/\s/g,'_')}_${S.ay.replace('/','_')}.pdf`;
     pdf.save(fname);
@@ -9375,9 +9374,9 @@ async function exportTchPDF(){
     document.body.removeChild(iframe);
     const{jsPDF}=window.jspdf;
     const pdf=new jsPDF({orientation:'landscape',unit:'mm',format:'a4'});
-    const pW=pdf.internal.pageSize.getWidth();
-    const imgH=canvas.height*(pW/canvas.width);
-    pdf.addImage(canvas.toDataURL('image/jpeg',0.93),'JPEG',0,0,pW,Math.min(imgH,pdf.internal.pageSize.getHeight()));
+    const pW=pdf.internal.pageSize.getWidth(),pH=pdf.internal.pageSize.getHeight(),m=10;
+    const imgW=pW-m*2,imgH2=canvas.height*(imgW/canvas.width);
+    pdf.addImage(canvas.toDataURL('image/jpeg',0.93),'JPEG',m,m,imgW,Math.min(imgH2,pH-m*2));
     pdf.save(`جدول_${tchName.replace(/\s/g,'_')}_${year.replace('/','_')}.pdf`);
     toast('✅ تم تصدير PDF: '+tchName);
   }catch(e){console.error(e);toast('❌ خطأ: '+e.message);}
