@@ -4909,25 +4909,60 @@ function onDropWithKey(e,day,slot,lv,dp,spec,sec,grp){
   );
   if(conflict){toast('⚠️ تعارض: توجد حصة في هذه الخلية');dragId=null;return;}
   s.day=day;s.slot=slot;s.lv=lv;s.dp=dp;s.spec=spec;s.section=sec;s.group=grp;
-  dragId=null;save();renderTT();toast('✅ تم نقل الحصة');
+
+  // محاضرة / محاضرة عن بعد → تنتقل لنفس الخلية في كل الأفواج
+  if(s.type==='tlc'||s.type==='tlc-remote'){
+    const siblings=S.sessions.filter(x=>
+      x.id!==s.id&&x.type===s.type&&x.subj===s.subj&&
+      x.lv===s.lv&&x.dp===s.dp&&x.spec===s.spec&&x.y===s.y&&x.sem===s.sem
+    );
+    let synced=0;
+    siblings.forEach(x=>{
+      const taken=S.sessions.find(o=>
+        o.id!==x.id&&o.day===day&&o.slot===slot&&
+        o.lv===x.lv&&o.dp===x.dp&&o.spec===x.spec&&
+        (o.section||'')===(x.section||'')&&(o.group||'')===(x.group||'')
+      );
+      if(!taken){x.day=day;x.slot=slot;synced++;}
+    });
+    if(synced)toast(`✅ تم النقل + مزامنة ${synced} فوج`);
+    else toast('✅ تم نقل الحصة');
+  } else {
+    toast('✅ تم نقل الحصة');
+  }
+
+  dragId=null;save();renderTT();
 }
 
-function onDS(e,id){
-  dragId=id;
-  document.querySelectorAll('.sc').forEach(x=>x.classList.remove('dragging'));
-  e.currentTarget.classList.add('dragging');
-  e.dataTransfer.effectAllowed='move';
-}
 function onDrop(e,day,slot){
   e.preventDefault();
   e.currentTarget.classList.remove('drop-over');
   if(!dragId)return;
   const s=S.sessions.find(x=>x.id===dragId);if(!s)return;
-  // Check conflict
   const conflict=S.sessions.find(x=>x.id!==dragId&&x.day===day&&x.slot===slot&&x.lv===s.lv&&x.dp===s.dp);
   if(conflict){toast('⚠️ تعارض: توجد حصة في هذه الخلية');dragId=null;return;}
   s.day=day;s.slot=slot;
-  dragId=null;save();renderTT();toast('✅ تم نقل الحصة');
+
+  // محاضرة / محاضرة عن بعد → مزامنة كل الأفواج
+  if(s.type==='tlc'||s.type==='tlc-remote'){
+    const siblings=S.sessions.filter(x=>
+      x.id!==s.id&&x.type===s.type&&x.subj===s.subj&&
+      x.lv===s.lv&&x.dp===s.dp&&x.spec===s.spec&&x.y===s.y&&x.sem===s.sem
+    );
+    let synced=0;
+    siblings.forEach(x=>{
+      const taken=S.sessions.find(o=>
+        o.id!==x.id&&o.day===day&&o.slot===slot&&o.lv===x.lv&&o.dp===x.dp
+      );
+      if(!taken){x.day=day;x.slot=slot;synced++;}
+    });
+    if(synced)toast(`✅ تم النقل + مزامنة ${synced} فوج`);
+    else toast('✅ تم نقل الحصة');
+  } else {
+    toast('✅ تم نقل الحصة');
+  }
+
+  dragId=null;save();renderTT();
 }
 
 // -- SESSION MODAL HELPERS -------------------------
