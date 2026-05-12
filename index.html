@@ -3514,8 +3514,8 @@ async function _generateGroupCanvas(reg){
     x.textAlign='right';x.textBaseline='middle';x.fillText(txt,395,24);
     return c.toDataURL('image/png');
   }
-  const secImgSrc=sec?canvasText('الفصيلة: '+sec,'#333','700 15'):'';
-  const grpImgSrc=grp?canvasText('الفوج: '+grp,'#333','700 15'):'';
+  const secImgSrc=sec?canvasText('الفصيلة: '+sec,'#000','700 18'):'';
+  const grpImgSrc=grp?canvasText('الفوج: '+grp,'#000','700 18'):'';
 
   let rows='';
   DAYS.forEach(day=>{
@@ -7696,8 +7696,8 @@ async function exportGroupPNG(lv,dp,spec,sec,grp,style){
         x.textAlign='right';x.textBaseline='middle';x.fillText(txt,395,24);
         return c.toDataURL('image/png');
       }
-      const secImgSrc=sec?canvasText('الفصيلة: '+sec,'#333','700 15'):'';
-      const grpImgSrc=grp?canvasText('الفوج: '+grp,'#333','700 15'):'';
+      const secImgSrc=sec?canvasText('الفصيلة: '+sec,'#000','700 18'):'';
+      const grpImgSrc=grp?canvasText('الفوج: '+grp,'#000','700 18'):'';
 
       let rows='';
       DAYS.forEach(day=>{
