@@ -7325,6 +7325,7 @@ function impOvertimeExcel(){
   };
   inp.click();
 }
+function expArcJSON(i){
   const blob=new Blob([JSON.stringify(S.archive[i],null,2)],{type:'application/json'});
   dl(blob,'archive-'+S.archive[i].yr.replace('/','_')+'.json');toast('📄 تم تصدير JSON');
 }
