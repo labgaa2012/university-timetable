@@ -6,6 +6,7 @@
 <title>نظام جداول التوقيت والامتحانات</title>
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800;900&family=Tajawal:wght@300;400;500;700;800&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <style>
@@ -1520,6 +1521,8 @@ table.occ-matrix td.cell-occ:hover{background:#fee2e2;filter:brightness(.97);}
           <button class="btn bi" onclick="trigImp('imp-sessions')">📥 استيراد</button>
           <button class="btn btpl" onclick="dlTemplate('sessions')">📋 قالب</button>
           <button class="btn bp" onclick="exportPDF()" id="btn-pdf">📄 تصدير PDF</button>
+          <button class="btn" onclick="openBulkExportModal()" style="background:#7c3aed;color:#fff;">📄 PDF الكل</button>
+          <button class="btn" onclick="openBulkExportModal('png')" style="background:#059669;color:#fff;">🖼️ PNG الكل</button>
         </div>
       </div>
       <!-- بانر التعارضات -->
@@ -2141,6 +2144,39 @@ table.occ-matrix td.cell-occ:hover{background:#fee2e2;filter:brightness(.97);}
 </div>
 
 <!-- MODALS -->
+<!-- MODAL: تصدير الكل (PDF/PNG) -->
+<div class="mo" id="mBulkExport" style="z-index:3500;">
+  <div class="mb" style="width:430px;">
+    <div class="mt" id="bulk-export-title">📄 تصدير الكل</div>
+    <div class="fg" style="margin-bottom:12px;">
+      <label class="fl">تصدير حسب</label>
+      <div style="display:flex;gap:16px;margin-top:8px;">
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;">
+          <input type="radio" name="bulk-mode" value="section" onchange="onBulkModeChange()" checked> الفصيلة
+        </label>
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;">
+          <input type="radio" name="bulk-mode" value="spec" onchange="onBulkModeChange()"> التخصص
+        </label>
+      </div>
+    </div>
+    <div class="fg" id="bulk-section-grp">
+      <label class="fl">اختر الفصيلة</label>
+      <select class="fs" id="bulk-section-sel"></select>
+    </div>
+    <div class="fg" id="bulk-spec-grp" style="display:none;">
+      <label class="fl">اختر التخصص</label>
+      <select class="fs" id="bulk-spec-sel"></select>
+    </div>
+    <div style="background:#f0f4ff;border:1.5px solid #c7d7fb;border-radius:8px;padding:9px 12px;font-size:11.5px;color:#374151;margin:10px 0;">
+      💡 كل فوج سيكون في <strong id="bulk-hint-txt">صفحة منفصلة في ملف PDF واحد</strong>
+    </div>
+    <div class="ma">
+      <button class="btn bg" id="bulk-export-btn" onclick="runBulkExport()" style="flex:1;justify-content:center;">⬇️ تصدير</button>
+      <button class="btn" style="background:var(--gray-light);color:var(--text-mid);" onclick="closeM('mBulkExport')">إلغاء</button>
+    </div>
+  </div>
+</div>
+
 <!-- MODAL: تنصيب جداول -->
 <div class="mo" id="mInstallTT">
   <div class="mb" style="width:460px;">
@@ -3422,7 +3458,177 @@ function expDeptsExcel(){
   const ws=XLSX.utils.aoa_to_sheet(data);ws['!cols']=[{wch:30},{wch:12},{wch:16},{wch:8}];
   XLSX.utils.book_append_sheet(wb,ws,'الأقسام');XLSX.writeFile(wb,'depts.xlsx');toast('📊 تم التصدير');
 }
-// -- IMPORT/EXPORT HELPERS ---------------------------
+// == BULK EXPORT (PDF الكل / PNG الكل) =======================
+let _bulkMode='pdf';
+
+function openBulkExportModal(mode='pdf'){
+  _bulkMode=mode;
+  const t=document.getElementById('bulk-export-title');
+  const hint=document.getElementById('bulk-hint-txt');
+  const btn=document.getElementById('bulk-export-btn');
+  if(t)t.textContent=mode==='pdf'?'📄 PDF الكل':'🖼️ PNG الكل';
+  if(hint)hint.textContent=mode==='pdf'?'صفحة منفصلة في ملف PDF واحد':'ملف PNG لكل فوج — مضغوطين في ZIP';
+  if(btn)btn.textContent=mode==='pdf'?'⬇️ تصدير PDF':'⬇️ تصدير ZIP';
+  // تعبئة الفصائل
+  const secSel=document.getElementById('bulk-section-sel');
+  if(secSel)secSel.innerHTML=S.sections.map(s=>`<option value="${s}">${s}</option>`).join('');
+  // تعبئة التخصصات
+  const specSel=document.getElementById('bulk-spec-sel');
+  if(specSel){
+    const specs=[...new Set(S.registeredTTs.map(t=>t.spec).filter(Boolean))];
+    specSel.innerHTML=specs.map(s=>`<option value="${s}">${s}</option>`).join('');
+  }
+  // reset radio
+  const r=document.querySelector('input[name="bulk-mode"][value="section"]');
+  if(r){r.checked=true;onBulkModeChange();}
+  openM('mBulkExport');
+}
+
+function onBulkModeChange(){
+  const mode=document.querySelector('input[name="bulk-mode"]:checked')?.value;
+  document.getElementById('bulk-section-grp').style.display=mode==='section'?'':'none';
+  document.getElementById('bulk-spec-grp').style.display=mode==='spec'?'':'none';
+}
+
+async function runBulkExport(){
+  const filterMode=document.querySelector('input[name="bulk-mode"]:checked')?.value||'section';
+  const filterVal=filterMode==='section'
+    ?document.getElementById('bulk-section-sel')?.value
+    :document.getElementById('bulk-spec-sel')?.value;
+  if(!filterVal){toast('⚠️ اختر الفصيلة أو التخصص');return;}
+
+  const regs=S.registeredTTs.filter(t=>
+    filterMode==='section'?t.section===filterVal:t.spec===filterVal
+  );
+  if(!regs.length){toast('⚠️ لا توجد جداول مسجّلة');return;}
+
+  const btn=document.getElementById('bulk-export-btn');
+  if(btn){btn.disabled=true;btn.textContent='⏳...';}
+  closeM('mBulkExport');
+  toast('⏳ جاري تصدير '+regs.length+' فوج...');
+
+  try{
+    const canvases=[];
+    for(const reg of regs){
+      const canvas=await _generateGroupCanvas(reg);
+      if(canvas)canvases.push({canvas,reg});
+    }
+    if(!canvases.length){toast('⚠️ لا توجد بيانات');return;}
+    if(_bulkMode==='pdf') await _exportBulkPDF(canvases,filterVal);
+    else await _exportBulkPNG(canvases,filterVal);
+  }catch(err){console.error(err);toast('❌ خطأ: '+err.message);}
+  finally{if(btn){btn.disabled=false;btn.textContent='⬇️ تصدير';}}
+}
+
+async function _generateGroupCanvas(reg){
+  const att=reg;
+  const period=att.period?S.periods[att.period-1]||'':'';
+  const logoHtml=S.settings?.logo?`<img src="${S.settings.logo}" style="width:55px;height:55px;object-fit:contain;">`:'<span style="font-size:30px;">🎓</span>';
+  const days=S.days||['السبت','الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس'];
+  const slots=S.slots||[];
+  const sessions=S.sessions.filter(s=>
+    s.y===S.ay&&s.lv===att.lv&&s.dp===att.dp&&s.spec===att.spec&&
+    s.section===att.section&&s.group===att.group
+  );
+  const typeColors={tlc:'#dbeafe','tlc-remote':'#e0f2fe',td:'#dcfce7',tp:'#fed7aa','td-remote':'#fce7f3'};
+  const TL2={tlc:'محاضرة','tlc-remote':'عن بعد',td:'أعمال موجهة',tp:'أعمال تطبيقية'};
+
+  // اسم الفصيلة بـ Canvas
+  const sc=document.createElement('canvas');sc.width=400;sc.height=65;
+  const sx=sc.getContext('2d');sx.clearRect(0,0,400,65);
+  sx.font='900 40px Cairo,Arial,sans-serif';sx.fillStyle='#dc2626';
+  sx.textAlign='center';sx.textBaseline='middle';
+  sx.fillText(att.section||att.spec||'',200,35);
+  const secImg=sc.toDataURL('image/png');
+
+  let tHead=`<th style="width:50px;background:#0f1f3d;color:#c9a84c;border:1px solid #999;padding:5px;-webkit-print-color-adjust:exact;">اليوم</th>`;
+  slots.forEach(sl=>tHead+=`<th style="background:#0f1f3d;color:#c9a84c;border:1px solid #999;padding:4px;font-size:7.5pt;-webkit-print-color-adjust:exact;">${sl.name||''}<br><small style="font-weight:400;">${sl.from}–${sl.to}</small></th>`);
+  let tBody='';
+  days.forEach(day=>{
+    tBody+=`<tr><td style="background:#f0f4f8;font-weight:700;text-align:center;border:1px solid #ccc;padding:4px;font-size:9pt;">${day}</td>`;
+    slots.forEach(sl=>{
+      const sess=sessions.filter(s=>s.day===day&&s.slot===sl.name);
+      let cell=sess.map(s=>`<div style="background:${typeColors[s.type]||'#f8f8f8'};border-radius:4px;padding:3px;margin:1px;font-size:7pt;line-height:1.4;">
+        <strong style="font-size:8.5pt;">${s.subj||''}</strong><br>
+        <span style="color:#555;">${s.tch||''}</span>
+      </div>`).join('');
+      tBody+=`<td style="border:1px solid #ccc;padding:2px;vertical-align:top;min-height:48px;">${cell}</td>`;
+    });
+    tBody+='</tr>';
+  });
+
+  const html=`<!DOCTYPE html><html><head><meta charset="UTF-8">
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;800;900&display=swap" rel="stylesheet">
+    <style>*{box-sizing:border-box;}body{font-family:'Cairo',Arial,sans-serif;direction:rtl;margin:0;padding:10px;background:#fff;}
+    .hdr{display:flex;align-items:center;justify-content:space-between;border:3px solid #0f1f3d;border-radius:10px;padding:10px 14px;margin-bottom:8px;gap:10px;}
+    .sep{width:70%;height:3px;background:#0f1f3d;margin:4px auto;}
+    .ttl{text-align:center;font-size:11pt;font-weight:900;color:#0f1f3d;margin-bottom:5px;border-bottom:2px solid #0f1f3d;padding-bottom:3px;}
+    table{width:100%;border-collapse:collapse;font-size:8pt;}
+    </style></head><body>
+    <div class="hdr">
+      <div style="text-align:right;min-width:150px;border-right:3px solid #0f1f3d;padding-right:12px;">
+        <div style="font-size:11pt;font-weight:900;color:#0f1f3d;">${att.dp||''}</div>
+        <div style="font-size:8.5pt;color:#333;line-height:2;">${period?'الفترة: '+period+'<br>':''}الفوج: <strong>${att.group||'—'}</strong></div>
+      </div>
+      <div style="text-align:center;flex:1;">
+        <div style="font-size:8pt;color:#555;">${S.settings?.ministry||'وزارة التعليم العالي والبحث العلمي'}</div>
+        <div class="sep"></div>
+        <div style="font-size:13pt;font-weight:900;color:#0f1f3d;">${S.settings?.university||'جامعة عمار ثليجي الأغواط'}</div>
+        <div style="font-size:9pt;color:#333;margin-bottom:4px;">${S.settings?.faculty||''}</div>
+        <img src="${secImg}" style="height:48px;">
+      </div>
+      <div style="min-width:120px;text-align:center;border-left:3px solid #0f1f3d;padding-left:12px;">
+        ${logoHtml}
+        <div style="font-size:9pt;font-weight:900;color:#0f1f3d;margin-top:4px;">${S.ay}</div>
+        <div style="font-size:8pt;color:#555;">${att.spec||''}</div>
+      </div>
+    </div>
+    <div class="ttl">جدول التوقيت — ${att.section||att.spec||''} — ${att.group||''}</div>
+    <table><thead><tr>${tHead}</tr></thead><tbody>${tBody}</tbody></table>
+    </body></html>`;
+
+  const iframe=document.createElement('iframe');
+  iframe.style.cssText='position:fixed;left:-9999px;top:-9999px;width:1250px;background:#fff;border:none;';
+  document.body.appendChild(iframe);
+  const doc=iframe.contentDocument||iframe.contentWindow.document;
+  doc.open();doc.write(html);doc.close();
+  await new Promise(r=>setTimeout(r,1500));
+  const canvas=await html2canvas(iframe.contentDocument.body,{scale:2,useCORS:true,backgroundColor:'#ffffff',width:1250,windowWidth:1250});
+  document.body.removeChild(iframe);
+  return canvas;
+}
+
+async function _exportBulkPDF(canvases,label){
+  const{jsPDF}=window.jspdf;
+  const pdf=new jsPDF({orientation:'landscape',unit:'mm',format:'a4'});
+  const pW=pdf.internal.pageSize.getWidth(),pH=pdf.internal.pageSize.getHeight(),m=10;
+  canvases.forEach(({canvas},i)=>{
+    if(i>0)pdf.addPage();
+    const imgW=pW-m*2,imgH=canvas.height*(imgW/canvas.width);
+    pdf.addImage(canvas.toDataURL('image/jpeg',0.92),'JPEG',m,m,imgW,Math.min(imgH,pH-m*2));
+  });
+  pdf.save(`جداول_${label.replace(/\s/g,'_')}_${S.ay.replace('/','_')}.pdf`);
+  toast(`✅ تم تصدير PDF (${canvases.length} صفحة)`);
+}
+
+async function _exportBulkPNG(canvases,label){
+  if(!window.JSZip){toast('❌ مكتبة ZIP غير متاحة');return;}
+  const zip=new window.JSZip();
+  const folder=zip.folder('جداول_'+label.replace(/\s/g,'_'));
+  canvases.forEach(({canvas,reg},i)=>{
+    const name=`${(reg.section||reg.spec||'').replace(/\s/g,'_')}_${(reg.group||i+1).toString().replace(/\s/g,'_')}.png`;
+    const data=canvas.toDataURL('image/png').split(',')[1];
+    folder.file(name,data,{base64:true});
+  });
+  const blob=await zip.generateAsync({type:'blob'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download=`جداول_${label.replace(/\s/g,'_')}_${S.ay.replace('/','_')}.zip`;
+  a.click();
+  toast(`✅ تم تصدير ZIP (${canvases.length} صورة)`);
+}
+
+// == IMPORT/EXPORT HELPERS ---------------------------
 function expSimpleExcel(key, colName){
   const wb=XLSX.utils.book_new();
   const arr=S[key]||[];
