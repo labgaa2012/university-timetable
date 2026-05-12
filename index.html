@@ -4762,7 +4762,7 @@ function renderTT(){
     }
 
     sg.keys.forEach(k=>{
-      const showGrpHdr=sg.keys.length>1||!curGrp;
+      const showGrpHdr=true;
       const colorCls=`gh-${gColorIdx%8}`;
       gColorIdx++;
       const subLabel=[k.sec&&`🗂️ ${k.sec}`,k.grp&&`👥 ${k.grp}`].filter(Boolean).join(' ');
