@@ -2600,7 +2600,7 @@ table.occ-matrix td.cell-occ:hover{background:#fee2e2;filter:brightness(.97);}
 <!-- MODAL: اختيار شكل PDF -->
 <div class="mo" id="mPDFChoice">
   <div class="mb" style="width:480px;">
-    <div class="mt">📄 اختر شكل التصدير</div>
+    <div class="mt" id="pdfchoice-title">📄 اختر شكل التصدير</div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:4px;">
       <!-- الخيار 1: الشكل الحالي -->
       <div class="pdf-choice-card" onclick="pickPDF(1)" id="pdc-1">
@@ -4837,6 +4837,10 @@ function renderTT(){
             <button class="grp-pdf-btn"
               onclick="openPDFChoice('${lvE}','${dpE}','${spE}','${seE}','${gE}')">
               📄 PDF
+            </button>
+            <button class="grp-pdf-btn" style="background:rgba(5,150,105,.25);border-color:rgba(5,150,105,.5);"
+              onclick="openPNGChoice('${lvE}','${dpE}','${spE}','${seE}','${gE}')">
+              🖼️ PNG
             </button>
             <button class="grp-pdf-btn" style="background:rgba(239,68,68,.25);border-color:rgba(239,68,68,.5);"
               onclick="deleteGroupTT('${lvE}','${dpE}','${spE}','${seE}','${gE}')">
@@ -7643,15 +7647,62 @@ function buildExcel(sessions,exams,fname){
 // -- PRINT -----------------------------------------
 // -- PDF CHOICE ------------------------------------
 let _pdfChoiceKey={};
+let _exportMode='pdf'; // 'pdf' or 'png'
+
 function openPDFChoice(lv,dp,spec,sec,grp){
   _pdfChoiceKey={lv,dp,spec,sec,grp};
+  _exportMode='pdf';
+  const t=document.getElementById('pdfchoice-title');
+  if(t)t.textContent='📄 اختر شكل التصدير — PDF';
+  openM('mPDFChoice');
+}
+function openPNGChoice(lv,dp,spec,sec,grp){
+  _pdfChoiceKey={lv,dp,spec,sec,grp};
+  _exportMode='png';
+  const t=document.getElementById('pdfchoice-title');
+  if(t)t.textContent='🖼️ اختر شكل التصدير — PNG';
   openM('mPDFChoice');
 }
 function pickPDF(choice){
   closeM('mPDFChoice');
   const{lv,dp,spec,sec,grp}=_pdfChoiceKey;
-  if(choice===1) exportGroupPDF(lv,dp,spec,sec,grp);
-  else           exportGroupPDFClassic(lv,dp,spec,sec,grp);
+  if(_exportMode==='png'){
+    if(choice===1) exportGroupPNG(lv,dp,spec,sec,grp,'current');
+    else           exportGroupPNG(lv,dp,spec,sec,grp,'classic');
+  } else {
+    if(choice===1) exportGroupPDF(lv,dp,spec,sec,grp);
+    else           exportGroupPDFClassic(lv,dp,spec,sec,grp);
+  }
+}
+
+// -- GROUP PNG EXPORT ----------------------------------
+async function exportGroupPNG(lv,dp,spec,sec,grp,style){
+  toast('⏳ جاري تصدير PNG...');
+  try{
+    const reg={lv,dp,spec,section:sec,group:grp,period:S.activeTT?.period};
+    let canvas;
+    if(style==='classic'){
+      canvas=await _generateGroupCanvas(reg); // الشكل الكلاسيكي المثبت
+    } else {
+      // الشكل الحالي: لقطة مباشرة للجدول الموجود على الشاشة
+      const tables=[...document.querySelectorAll('.tt-wrap table')];
+      // نبحث عن الجدول المناسب بمقارنة البيانات
+      const matchTable=tables.find(t=>{
+        const wrap=t.closest('.tt-wrap');
+        return wrap&&wrap.dataset.lv===lv&&wrap.dataset.dp===dp&&
+          (wrap.dataset.grp||'')===(grp||'')&&(wrap.dataset.sec||'')===(sec||'');
+      })||tables[0];
+      if(!matchTable){toast('⚠️ لم يُعثر على الجدول');return;}
+      canvas=await html2canvas(matchTable.closest('.tt-block')||matchTable,{
+        scale:2,useCORS:true,backgroundColor:'#ffffff'
+      });
+    }
+    if(!canvas){toast('⚠️ لا توجد بيانات');return;}
+    const a=document.createElement('a');
+    const name=`جدول_${(spec||dp).replace(/\s/g,'_')}_${(sec||'').replace(/\s/g,'_')}_${(grp||'').replace(/\s/g,'_')}_${S.ay.replace('/','_')}.png`;
+    a.download=name;a.href=canvas.toDataURL('image/png');a.click();
+    toast('✅ تم تصدير PNG');
+  }catch(e){console.error(e);toast('❌ خطأ: '+e.message);}
 }
 
 // -- CLASSIC PDF (فترات أعمدة / أيام صفوف) --------
