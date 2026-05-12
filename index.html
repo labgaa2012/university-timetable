@@ -4934,6 +4934,13 @@ function onDropWithKey(e,day,slot,lv,dp,spec,sec,grp){
   dragId=null;save();renderTT();
 }
 
+function onDS(e,id){
+  dragId=id;
+  document.querySelectorAll('.sc').forEach(x=>x.classList.remove('dragging'));
+  e.currentTarget.classList.add('dragging');
+  e.dataTransfer.effectAllowed='move';
+}
+
 function onDrop(e,day,slot){
   e.preventDefault();
   e.currentTarget.classList.remove('drop-over');
