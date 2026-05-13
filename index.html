@@ -3857,10 +3857,11 @@ function syncSubjSelects(){
   if(flv)flv.innerHTML='<option value="">كل المستويات</option>'+lvOpts;
   const spOpts='<option value="">-- عام --</option>'+S.specs.map(s=>`<option value="${s.name}">${s.name}</option>`).join('');
   const ss=document.getElementById('subjSpec');if(ss)ss.innerHTML=spOpts;
-  const dpOpts=S.depts.map(d=>`<option>${d}</option>`).join('');
+  // القسم: يرى قسمه فقط في modal الإضافة
+  const isAdm=!CURRENT_USER||CURRENT_USER.role==='admin';
+  const availDepts=isAdm?S.depts:[CURRENT_USER?.dept].filter(Boolean);
+  const dpOpts=availDepts.map(d=>`<option>${d}</option>`).join('');
   ['subjDept'].forEach(id=>{const el=document.getElementById(id);if(el)el.innerHTML=dpOpts;});
-  const fdp=document.getElementById('subj-f-dept');
-  if(fdp)fdp.innerHTML='<option value="">كل الأقسام</option>'+dpOpts;
   syncSubjModalSel();
 }
 function syncSubjModalSel(){
@@ -3935,10 +3936,14 @@ function renderSubjGrid(){
   // Cascade: تحديث قائمة الأقسام بناءً على المستوى
   const dpEl=document.getElementById('subj-f-dept');
   if(dpEl){
-    const dpOpts=S.depts.filter(d=>!fLv||S.subjects.some(s=>s.level===fLv&&s.dept===d));
+    const isAdm=!CURRENT_USER||CURRENT_USER.role==='admin';
+    const availDepts=isAdm
+      ?S.depts.filter(d=>!fLv||S.subjects.some(s=>s.level===fLv&&s.dept===d))
+      :[CURRENT_USER?.dept].filter(Boolean);
     const cur=dpEl.value;
-    dpEl.innerHTML='<option value="">كل الأقسام</option>'
-      +dpOpts.map(d=>`<option value="${d}"${d===cur?' selected':''}>${d}</option>`).join('');
+    dpEl.innerHTML=isAdm?'<option value="">كل الأقسام</option>':''
+      +availDepts.map(d=>`<option value="${d}"${(d===cur||!isAdm)?' selected':''}>${d}</option>`).join('');
+    if(!isAdm&&availDepts.length)dpEl.value=availDepts[0];
   }
 
   // Cascade: تحديث قائمة التخصصات بناءً على المستوى والقسم
@@ -3971,7 +3976,10 @@ function renderSubjGrid(){
   }
 
   // تطبيق الفلاتر
+  const isAdmin=!CURRENT_USER||CURRENT_USER.role==='admin';
   let list=S.subjects;
+  // القسم: يرى فقط مقاييس قسمه وتخصصاته
+  if(!isAdmin&&CURRENT_USER?.dept) list=list.filter(s=>s.dept===CURRENT_USER.dept||!s.dept);
   if(subjSemTab)list=list.filter(s=>s.sem==subjSemTab);
   if(q)list=list.filter(s=>s.name.toLowerCase().includes(q));
   if(fLv)list=list.filter(s=>s.level===fLv);
@@ -4048,7 +4056,9 @@ function openEditSubj(i){
   openM('mEdit');
 }
 function rmSubject(i){
-  if(!confirm('حذف '+S.subjects[i]?.name+'؟'))return;
+  const subj=S.subjects[i];
+  if(!canEditDept(subj?.dept)){toast('⚠️ لا تملك صلاحية حذف مقاييس هذا القسم');return;}
+  if(!confirm('حذف '+subj?.name+'؟'))return;
   S.subjects.splice(i,1);save();renderSubjGrid();syncSubjModalSel();toast('🗑️ تم الحذف');
 }
 function expSubjectsExcel(){
