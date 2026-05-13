@@ -4646,6 +4646,7 @@ function confirmAddTimetable(){
   const spec=document.getElementById('att-spec')?.value||'';
   if(!lv){toast('⚠️ اختر المستوى');return;}
   if(!dp){toast('⚠️ اختر القسم');return;}
+  if(!canEditDept(dp)){toast('⚠️ لا تملك صلاحية إنشاء جداول لهذا القسم');return;}
   if(!spec){toast('⚠️ اختر التخصص');return;}
   const section=document.getElementById('att-section')?.value||'';
   const group=document.getElementById('att-group')?.value||'';
@@ -5063,17 +5064,17 @@ function renderTT(){
           tbl+=`<td class="${isEmpty?'ec':''}"
             ondragover="event.preventDefault();this.classList.add('drop-over')"
             ondragleave="this.classList.remove('drop-over')"
-            ondrop="onDropWithKey(event,'${dE}','${slE}','${lvE}','${dpE}','${spE}','${seE}','${gE}')"
-            ${isEmpty?`onclick="openAddSessWithKey('${dE}','${slE}','${lvE}','${dpE}','${spE}','${seE}','${gE}')"`:''}
+            ${canEditDept(k.dp||'')?`ondrop="onDropWithKey(event,'${dE}','${slE}','${lvE}','${dpE}','${spE}','${seE}','${gE}')"`:''}
+            ${isEmpty&&canEditDept(k.dp||'')?`onclick="openAddSessWithKey('${dE}','${slE}','${lvE}','${dpE}','${spE}','${seE}','${gE}')"`:''}
           >`;
           cells.forEach(s=>{
             const sid=s.id;
             const isConflict=conflictIds.has(sid);
-            tbl+=`<div class="sc ${s.type}${isConflict?' conflict-cell':''}" draggable="true"
+            tbl+=`<div class="sc ${s.type}${isConflict?' conflict-cell':''}" draggable="${canEditDept(s.dp)}"
               ondragstart="if(event.target.closest('button')){event.preventDefault();return;} onDS(event,'${sid}')"
               ondragend="document.querySelectorAll('.sc').forEach(x=>x.classList.remove('dragging'))"
-            ><button class="sceb" onclick="event.stopPropagation();openEditSess('${sid}')">✏️</button>
-            <button class="scdb" onclick="event.stopPropagation();delSess('${sid}')">✕</button>
+            >${canEditDept(s.dp)?`<button class="sceb" onclick="event.stopPropagation();openEditSess('${sid}')">✏️</button>
+            <button class="scdb" onclick="event.stopPropagation();delSess('${sid}')">✕</button>`:''}
             <div class="ss">${s.subj}</div>
             <div class="si">${s.tch}</div>
             <div class="si">${s.rm}</div>
@@ -5123,6 +5124,7 @@ function getLevelsForDept(dp){
   return S.levels.filter(l=>lvSet.has(l));
 }
 function openAddSessWithKey(day,slot,lv,dp,spec,sec,grp){
+  if(!canEditDept(dp)){toast('⚠️ لا تملك صلاحية إضافة حصص لهذا القسم');return;}
   S.activeTT={period:S.activeTT?.period||'',lv,dp,spec,section:sec,group:grp};
   save();
   if(day==='__'||slot==='__'){
@@ -5281,6 +5283,7 @@ function openAddSess(day,slot){
 }
 function openEditSess(id){
   const s=S.sessions.find(x=>x.id===id);if(!s)return;
+  if(!canEditDept(s.dp)){toast('⚠️ لا تملك صلاحية تعديل حصص هذا القسم');return;}
   document.getElementById('esSessId').value=id;
   document.getElementById('mSessTitle').textContent='✏️ تعديل الحصة';
   // حفظ بيانات الحصة الأصلية كاملةً في الـ dataset للاسترداد عند الحفظ
@@ -5398,6 +5401,7 @@ function saveSess(){
 function delSess(id){
   const s=S.sessions.find(x=>x.id===id);
   if(!s){toast('⚠️ الحصة غير موجودة');return;}
+  if(!canEditDept(s.dp)){toast('⚠️ لا تملك صلاحية حذف حصص هذا القسم');return;}
   const isLec=s.type==='tlc'||s.type==='tlc-remote';
   if(isLec){
     // المحاضرة: نحذف لجميع أفواج نفس الفصيلة في نفس اليوم+الفترة+المادة
