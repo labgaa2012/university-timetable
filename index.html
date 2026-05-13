@@ -5582,6 +5582,8 @@ function renderDuyunTable(){
   wrap.innerHTML=h;
 }
 function updateDuyunRow(ri,field,val){
+  const f=getExamFilters();
+  if(!canEditDept(f.dp||'')){toast('⚠️ لا تملك صلاحية تعديل هذا الجدول');return;}
   const data=getDuyunData();
   if(!data.rows[ri])return;
   data.rows[ri][field]=val;
@@ -5627,6 +5629,7 @@ function updateDuyunCol(ci,val){
   data.extraCols[ci]=val;save();
 }
 function addDuyunRow(){
+  if(!canEditDept(getExamFilters().dp||'')){toast('⚠️ لا تملك صلاحية تعديل هذا الجدول');return;}
   const data=getDuyunData();
   const nc=(data.extraCols||[]).length;
   data.rows.push({date:'',day:'',slot:getExamSlots()[0]||'',subj:'',tch:'',room:'',extra:Array(nc).fill('')});
@@ -5640,10 +5643,12 @@ function addDuyunCol(){
   save();renderDuyunTable();
 }
 function removeDuyunRow(ri){
+  if(!canEditDept(getExamFilters().dp||'')){toast('⚠️ لا تملك صلاحية تعديل هذا الجدول');return;}
   const data=getDuyunData();
   data.rows.splice(ri,1);save();renderDuyunTable();
 }
 function removeDuyunCol(ci){
+  if(!canEditDept(getExamFilters().dp||'')){toast('⚠️ لا تملك صلاحية تعديل هذا الجدول');return;}
   const data=getDuyunData();
   if(!data.extraCols||data.extraCols.length===0)return;
   data.extraCols.splice(ci,1);
@@ -6215,8 +6220,9 @@ function renderExams(){
     <th>المقياس / الأستاذ</th>`;
 
   // خلية لكل فوج مع زر حذف
+  const canEditExam=canEditDept(f.dp||'');
   groups.forEach((g,gi)=>{
-    const canRemove=groups.length>1;
+    const canRemove=groups.length>1&&canEditExam;
     h+=`<th class="rc-${gi%8} grp-th" style="position:relative;min-width:80px;">
       <span style="unicode-bidi:bidi-override;direction:rtl;">👥 ${g}</span>
       ${canRemove?`<button onclick="removeExamGroup('${g.replace(/'/g,"\\'")}','${extraKey.replace(/'/g,"\\'")}',event)"
@@ -6225,16 +6231,16 @@ function renderExams(){
     </th>`;
   });
 
-  // زر إضافة فوج
+  // زر إضافة فوج — فقط لصاحب القسم
   h+=`<th style="width:90px;background:rgba(255,255,255,.1);">
-    <select id="exam-add-grp-sel" class="fs" style="font-size:10px;padding:3px;background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.3);border-radius:5px;width:100%;">
+    ${canEditExam?`<select id="exam-add-grp-sel" class="fs" style="font-size:10px;padding:3px;background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.3);border-radius:5px;width:100%;">
       <option value="">+ فوج</option>${addGrpOpts}
     </select>
     <button onclick="addExamGroup('${extraKey.replace(/'/g,"\\'")}',event)"
       style="margin-top:3px;width:100%;background:rgba(255,255,255,.2);color:#fff;border:1px solid rgba(255,255,255,.3);
         border-radius:5px;cursor:pointer;font-size:10px;padding:2px 5px;font-family:'Cairo',sans-serif;">
       إضافة
-    </button>
+    </button>`:''}
   </th>
   <th style="width:50px;"></th>
 </tr></thead><tbody>`;
@@ -6574,6 +6580,7 @@ function syncExamToSections(id,field,value){
 function updateExam(id,field,value){
   const ex=S.exams.find(e=>e.id===id);
   if(!ex)return;
+  if(!canEditDept(ex.dp)){toast('⚠️ لا تملك صلاحية تعديل امتحانات هذا القسم');return;}
   const dn=['الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'];
 
   // تحديث هذا الامتحان
