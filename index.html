@@ -5908,125 +5908,193 @@ async function exportTchCertificate(){
   if(!tchName){toast('⚠️ اختر أستاذاً أولاً');return;}
   const period=document.getElementById('tch-tt-period')?.value||'';
   const year=document.getElementById('tch-tt-year')?.value||S.ay;
-  const periodLabel=period?S.periods[parseInt(period)-1]||'':'كلا السداسيين';
   const tchObj=S.teachers.find(t=>t.name===tchName)||{};
-  const ot=calcTeacherOvertime(tchName,year,period||'');
-  const logoHtml=S.settings?.logo?`<img src="${S.settings.logo}" style="width:70px;height:70px;object-fit:contain;">`:'<span style="font-size:40px;">🎓</span>';
-  // مقاييس الأستاذ مفصّلة
+  const dept=tchObj.dept||S.settings?.faculty||'';
+  const deptShort=dept.replace('قسم ','');
+  const logoHtml=S.settings?.logo?`<img src="${S.settings.logo}" style="width:75px;height:75px;object-fit:contain;">`:'<span style="font-size:40px;">🎓</span>';
+
+  // جمع المقاييس الفريدة (المحاضرة مرة واحدة)
   let sessions=S.sessions.filter(s=>s.tch===tchName&&s.y===year);
   if(period)sessions=sessions.filter(s=>s.sem==period);
-  // تجميع المقاييس الفريدة
-  const subjMap={};
+  const seen=new Set();
+  const subjRows=[];
   sessions.forEach(s=>{
-    const k=`${s.subj||''}|${s.type}|${s.spec||''}|${s.lv||''}`;
-    if(!subjMap[k])subjMap[k]={subj:s.subj,type:s.type,spec:s.spec,lv:s.lv,dp:s.dp,count:0};
-    subjMap[k].count++;
+    const sem=period?period:s.sem;
+    const semLabel=S.periods[parseInt(sem)-1]||('السداسي '+sem);
+    const isTlc=s.type==='tlc'||s.type==='tlc-remote';
+    const key=isTlc?`${s.subj}|${s.type}|${s.spec}|${s.lv}`:`${s.subj}|${s.type}|${s.spec}|${s.lv}|${s.section}|${s.group}`;
+    if(!seen.has(key)){
+      seen.add(key);
+      subjRows.push({subj:s.subj,type:s.type,spec:s.spec,lv:s.lv,sem:semLabel,dp:s.dp});
+    }
   });
-  const subjRows=Object.values(subjMap).filter(r=>r.subj);
+
   const now=new Date();
-  const dateStr=`${now.getFullYear()}/${String(now.getMonth()+1).padStart(2,'0')}/${String(now.getDate()).padStart(2,'0')}`;
+  const dateStr=`الأغواط في: ${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
+  const refYear=year.split('/')[0]||now.getFullYear();
   toast('⏳ جاري إنشاء الشهادة...');
   try{
     const iframe=document.createElement('iframe');
-    iframe.style.cssText='position:fixed;left:-9999px;top:-9999px;width:900px;background:#fff;border:none;';
+    iframe.style.cssText='position:fixed;left:-9999px;top:-9999px;width:850px;background:#fff;border:none;';
     document.body.appendChild(iframe);
     const doc=iframe.contentDocument||iframe.contentWindow.document;
     doc.open();
     doc.write(`<!DOCTYPE html><html dir="rtl"><head><meta charset="UTF-8">
       <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;800;900&display=swap" rel="stylesheet">
       <style>
-        *{box-sizing:border-box;}
-        body{font-family:'Cairo',Arial,sans-serif;direction:rtl;margin:0;padding:20px;background:#fff;color:#111;}
-        .cert-border{border:4px double var(--navy,#0f1f3d);border-radius:12px;padding:24px;position:relative;}
-        .cert-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;padding-bottom:14px;border-bottom:2px solid #0f1f3d;}
-        .cert-title{text-align:center;margin-bottom:20px;}
-        .cert-title h1{font-size:20pt;font-weight:900;color:#0f1f3d;margin:0;}
-        .cert-title p{font-size:11pt;color:#555;margin:6px 0 0;}
-        .cert-body{font-size:12pt;line-height:2.2;margin-bottom:20px;}
-        .cert-body strong{color:#0f1f3d;}
-        table{width:100%;border-collapse:collapse;font-size:10.5pt;margin:12px 0;}
-        th{background:#0f1f3d;color:#c9a84c;padding:7px 10px;text-align:right;border:1px solid #334;}
-        td{padding:6px 10px;border:1px solid #ccc;}tr:nth-child(even) td{background:#f8f8f8;}
-        .cert-footer{display:flex;justify-content:space-between;margin-top:30px;padding-top:14px;border-top:1px solid #ccc;}
-        .sig-box{text-align:center;min-width:160px;}
-        .sig-line{border-bottom:1.5px solid #333;margin:40px 10px 6px;}</style>
-      </head><body>
-      <div class="cert-border">
-        <div class="cert-header">
-          <div style="text-align:right;">
-            <div style="font-weight:800;font-size:12pt;color:#0f1f3d;">${S.settings?.ministry||'وزارة التعليم العالي والبحث العلمي'}</div>
-            <div style="font-size:11pt;">${S.settings?.university||'جامعة عمار ثليجي الأغواط'}</div>
-            <div style="font-size:10pt;color:#555;">${S.settings?.faculty||'كلية العلوم الاقتصادية والتجارية وعلوم التسيير'}</div>
+        *{box-sizing:border-box;margin:0;padding:0;}
+        body{font-family:'Cairo',Arial,sans-serif;direction:rtl;background:#fff;color:#111;padding:18px;}
+        /* ═══ الحد الخارجي ═══ */
+        .page{border:2px solid #111;padding:16px;min-height:260mm;position:relative;display:flex;flex-direction:column;}
+        /* ═══ الترويسة العلوية ═══ */
+        .top-republic{text-align:center;font-size:13pt;font-weight:800;border-bottom:1px solid #111;padding-bottom:8px;margin-bottom:10px;}
+        .top-republic .en{font-size:10pt;font-weight:400;font-style:italic;}
+        /* ═══ صف المؤسسة ═══ */
+        .inst-row{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px;}
+        .inst-en{text-align:left;font-size:8.5pt;line-height:1.7;max-width:200px;direction:ltr;}
+        .inst-ar{text-align:right;font-size:9.5pt;line-height:1.8;max-width:220px;}
+        .inst-ar div{font-weight:700;}
+        /* ═══ سطر الرقم والتاريخ ═══ */
+        .ref-row{display:flex;justify-content:space-between;align-items:center;
+          border-top:1px solid #111;border-bottom:1px solid #111;
+          padding:5px 4px;margin-bottom:14px;font-size:10pt;}
+        .ref-num{font-weight:700;}
+        .ref-date{font-weight:400;}
+        /* ═══ عنوان الشهادة ═══ */
+        .cert-title{text-align:center;margin:10px auto 14px;padding:8px 40px;
+          border:1.5px solid #111;border-radius:4px;display:inline-block;
+          font-size:18pt;font-weight:900;}
+        .title-wrap{text-align:center;margin-bottom:14px;}
+        /* ═══ نص الشهادة ═══ */
+        .body-text{font-size:11pt;line-height:2.2;margin-bottom:14px;padding:0 4px;}
+        .body-line{display:flex;align-items:baseline;gap:8px;}
+        .body-line .dash{font-weight:900;font-size:14pt;}
+        .body-line .lbl{font-weight:700;}
+        .body-line .val{border-bottom:1px dotted #555;min-width:160px;padding:0 4px;}
+        /* ═══ الجدول ═══ */
+        table{width:100%;border-collapse:collapse;font-size:10pt;margin:8px 0 14px;}
+        th{background:#fff;border:1.5px solid #111;padding:7px 8px;text-align:center;font-weight:800;}
+        td{border:1.5px solid #111;padding:6px 8px;text-align:center;}
+        /* ═══ التوقيع ═══ */
+        .sig-section{margin-top:auto;padding-top:16px;}
+        .sig-label{font-size:11pt;font-weight:700;margin-bottom:50px;}
+        .delivery{font-size:9.5pt;margin-top:18px;border-top:1px solid #ccc;padding-top:10px;}
+        /* ═══ تذييل الصفحة ═══ */
+        .page-footer{font-size:8.5pt;text-align:center;border-top:1px solid #111;
+          margin-top:12px;padding-top:8px;line-height:1.8;color:#333;}
+      </style></head><body>
+      <div class="page">
+
+        <!-- ═══ الجمهورية ═══ -->
+        <div class="top-republic">
+          الجمهـوريـة الجزائريـة الديمقراطيـة الشعبيـة
+          <div class="en">People's Democratic Republic of Algeria</div>
+        </div>
+
+        <!-- ═══ صف المؤسسة ═══ -->
+        <div class="inst-row">
+          <div class="inst-en">
+            Ministry of Higher Education and Scientific Research<br>
+            Amar Telidji University – Laghouat<br>
+            Faculty of Economics, Commercial Sciences and Management<br>
+            ${deptShort}
           </div>
           <div>${logoHtml}</div>
-          <div style="text-align:left;font-size:10pt;color:#555;">
-            <div>التاريخ: ${dateStr}</div>
-            <div>السنة الجامعية: ${year}</div>
+          <div class="inst-ar">
+            <div>${S.settings?.ministry||'وزارة التعليم العالي والبحث العلمي'}</div>
+            <div>${S.settings?.university||'جامعة عمار ثليجي - الأغواط'}</div>
+            <div>${S.settings?.faculty||'كلية العلوم الاقتصادية والتجارية وعلوم التسيير'}</div>
+            <div>${dept}</div>
           </div>
         </div>
-        <div class="cert-title">
-          <h1>شهادة تدريس</h1>
-          <p>تُسلَّم للأستاذ المعني لإثبات عبء التدريس</p>
+
+        <!-- ═══ الرقم والتاريخ ═══ -->
+        <div class="ref-row">
+          <div class="ref-num">الرقم: ............/ق.م/${refYear}</div>
+          <div class="ref-date">${dateStr}</div>
         </div>
-        <div class="cert-body">
-          تُشهد ${S.settings?.faculty||'الكلية'} أن الأستاذ(ة):
-          <strong>${tchName}</strong><br>
-          الرتبة: <strong>${RANKS[tchObj.rank]?.label||'—'}</strong><br>
-          القسم: <strong>${tchObj.dept||'—'}</strong>
-          ${tchObj.post?`<br>المنصب: <strong>${POST_LABELS[tchObj.post]||''}</strong>`:''}
-          <br>يُدرِّس خلال السنة الجامعية <strong>${year}</strong> — الفترة: <strong>${periodLabel}</strong>
-          المقاييس التالية:
+
+        <!-- ═══ عنوان الشهادة ═══ -->
+        <div class="title-wrap">
+          <div class="cert-title">شهادة تدريس</div>
         </div>
+
+        <!-- ═══ نص الشهادة ═══ -->
+        <div class="body-text">
+          <div>نحن السيد رئيس <strong>${deptShort}</strong> نشهد بأن:</div>
+          <br>
+          <div class="body-line">
+            <span class="dash">-</span>
+            <span class="lbl">الأستاذ (ة):</span>
+            <span class="val"><strong>${tchName}</strong></span>
+            &nbsp;&nbsp;
+            <span class="lbl">بصفته:</span>
+            <span class="val">${RANKS[tchObj.rank]?.label||'أستاذ'}</span>
+          </div>
+          <div class="body-line" style="margin-top:6px;">
+            <span class="dash">-</span>
+            <span class="lbl">المولود (ة) في:</span>
+            <span class="val">.................</span>
+            &nbsp;
+            <span class="lbl">بـ:</span>
+            <span class="val">.................</span>
+            &nbsp;
+            <span class="lbl">بـ:</span>
+            <span class="val">الأغواط</span>
+          </div>
+          <br>
+          <div>قد درس على مستوى القسم المواد التالية :</div>
+        </div>
+
+        <!-- ═══ جدول المقاييس ═══ -->
         <table>
           <thead><tr>
-            <th>#</th><th>المقياس</th><th>نوع الدرس</th><th>التخصص / المستوى</th><th>عدد الحصص</th>
+            <th>المادة</th>
+            <th>المستوى</th>
+            <th>التخصص</th>
+            <th>نوع التدريس</th>
+            <th>السنة الجامعية</th>
           </tr></thead>
           <tbody>
-            ${subjRows.map((r,i)=>`<tr>
-              <td>${i+1}</td>
-              <td style="font-weight:700;">${r.subj}</td>
-              <td>${TL[r.type]||r.type}</td>
-              <td style="font-size:10pt;">${r.spec||''} — ${r.lv||''}</td>
-              <td style="text-align:center;">${r.count}</td>
+            ${subjRows.map(r=>`<tr>
+              <td style="text-align:right;font-weight:700;">${r.subj||''}</td>
+              <td>${r.lv||''}</td>
+              <td>${r.spec||''}</td>
+              <td>${TL[r.type]||''} — ${r.sem}</td>
+              <td>${year}</td>
             </tr>`).join('')}
           </tbody>
         </table>
-        <div class="cert-body" style="background:#f8f8f8;border-radius:8px;padding:12px;font-size:11pt;">
-          <strong>ملخص الساعات:</strong><br>
-          الساعات الفعلية: <strong>${ot.totalActual.toFixed(2)} ساعة</strong> &nbsp;|&nbsp;
-          الساعات المعادلة: <strong>${ot.totalEq.toFixed(2)} ساعة</strong> &nbsp;|&nbsp;
-          النصاب الأسبوعي: <strong>${ot.quorum} ساعة</strong><br>
-          ${ot.overtime>0?`<span style="color:#dc2626;">الساعات الإضافية: <strong>${ot.overtime.toFixed(2)} ساعة</strong></span>`:'<span style="color:#16a34a;">ضمن النصاب القانوني</span>'}
-        </div>
-        <div class="cert-footer">
-          <div class="sig-box">
-            <div class="sig-line"></div>
-            <div style="font-size:10pt;">رئيس القسم</div>
-          </div>
-          <div class="sig-box">
-            <div class="sig-line"></div>
-            <div style="font-size:10pt;">العميد</div>
-          </div>
-          <div class="sig-box">
-            <div class="sig-line"></div>
-            <div style="font-size:10pt;">الختم الرسمي</div>
+
+        <!-- ═══ التوقيع ═══ -->
+        <div class="sig-section">
+          <div class="sig-label">رئيس القسم:</div>
+          <div class="delivery">
+            سلمت هذه الشهادة للمعني يطلب منه لإستعمالها فيما يخوله القانون.
           </div>
         </div>
-      </div></body></html>`);
+
+        <!-- ═══ تذييل الصفحة ═══ -->
+        <div class="page-footer">
+          العنوان: طريق غرداية ص ب 37ج الأغواط 03000 &nbsp;|&nbsp; الهاتف: 029107431 &nbsp;|&nbsp; الفاكس: 029107430<br>
+          الموقع الإلكتروني: www.lagh-univ.dz
+        </div>
+
+      </div>
+    </body></html>`);
     doc.close();
-    await new Promise(r=>setTimeout(r,1400));
-    const canvas=await html2canvas(iframe.contentDocument.body,{scale:2,useCORS:true,backgroundColor:'#ffffff',width:900,windowWidth:900});
+    await new Promise(r=>setTimeout(r,1500));
+    const canvas=await html2canvas(iframe.contentDocument.body,{scale:2,useCORS:true,backgroundColor:'#ffffff',width:850,windowWidth:850});
     document.body.removeChild(iframe);
     const{jsPDF}=window.jspdf;
     const pdf=new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
-    const pW=pdf.internal.pageSize.getWidth();
-    const imgH=canvas.height*(pW/canvas.width);
-    pdf.addImage(canvas.toDataURL('image/jpeg',0.95),'JPEG',0,0,pW,Math.min(imgH,pdf.internal.pageSize.getHeight()));
+    const pW=pdf.internal.pageSize.getWidth(),pH=pdf.internal.pageSize.getHeight(),m=8;
+    const imgW=pW-m*2,imgH=canvas.height*(imgW/canvas.width);
+    pdf.addImage(canvas.toDataURL('image/jpeg',0.95),'JPEG',m,m,imgW,Math.min(imgH,pH-m*2));
     pdf.save(`شهادة_تدريس_${tchName.replace(/\s/g,'_')}_${year.replace('/','_')}.pdf`);
     toast('✅ تم إنشاء شهادة التدريس');
   }catch(e){console.error(e);toast('❌ خطأ: '+e.message);}
 }
-
 // ══ ⑰ استيراد الأساتذة من Excel ══
 function importTeachersExcel(file){
   if(!file)return;
