@@ -2840,7 +2840,7 @@ table.occ-matrix td.cell-occ:hover{background:#fee2e2;filter:brightness(.97);}
     </div>
     <div class="frow2">
       <div class="fg"><label class="fl">المستوى</label><select class="fs" id="me-lv"></select></div>
-      <div class="fg"><label class="fl">القسم</label><select class="fs" id="me-dp"></select></div>
+      <div class="fg"><label class="fl">القسم</label><select class="fs" id="me-dp" onchange="onMeDpChange()"></select></div>
     </div>
     <div class="frow2">
       <div class="fg"><label class="fl">التاريخ</label>
@@ -2873,7 +2873,7 @@ table.occ-matrix td.cell-occ:hover{background:#fee2e2;filter:brightness(.97);}
     <div class="mt">➕ تفاصيل التخصص</div>
     <input type="hidden" id="spName">
     <div class="fg"><label class="fl">المستوى</label><select class="fs" id="sp-lv"></select></div>
-    <div class="fg"><label class="fl">القسم</label><select class="fs" id="sp-dp"></select></div>
+    <div class="fg"><label class="fl">القسم</label><select class="fs" id="sp-dp" onchange="onSpDpChange()"></select></div>
     <div class="ma">
       <button class="btn bp" onclick="confSpec()">✅ إضافة</button>
       <button class="btn" style="background:var(--gray-light);color:var(--text-mid);" onclick="closeM('mSpec')">إلغاء</button>
@@ -4517,6 +4517,10 @@ function onItLvChange(){
   updateItPreview();
 }
 function onItDpChange(){
+  const dp=document.getElementById('it-dp')?.value||'';
+  const lvOpts=getLevelsForDept(dp).map(l=>`<option>${l}</option>`).join('');
+  const lvEl=document.getElementById('it-lv');
+  if(lvEl)lvEl.innerHTML=lvOpts;
   onItLvChange();
 }
 function updateItPreview(){
@@ -4576,13 +4580,13 @@ function confirmInstallTT(){
 
 // -- ADD TIMETABLE MODAL ---------------------------
 function openAddTimetable(){
-  const lvOpts=S.levels.map(l=>`<option>${l}</option>`).join('');
-  const el=document.getElementById('att-lv');if(el)el.innerHTML=lvOpts;
-  // قسم: يرى قسمه فقط
   const isAdmin=!CURRENT_USER||CURRENT_USER.role==='admin';
   const depts=isAdmin?S.depts:[CURRENT_USER.dept];
   const dpOpts=depts.map(d=>`<option>${d}</option>`).join('');
   const ed=document.getElementById('att-dp');if(ed)ed.innerHTML=dpOpts;
+  const curDp=depts[0]||'';
+  const lvOpts=getLevelsForDept(curDp).map(l=>`<option>${l}</option>`).join('');
+  const el=document.getElementById('att-lv');if(el)el.innerHTML=lvOpts;
   const secEl=document.getElementById('att-section');
   if(secEl)secEl.innerHTML='<option value="">-- كل الفصائل --</option>'
     +S.sections.map(s=>`<option value="${s}">${s}</option>`).join('');
@@ -4598,8 +4602,11 @@ function onAttLvChange(){
   syncAttSpec(lv,dp);
 }
 function onAttDpChange(){
-  const lv=document.getElementById('att-lv')?.value||'';
   const dp=document.getElementById('att-dp')?.value||'';
+  const lvOpts=getLevelsForDept(dp).map(l=>`<option>${l}</option>`).join('');
+  const lvEl=document.getElementById('att-lv');
+  if(lvEl)lvEl.innerHTML=lvOpts;
+  const lv=lvEl?.value||'';
   syncAttSpec(lv,dp);
 }
 function syncAttSpec(lv,dp){
@@ -4796,7 +4803,7 @@ function renderTT(){
   const curSpec=att.spec||'';const curSec=att.section||'';
   const curGrp=att.group||'';const curPer=att.period||'';
 
-  const lvOpts='<option value="">جميع المستويات</option>'+S.levels.map(l=>`<option value="${l}"${l===curLv?' selected':''}>${l}</option>`).join('');
+  const lvOpts='<option value="">جميع المستويات</option>'+getLevelsForDept(curDp).map(l=>`<option value="${l}"${l===curLv?' selected':''}>${l}</option>`).join('');
   const dpOpts='<option value="">جميع الأقسام</option>'+S.depts.map(d=>`<option value="${d}"${d===curDp?' selected':''}>${d}</option>`).join('');
   const filteredSpecs=S.specs.filter(sp=>(!curLv||sp.lv===curLv)&&(!curDp||sp.dp===curDp));
   const spOpts='<option value="">كل التخصصات</option>'
@@ -5068,6 +5075,28 @@ function renderTT(){
 function setActiveTTFromKey(lv,dp,spec,sec,grp){
   S.activeTT={period:S.activeTT?.period||'',lv,dp,spec,section:sec,group:grp};
   save();
+}
+function onMeDpChange(){
+  const dp=document.getElementById('me-dp')?.value||'';
+  const lv=document.getElementById('me-lv');
+  if(lv)lv.innerHTML=getLevelsForDept(dp).map(l=>`<option>${l}</option>`).join('');
+}
+function onSpDpChange(){
+  const dp=document.getElementById('sp-dp')?.value||'';
+  const lv=document.getElementById('sp-lv');
+  if(lv)lv.innerHTML=getLevelsForDept(dp).map(l=>`<option>${l}</option>`).join('');
+  const lvInline=document.getElementById('sp-lv-inline');
+  if(lvInline)lvInline.innerHTML=getLevelsForDept(dp).map(l=>`<option>${l}</option>`).join('');
+}
+function getLevelsForDept(dp){
+  if(!dp) return S.levels;
+  const lvSet=new Set();
+  S.sessions.filter(s=>s.dp===dp).forEach(s=>{if(s.lv)lvSet.add(s.lv);});
+  S.subjects.filter(s=>s.dept===dp).forEach(s=>{if(s.level)lvSet.add(s.level);});
+  S.specs.filter(s=>s.dp===dp).forEach(s=>{if(s.lv)lvSet.add(s.lv);});
+  (S.registeredTTs||[]).filter(t=>t.dp===dp).forEach(t=>{if(t.lv)lvSet.add(t.lv);});
+  if(!lvSet.size) return S.levels;
+  return S.levels.filter(l=>lvSet.has(l));
 }
 function openAddSessWithKey(day,slot,lv,dp,spec,sec,grp){
   S.activeTT={period:S.activeTT?.period||'',lv,dp,spec,section:sec,group:grp};
