@@ -6250,28 +6250,29 @@ function renderExams(){
       لا توجد امتحانات — اضغط "إضافة امتحان"
     </td></tr>`;
   } else {
+    const ro=canEditExam?'':' disabled title="لا تملك صلاحية التعديل"';
     exams.forEach((ex,i)=>{
       const rowCls=i%2?'exam-row-even':'exam-row-odd';
       h+=`<tr class="${rowCls}">
         <td class="exam-day-cell">
           <div style="font-weight:700;color:var(--navy);">${ex.day||'—'}</div>
-          <input class="exam-date-input" type="date" value="${ex.date||''}"
+          <input class="exam-date-input" type="date" value="${ex.date||''}"${ro}
             onchange="updateExam('${ex.id}','date',this.value)">
         </td>
         <td>
-          <select class="exam-edit-input" onchange="updateExam('${ex.id}','slot',this.value)">
+          <select class="exam-edit-input" onchange="updateExam('${ex.id}','slot',this.value)"${ro}>
             ${getExamSlots().map(s=>`<option${s===ex.slot?' selected':''}>${s}</option>`).join('')}
           </select>
         </td>
         <td class="exam-subj-cell">
-          <select class="exam-edit-input" style="font-weight:800;font-size:12px;width:100%;"
+          <select class="exam-edit-input" style="font-weight:800;font-size:12px;width:100%;"${ro}
             onchange="onExamSubjChange('${ex.id}',this.value)">
             <option value="">-- اختر المقياس --</option>
             ${S.subjects.filter(s=>(!f.lv||!s.level||s.level===f.lv)&&(!f.dp||!s.dept||s.dept===f.dp)&&(!f.spec||!s.spec||s.spec===f.spec)&&(!f.period||s.sem==f.period)).map(s=>`<option value="${s.name}"${s.name===ex.subj?' selected':''}>${s.name}</option>`).join('')}
             ${ex.subj&&!S.subjects.find(s=>s.name===ex.subj)?`<option value="${ex.subj}" selected>${ex.subj}</option>`:''}
           </select>
           <div style="margin-top:4px;">
-            <select class="exam-edit-input" style="font-size:11px;width:100%;"
+            <select class="exam-edit-input" style="font-size:11px;width:100%;"${ro}
               onchange="onExamTchSelect('${ex.id}',this)">
               <option value="">-- الأستاذ --</option>
               ${(()=>{
@@ -6299,8 +6300,8 @@ function renderExams(){
             style="vertical-align:middle;text-align:center;padding:6px 4px;
               min-width:80px;border:2px solid #ccc;">
             <div style="font-size:10px;font-weight:700;color:var(--gray);margin-bottom:4px;">${g}</div>
-            <div class="exam-room-display" onclick="showRoomEdit(this)"
-              style="font-weight:900;font-size:12pt;color:#0f1f3d;cursor:pointer;
+            <div class="exam-room-display" ${canEditExam?'onclick="showRoomEdit(this)"':''} 
+              style="font-weight:900;font-size:12pt;color:#0f1f3d;cursor:${canEditExam?'pointer':'default'};
                 min-height:30px;display:flex;align-items:center;justify-content:center;">
               ${room||'—'}
             </div>
@@ -6477,6 +6478,8 @@ function updateExamRoom(id,grp,room,extraKey){
 
 // == EXAM CREATOR =============================================
 function openExamCreator(){
+  const f=getExamFilters();
+  if(!canEditDept(f.dp||'')){toast('⚠️ لا تملك صلاحية إضافة امتحانات لهذا القسم');return;}
   // تعبئة الفصائل
   const secSel=document.getElementById('ec-section');
   if(secSel){
@@ -6499,6 +6502,8 @@ function openExamCreator(){
 }
 
 function confirmExamCreator(){
+  const f=getExamFilters();
+  if(!canEditDept(f.dp||'')){toast('⚠️ لا تملك صلاحية هذا الإجراء');return;}
   const count=parseInt(document.getElementById('ec-count')?.value)||0;
   const startDate=document.getElementById('ec-start-date')?.value||'';
   const secVal=document.getElementById('ec-section')?.value;
