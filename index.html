@@ -9321,7 +9321,14 @@ function renderTchTT(){
   ss.forEach(s=>{
     if(!mp[s.day])mp[s.day]={};
     if(!mp[s.day][s.slot])mp[s.day][s.slot]=[];
-    mp[s.day][s.slot].push(s);
+    // المحاضرة: لا تكررها — نعرضها مرة واحدة لكل مقياس
+    const isTlc=s.type==='tlc'||s.type==='tlc-remote';
+    if(isTlc){
+      const already=mp[s.day][s.slot].find(x=>(x.type==='tlc'||x.type==='tlc-remote')&&x.subj===s.subj);
+      if(!already) mp[s.day][s.slot].push(s);
+    } else {
+      mp[s.day][s.slot].push(s);
+    }
   });
 
   // -- الجدول: الفترات أعمدة / الأيام صفوف (كالمرجع) --
@@ -9339,14 +9346,9 @@ function renderTchTT(){
       html+=`<td style="padding:4px;vertical-align:top;min-height:60px;background:${bg}30;">`;
       if(!cells.length){html+=`<div style="text-align:center;color:#ccc;padding-top:18px;font-size:11px;">—</div>`;}
       cells.forEach(s=>{
-        const grpParts=[s.section,s.group].filter(Boolean);
-        const specPart=s.spec?`<div style="font-size:10px;color:#666;font-weight:600;">${s.spec.slice(0,20)}</div>`:'';
-        html+=`<div class="sc ${s.type}" style="margin-bottom:3px;border-radius:8px;">
-          <div class="ss">${s.subj}</div>
-          <div class="si">🏫 ${s.rm||'—'}</div>
-          ${grpParts.length?`<div class="si">👥 ${grpParts.join(' — ')}</div>`:''}
-          ${specPart}
-          <div class="si" style="font-size:9px;opacity:.65;">${TL[s.type]||''}</div>
+        html+=`<div class="sc ${s.type}" style="margin-bottom:3px;border-radius:8px;text-align:center;">
+          <div class="ss" style="font-weight:800;font-size:11.5px;">${s.subj}</div>
+          <div class="si" style="font-size:10px;margin-top:2px;opacity:.8;">${TL[s.type]||''}</div>
         </div>`;
       });
       html+=`</td>`;
@@ -9412,7 +9414,14 @@ async function exportTchPDF(){
     ss.forEach(s=>{
       if(!mp[s.day])mp[s.day]={};
       if(!mp[s.day][s.slot])mp[s.day][s.slot]=[];
-      mp[s.day][s.slot].push(s);
+      // المحاضرة: مرة واحدة لكل مقياس
+      const isTlc=s.type==='tlc'||s.type==='tlc-remote';
+      if(isTlc){
+        const already=mp[s.day][s.slot].find(x=>(x.type==='tlc'||x.type==='tlc-remote')&&x.subj===s.subj);
+        if(!already) mp[s.day][s.slot].push(s);
+      } else {
+        mp[s.day][s.slot].push(s);
+      }
     });
     const logoHtml=S.settings?.logo?`<img src="${S.settings.logo}" style="width:55px;height:55px;object-fit:contain;">`:'<span style="font-size:36px;">🎓</span>';
     let rows='';
@@ -9423,10 +9432,8 @@ async function exportTchPDF(){
         const bg=cells.length?(TC[cells[0].type]||'#fff'):'#fff';
         rows+=`<td style="background:${bg};">`;
         cells.forEach(s=>{
-          const grp=[s.spec,s.section,s.group].filter(Boolean).join(' / ');
-          rows+=`<div class="ci"><div class="cs">${s.subj}</div>
-            <div class="ci2">🏫 ${s.rm||'—'}</div>
-            ${grp?`<div class="ci2">👥 ${grp}</div>`:''}
+          rows+=`<div class="ci">
+            <div class="cs">${s.subj}</div>
             <div class="ci2">${TL[s.type]||''}</div>
           </div>`;
         });
