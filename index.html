@@ -1827,7 +1827,7 @@ table.occ-matrix td.cell-occ:hover{background:#fee2e2;filter:brightness(.97);}
         </div>
         <div class="fg">
           <label class="fl">القسم</label>
-          <select class="fs" id="subjDept"></select>
+          <select class="fs" id="subjDept" onchange="onSubjDeptChange()"></select>
         </div>
         <button class="btn bg" onclick="addSubject()" style="white-space:nowrap;align-self:flex-end;">➕ إضافة</button>
       </div>
@@ -3850,22 +3850,41 @@ function impExcel(key){
 // -- SUBJECTS (المقاييس) ---------------------------
 let subjSemTab=0;
 
+function onSubjDeptChange(){
+  const dp=document.getElementById('subjDept')?.value||'';
+  const isAdm=!CURRENT_USER||CURRENT_USER.role==='admin';
+  const availSpecs=isAdm
+    ?S.specs.filter(sp=>!dp||sp.dp===dp)
+    :S.specs.filter(sp=>sp.dp===(CURRENT_USER?.dept));
+  const spOpts='<option value="">-- عام --</option>'+availSpecs.map(s=>`<option value="${s.name}">${s.name}</option>`).join('');
+  const ss=document.getElementById('subjSpec');
+  if(ss)ss.innerHTML=spOpts;
+  // تحديث المستويات أيضاً بناءً على القسم
+  const lvOpts=getLevelsForDept(dp).map(l=>`<option>${l}</option>`).join('');
+  const lv=document.getElementById('subjLevel');
+  if(lv)lv.innerHTML=lvOpts;
+}
+
 function syncSubjSelects(){
-  const lvOpts=S.levels.map(l=>`<option>${l}</option>`).join('');
-  ['subjLevel'].forEach(id=>{const el=document.getElementById(id);if(el)el.innerHTML=lvOpts;});
-  const flv=document.getElementById('subj-f-level');
-  if(flv)flv.innerHTML='<option value="">كل المستويات</option>'+lvOpts;
-  // القسم: يرى قسمه وتخصصاته فقط
   const isAdm=!CURRENT_USER||CURRENT_USER.role==='admin';
   const availDepts=isAdm?S.depts:[CURRENT_USER?.dept].filter(Boolean);
   const dpOpts=availDepts.map(d=>`<option>${d}</option>`).join('');
   ['subjDept'].forEach(id=>{const el=document.getElementById(id);if(el)el.innerHTML=dpOpts;});
-  // التخصصات: مفلترة حسب القسم للمستخدم غير المشرف
-  const availSpecs=isAdm
-    ?S.specs
-    :S.specs.filter(sp=>sp.dp===CURRENT_USER?.dept);
+
+  // المستويات: بناءً على القسم الأول المتاح
+  const firstDept=availDepts[0]||'';
+  const lvOpts=getLevelsForDept(firstDept).map(l=>`<option>${l}</option>`).join('');
+  const allLvOpts=S.levels.map(l=>`<option>${l}</option>`).join('');
+  ['subjLevel'].forEach(id=>{const el=document.getElementById(id);if(el)el.innerHTML=isAdm?allLvOpts:lvOpts;});
+  const flv=document.getElementById('subj-f-level');
+  if(flv)flv.innerHTML='<option value="">كل المستويات</option>'+(isAdm?allLvOpts:lvOpts);
+
+  // التخصصات: مفلترة حسب القسم
+  const availSpecs=isAdm?S.specs:S.specs.filter(sp=>sp.dp===CURRENT_USER?.dept);
   const spOpts='<option value="">-- عام --</option>'+availSpecs.map(s=>`<option value="${s.name}">${s.name}</option>`).join('');
+  const spFilterOpts='<option value="">كل التخصصات</option>'+availSpecs.map(s=>`<option value="${s.name}">${s.name}</option>`).join('');
   const ss=document.getElementById('subjSpec');if(ss)ss.innerHTML=spOpts;
+  const sf=document.getElementById('subj-f-spec');if(sf)sf.innerHTML=spFilterOpts;
   syncSubjModalSel();
 }
 function syncSubjModalSel(){
