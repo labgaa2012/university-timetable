@@ -3855,13 +3855,17 @@ function syncSubjSelects(){
   ['subjLevel'].forEach(id=>{const el=document.getElementById(id);if(el)el.innerHTML=lvOpts;});
   const flv=document.getElementById('subj-f-level');
   if(flv)flv.innerHTML='<option value="">كل المستويات</option>'+lvOpts;
-  const spOpts='<option value="">-- عام --</option>'+S.specs.map(s=>`<option value="${s.name}">${s.name}</option>`).join('');
-  const ss=document.getElementById('subjSpec');if(ss)ss.innerHTML=spOpts;
-  // القسم: يرى قسمه فقط في modal الإضافة
+  // القسم: يرى قسمه وتخصصاته فقط
   const isAdm=!CURRENT_USER||CURRENT_USER.role==='admin';
   const availDepts=isAdm?S.depts:[CURRENT_USER?.dept].filter(Boolean);
   const dpOpts=availDepts.map(d=>`<option>${d}</option>`).join('');
   ['subjDept'].forEach(id=>{const el=document.getElementById(id);if(el)el.innerHTML=dpOpts;});
+  // التخصصات: مفلترة حسب القسم للمستخدم غير المشرف
+  const availSpecs=isAdm
+    ?S.specs
+    :S.specs.filter(sp=>sp.dp===CURRENT_USER?.dept);
+  const spOpts='<option value="">-- عام --</option>'+availSpecs.map(s=>`<option value="${s.name}">${s.name}</option>`).join('');
+  const ss=document.getElementById('subjSpec');if(ss)ss.innerHTML=spOpts;
   syncSubjModalSel();
 }
 function syncSubjModalSel(){
