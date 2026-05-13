@@ -4265,7 +4265,7 @@ function renderTchGrid(){
         </div>
         <div class="iac">
           <button class="icb ied" onclick="openEditTeacher(${realIdx})">✏️</button>
-          <button class="icb idl" onclick="rmTch(${realIdx})">🗑️</button>
+          ${(!CURRENT_USER||CURRENT_USER.role==='admin')?`<button class="icb idl" onclick="rmTch(${realIdx})">🗑️</button>`:''}
         </div>
       </div>`;
     }).join('')
@@ -4302,6 +4302,7 @@ function addTeacher(){
   save();renderTchGrid();toast('✅ أضيف: '+n);
 }
 function rmTch(i){
+  if(!CURRENT_USER||CURRENT_USER.role!=='admin'){toast('⚠️ المشرف العام فقط يستطيع حذف الأساتذة');return;}
   if(!confirm('حذف الأستاذ '+S.teachers[i]?.name+'؟'))return;
   S.teachers.splice(i,1);save();renderTchGrid();toast('🗑️ تم الحذف');
 }
