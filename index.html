@@ -6513,7 +6513,6 @@ function confirmExamCreator(){
   if(!startDate){toast('⚠️ اختر تاريخ البداية');return;}
 
   // تحديد الفصائل المستهدفة
-  const f=getExamFilters();
   let sections;
   if(secVal==='__all__') sections=S.sections.filter(s=>s);
   else sections=[secVal]; // '' = بدون فصيلة أو فصيلة محددة
