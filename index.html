@@ -998,6 +998,15 @@ table.occ-matrix td.cell-occ:hover{background:#fee2e2;filter:brightness(.97);}
     </div>
   </button>
 
+  <!-- NAV BUTTON: الرزنامة -->
+  <button class="sb-nav-btn" id="snb-calendar" onclick="showMgmtPg('calendar')">
+    <div class="snb-left">
+      <div class="ai">🗓️</div>
+      <span>الرزنامة</span>
+    </div>
+    <span class="snb-arrow">←</span>
+  </button>
+
   <!-- NAV BUTTON: المستوى -->
   <button class="sb-nav-btn" id="snb-levels" onclick="showMgmtPg('levels')">
     <div class="snb-left">
@@ -1294,6 +1303,89 @@ table.occ-matrix td.cell-occ:hover{background:#fee2e2;filter:brightness(.97);}
           <div class="db-section-title">⚠️ Overload Detection</div>
           <div id="db-overload-table"></div>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ CALENDAR PAGE ══ -->
+  <div class="pg" id="pg-calendar">
+    <div class="mc">
+      <div class="mgmt-header">
+        <div class="mct"><div class="mcti">🗓️</div>الرزنامة الجامعية</div>
+        <div class="frow">
+          <select class="fs" id="cal-month" onchange="renderCalendar()" style="min-width:120px;font-weight:700;"></select>
+          <select class="fs" id="cal-year-sel" onchange="renderCalendar()" style="min-width:100px;font-weight:700;"></select>
+          <button class="btn" onclick="calToday()" style="background:#0f1f3d;color:#c9a84c;">اليوم</button>
+        </div>
+      </div>
+
+      <!-- Legend -->
+      <div style="display:flex;gap:14px;flex-wrap:wrap;margin-bottom:14px;font-size:12px;font-weight:700;">
+        <span style="display:flex;align-items:center;gap:5px;"><span style="width:14px;height:14px;border-radius:3px;background:#dcfce7;border:1.5px solid #16a34a;display:inline-block;"></span>السداسي</span>
+        <span style="display:flex;align-items:center;gap:5px;"><span style="width:14px;height:14px;border-radius:3px;background:#fee2e2;border:1.5px solid #dc2626;display:inline-block;"></span>امتحانات</span>
+        <span style="display:flex;align-items:center;gap:5px;"><span style="width:14px;height:14px;border-radius:3px;background:#fef9c3;border:1.5px solid #ca8a04;display:inline-block;"></span>عطلة</span>
+        <span style="display:flex;align-items:center;gap:5px;"><span style="width:14px;height:14px;border-radius:3px;background:#e0f2fe;border:1.5px solid #0284c7;display:inline-block;"></span>استدراكي</span>
+      </div>
+
+      <!-- Visual Calendar -->
+      <div id="cal-grid" style="margin-bottom:20px;"></div>
+
+      <!-- 3 sections -->
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;">
+
+        <!-- العطل -->
+        <div class="db-card">
+          <div class="db-card-header">
+            <span>🌴 العطل الدراسية</span>
+            <button class="btn bg" onclick="openCalModal('holiday')" style="padding:4px 10px;font-size:11px;">➕ إضافة</button>
+          </div>
+          <div id="cal-holidays-list"></div>
+        </div>
+
+        <!-- الامتحانات -->
+        <div class="db-card">
+          <div class="db-card-header">
+            <span>📝 فترات الامتحانات</span>
+            <button class="btn" onclick="openCalModal('exam')" style="padding:4px 10px;font-size:11px;background:#dc2626;color:#fff;">➕ إضافة</button>
+          </div>
+          <div id="cal-exams-list"></div>
+        </div>
+
+        <!-- السداسيات -->
+        <div class="db-card">
+          <div class="db-card-header">
+            <span>📅 تواريخ السداسيات</span>
+            <button class="btn" onclick="openCalModal('semester')" style="padding:4px 10px;font-size:11px;background:#16a34a;color:#fff;">➕ إضافة</button>
+          </div>
+          <div id="cal-semesters-list"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: الرزنامة -->
+  <div class="mo" id="mCal">
+    <div class="mb" style="width:420px;">
+      <div class="mt" id="mCal-title">➕ إضافة</div>
+      <input type="hidden" id="mCal-type">
+      <input type="hidden" id="mCal-id">
+      <div class="fg">
+        <label class="fl" id="mCal-type-lbl">النوع</label>
+        <select class="fs" id="mCal-kind"></select>
+      </div>
+      <div class="frow2">
+        <div class="fg">
+          <label class="fl">تاريخ البداية</label>
+          <input class="fi" type="date" id="mCal-start">
+        </div>
+        <div class="fg">
+          <label class="fl">تاريخ النهاية</label>
+          <input class="fi" type="date" id="mCal-end">
+        </div>
+      </div>
+      <div class="ma">
+        <button class="btn bg" onclick="confCalModal()" style="flex:1;justify-content:center;">✅ حفظ</button>
+        <button class="btn" style="background:var(--gray-light);color:var(--text-mid);" onclick="closeM('mCal')">إلغاء</button>
       </div>
     </div>
   </div>
@@ -3300,6 +3392,7 @@ function showMgmtPg(id){
   if(id==='specs')renderSpGrid();
   if(id==='subjects')renderSubjGrid();
   if(id==='years')renderYrGrid();
+  if(id==='calendar')renderCalendar();
   if(id==='levels')renderLvGrid();
   if(id==='depts')renderDptGrid();
   if(id==='sections')renderSecGrid();
@@ -9411,6 +9504,197 @@ async function exportTchPDF(){
   }catch(e){console.error(e);toast('❌ خطأ: '+e.message);}
 }
 
+// ══ CALENDAR / رزنامة ════════════════════════════════
+
+function getCalData(){
+  if(!S.calendar)S.calendar={holidays:[],examPeriods:[],semesterPeriods:[]};
+  return S.calendar;
+}
+
+function showMgmtPgCalendar(){
+  renderCalendar();
+}
+
+function calToday(){
+  const now=new Date();
+  document.getElementById('cal-month').value=now.getMonth();
+  document.getElementById('cal-year-sel').value=now.getFullYear();
+  renderCalendar();
+}
+
+function initCalSelects(){
+  const mSel=document.getElementById('cal-month');
+  if(mSel&&mSel.options.length===0){
+    ['يناير','فبراير','مارس','أبريل','ماي','يونيو','يوليو','أوت','سبتمبر','أكتوبر','نوفمبر','ديسمبر']
+      .forEach((m,i)=>mSel.add(new Option(m,i)));
+    mSel.value=new Date().getMonth();
+  }
+  const ySel=document.getElementById('cal-year-sel');
+  if(ySel&&ySel.options.length===0){
+    const yr=new Date().getFullYear();
+    for(let y=yr-2;y<=yr+3;y++)ySel.add(new Option(y,y));
+    ySel.value=yr;
+  }
+}
+
+function renderCalendar(){
+  initCalSelects();
+  const month=parseInt(document.getElementById('cal-month')?.value||new Date().getMonth());
+  const year=parseInt(document.getElementById('cal-year-sel')?.value||new Date().getFullYear());
+  const cal=getCalData();
+
+  // build day color map
+  function inRange(dateStr,start,end){
+    if(!start||!end)return false;
+    return dateStr>=start&&dateStr<=end;
+  }
+  function dayClass(y,m,d){
+    const ds=`${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    for(const s of cal.semesterPeriods) if(inRange(ds,s.start,s.end))return{bg:'#dcfce7',border:'#16a34a',label:s.type.replace('السداسي ','')};
+    for(const e of cal.examPeriods){
+      if(inRange(ds,e.start,e.end)){
+        const isRattra=e.type.includes('استدراكي');
+        return{bg:isRattra?'#e0f2fe':'#fee2e2',border:isRattra?'#0284c7':'#dc2626',label:e.type.replace('امتحانات ','').replace('الامتحان الاستدراكي ','')};
+      }
+    }
+    for(const h of cal.holidays) if(inRange(ds,h.start,h.end))return{bg:'#fef9c3',border:'#ca8a04',label:h.type.replace('عطلة ','')};
+    return null;
+  }
+
+  const firstDay=new Date(year,month,1).getDay();
+  const offset=[6,0,1,2,3,4,5][firstDay]; // تعديل: السبت أول الأسبوع
+  const daysInMonth=new Date(year,month+1,0).getDate();
+  const today=new Date();
+  const todayStr=`${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
+
+  let html=`<div style="border:1.5px solid #e0e8f5;border-radius:12px;overflow:hidden;">
+    <div style="display:grid;grid-template-columns:repeat(7,1fr);background:#0f1f3d;">
+      ${['السبت','الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس','الجمعة'].map(d=>`<div style="padding:8px 4px;text-align:center;font-size:11px;font-weight:700;color:#c9a84c;">${d}</div>`).join('')}
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;padding:6px;background:#f8fafc;">`;
+
+  // empty cells before first day
+  for(let i=0;i<offset;i++) html+=`<div></div>`;
+
+  for(let d=1;d<=daysInMonth;d++){
+    const ds=`${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const info=dayClass(year,month,d);
+    const isToday=ds===todayStr;
+    html+=`<div style="min-height:48px;border-radius:8px;padding:4px 6px;
+      background:${info?info.bg:'#fff'};
+      border:${isToday?'2px solid #0f1f3d':info?`1.5px solid ${info.border}`:'1px solid #e0e8f5'};
+      font-weight:${isToday?'900':'700'};
+      font-size:12px;">
+      <div style="color:${isToday?'#0f1f3d':'#374151'};">${d}</div>
+      ${info?`<div style="font-size:8px;color:${info.border};margin-top:2px;line-height:1.2;">${info.label}</div>`:''}
+    </div>`;
+  }
+  html+=`</div></div>`;
+  const el=document.getElementById('cal-grid');
+  if(el)el.innerHTML=html;
+
+  // render lists
+  renderCalLists();
+}
+
+function renderCalLists(){
+  const cal=getCalData();
+  const holidayColors={
+    'عطلة الشتاء':'#bfdbfe','عطلة الربيع':'#bbf7d0','عطلة الصيف':'#fed7aa','عطلة غير مبرمجة':'#e9d5ff'
+  };
+  const fmtDate=d=>d?d.split('-').reverse().join('/'):'—';
+
+  const hEl=document.getElementById('cal-holidays-list');
+  if(hEl)hEl.innerHTML=cal.holidays.length?cal.holidays.map((h,i)=>`
+    <div style="display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:8px;margin:4px 0;background:${holidayColors[h.type]||'#f0f4ff'};">
+      <div style="flex:1;">
+        <div style="font-size:12px;font-weight:800;">${h.type}</div>
+        <div style="font-size:10px;color:#555;">${fmtDate(h.start)} ← ${fmtDate(h.end)}</div>
+      </div>
+      <button onclick="editCalItem('holiday',${i})" style="background:none;border:none;cursor:pointer;font-size:13px;">✏️</button>
+      <button onclick="delCalItem('holiday',${i})" style="background:none;border:none;cursor:pointer;font-size:13px;">🗑️</button>
+    </div>`).join('')
+    :`<div style="text-align:center;color:#999;font-size:12px;padding:14px;">لا توجد عطل</div>`;
+
+  const eEl=document.getElementById('cal-exams-list');
+  if(eEl)eEl.innerHTML=cal.examPeriods.length?cal.examPeriods.map((e,i)=>`
+    <div style="display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:8px;margin:4px 0;background:${e.type.includes('استدراكي')?'#e0f2fe':'#fee2e2'};">
+      <div style="flex:1;">
+        <div style="font-size:11px;font-weight:800;">${e.type}</div>
+        <div style="font-size:10px;color:#555;">${fmtDate(e.start)} ← ${fmtDate(e.end)}</div>
+      </div>
+      <button onclick="editCalItem('exam',${i})" style="background:none;border:none;cursor:pointer;font-size:13px;">✏️</button>
+      <button onclick="delCalItem('exam',${i})" style="background:none;border:none;cursor:pointer;font-size:13px;">🗑️</button>
+    </div>`).join('')
+    :`<div style="text-align:center;color:#999;font-size:12px;padding:14px;">لا توجد فترات</div>`;
+
+  const sEl=document.getElementById('cal-semesters-list');
+  if(sEl)sEl.innerHTML=cal.semesterPeriods.length?cal.semesterPeriods.map((s,i)=>`
+    <div style="display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:8px;margin:4px 0;background:#dcfce7;">
+      <div style="flex:1;">
+        <div style="font-size:12px;font-weight:800;">${s.type}</div>
+        <div style="font-size:10px;color:#555;">${fmtDate(s.start)} ← ${fmtDate(s.end)}</div>
+      </div>
+      <button onclick="editCalItem('semester',${i})" style="background:none;border:none;cursor:pointer;font-size:13px;">✏️</button>
+      <button onclick="delCalItem('semester',${i})" style="background:none;border:none;cursor:pointer;font-size:13px;">🗑️</button>
+    </div>`).join('')
+    :`<div style="text-align:center;color:#999;font-size:12px;padding:14px;">لا توجد سداسيات</div>`;
+}
+
+const CAL_KINDS={
+  holiday:['عطلة الشتاء','عطلة الربيع','عطلة الصيف','عطلة غير مبرمجة'],
+  exam:['امتحانات السداسي الأول','امتحانات السداسي الثاني','الامتحان الاستدراكي للسداسي الاول','الامتحان الاستدراكي للسداسي الثاني'],
+  semester:['السداسي الأول','السداسي الثاني']
+};
+const CAL_TITLES={holiday:'🌴 إضافة عطلة',exam:'📝 إضافة فترة امتحان',semester:'📅 إضافة سداسي'};
+const CAL_LABELS={holiday:'نوع العطلة',exam:'نوع الامتحان',semester:'نوع السداسي'};
+
+function openCalModal(type,idx){
+  const cal=getCalData();
+  document.getElementById('mCal-type').value=type;
+  document.getElementById('mCal-id').value=idx!==undefined?idx:'';
+  document.getElementById('mCal-title').textContent=idx!==undefined?'✏️ تعديل':CAL_TITLES[type];
+  document.getElementById('mCal-type-lbl').textContent=CAL_LABELS[type];
+  const kindSel=document.getElementById('mCal-kind');
+  kindSel.innerHTML=CAL_KINDS[type].map(k=>`<option value="${k}">${k}</option>`).join('');
+  if(idx!==undefined){
+    const arr=type==='holiday'?cal.holidays:type==='exam'?cal.examPeriods:cal.semesterPeriods;
+    const item=arr[idx];
+    if(item){kindSel.value=item.type;document.getElementById('mCal-start').value=item.start;document.getElementById('mCal-end').value=item.end;}
+  } else {
+    document.getElementById('mCal-start').value='';
+    document.getElementById('mCal-end').value='';
+  }
+  openM('mCal');
+}
+
+function editCalItem(type,idx){openCalModal(type,idx);}
+
+function confCalModal(){
+  const type=document.getElementById('mCal-type').value;
+  const idxStr=document.getElementById('mCal-id').value;
+  const kind=document.getElementById('mCal-kind').value;
+  const start=document.getElementById('mCal-start').value;
+  const end=document.getElementById('mCal-end').value;
+  if(!start||!end){toast('⚠️ حدد تاريخ البداية والنهاية');return;}
+  if(end<start){toast('⚠️ تاريخ النهاية يجب أن يكون بعد البداية');return;}
+  const cal=getCalData();
+  const arr=type==='holiday'?cal.holidays:type==='exam'?cal.examPeriods:cal.semesterPeriods;
+  const item={type:kind,start,end};
+  if(idxStr!==''){arr[parseInt(idxStr)]=item;}
+  else{arr.push(item);}
+  save();closeM('mCal');renderCalendar();
+  toast('✅ تم الحفظ');
+}
+
+function delCalItem(type,idx){
+  if(!confirm('حذف هذا العنصر؟'))return;
+  const cal=getCalData();
+  const arr=type==='holiday'?cal.holidays:type==='exam'?cal.examPeriods:cal.semesterPeriods;
+  arr.splice(idx,1);
+  save();renderCalendar();toast('🗑️ تم الحذف');
+}
+
 // ══ AUTH SYSTEM ══════════════════════════════════
 
 // المستخدم الحالي
@@ -9496,7 +9780,7 @@ function applyPermissions(){
   if(isAdmin){
     document.querySelectorAll('.sb-nav-btn,.nav-tab').forEach(b=>b.style.display='');
   } else {
-    const hideMgmt=['snb-settings','snb-years','snb-depts','snb-periods',
+    const hideMgmt=['snb-settings','snb-years','snb-calendar','snb-depts','snb-periods',
       'snb-stypes','snb-sections','snb-groups','snb-specs','snb-rooms-manage'];
     hideMgmt.forEach(id=>{
       const el=document.getElementById(id);
