@@ -9,7 +9,6 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <style>
 :root{
   --navy:#0f1f3d;--navy-mid:#162847;--navy-light:#1e3a5f;
@@ -649,12 +648,6 @@ table.tt td.ec:hover::after{color:var(--teal);}
 .db-kpi-card .kpi-lbl{font-size:11px;color:var(--gray);margin-top:5px;}
 .db-kpi-card .kpi-icon{font-size:28px;margin-bottom:6px;}
 .db-section-title{font-size:13.5px;font-weight:800;color:var(--navy);font-family:'Tajawal',sans-serif;padding:8px 14px;background:linear-gradient(90deg,#f0f4ff,transparent);border-right:4px solid var(--navy);border-radius:0 8px 8px 0;margin-bottom:12px;}
-.db-card{background:#fff;border:1.5px solid #e0e8f5;border-radius:12px;padding:14px;box-shadow:0 2px 8px rgba(0,0,0,.05);}
-.db-card-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
-.db-card-header>span{font-size:13px;font-weight:800;color:var(--navy);}
-.db-exp-btn{background:#f0f4ff;border:1px solid #c7d7fb;border-radius:6px;padding:3px 7px;cursor:pointer;font-size:11px;color:var(--navy);}
-.db-exp-btn:hover{background:#dbeafe;}
-.heat-cell{min-width:38px;height:30px;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;}
 .db-table{width:100%;border-collapse:collapse;font-size:12px;}
 .db-table th{background:var(--navy);color:var(--gold-light);padding:7px 10px;text-align:right;border:1px solid #334;font-size:11.5px;}
 .db-table td{padding:6px 10px;border:1px solid #e0e8f5;vertical-align:middle;}
@@ -1271,91 +1264,35 @@ table.occ-matrix td.cell-occ:hover{background:#fee2e2;filter:brightness(.97);}
           <select class="fs" id="db-period" onchange="renderDashboard()">
             <option value="">كل الفترات</option>
           </select>
-          <select class="fs" id="db-tch-dept" onchange="renderDashboard()" style="max-width:180px;">
-            <option value="">كل الأقسام</option>
-          </select>
           <button class="btn" onclick="renderDashboard()" style="background:#059669;color:#fff;">🔄 تحديث</button>
-          <button class="btn" onclick="exportDashboardExcel()" style="background:#0f1f3d;color:#c9a84c;">📊 Excel الكل</button>
-          <button class="btn" onclick="exportDashboardPDF()" style="background:#7c3aed;color:#fff;">📄 PDF الكل</button>
         </div>
       </div>
-
-      <!-- KPI Cards -->
-      <div id="db-kpi" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:12px;margin-bottom:20px;"></div>
-
-      <!-- Row 1: Workload bar + Type pie -->
-      <div style="display:grid;grid-template-columns:2fr 1fr;gap:16px;margin-bottom:16px;">
-        <div class="db-card" id="db-workload-card">
-          <div class="db-card-header">
-            <span>👨‍🏫 حمل الأساتذة</span>
-            <div style="display:flex;gap:6px;">
-              <label style="display:flex;align-items:center;gap:4px;font-size:11px;cursor:pointer;">
-                <input type="checkbox" id="db-overload-only" onchange="renderDashboard()"> المثقّلون فقط
-              </label>
-              <button class="db-exp-btn" onclick="exportSectionExcel('workload')">📊</button>
-              <button class="db-exp-btn" onclick="exportSectionPDF('db-workload-card','حمل_الأساتذة')">📄</button>
-            </div>
+      <!-- KPI cards -->
+      <div id="db-kpi" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;margin-bottom:20px;"></div>
+      <!-- Charts & Tables -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;" id="db-grid">
+        <!-- عدد الساعات لكل أستاذ -->
+        <div style="grid-column:1/-1;">
+          <div class="db-section-title">📚 عدد الساعات لكل أستاذ</div>
+          <div style="margin-bottom:10px;display:flex;gap:8px;flex-wrap:wrap;">
+            <select class="fs" id="db-tch-dept" onchange="renderDashboard()" style="max-width:200px;">
+              <option value="">كل الأقسام</option>
+            </select>
+            <label style="display:flex;align-items:center;gap:5px;font-size:12px;cursor:pointer;">
+              <input type="checkbox" id="db-overload-only" onchange="renderDashboard()"> عرض المثقّلين فقط
+            </label>
           </div>
-          <div style="overflow-x:auto;max-height:320px;overflow-y:auto;" id="db-tch-table"></div>
+          <div id="db-tch-table"></div>
         </div>
-        <div class="db-card" id="db-type-card">
-          <div class="db-card-header">
-            <span>🎯 توزيع أنواع الدروس</span>
-            <div style="display:flex;gap:6px;">
-              <button class="db-exp-btn" onclick="exportSectionExcel('types')">📊</button>
-              <button class="db-exp-btn" onclick="exportSectionPDF('db-type-card','توزيع_الدروس')">📄</button>
-            </div>
-          </div>
-          <canvas id="db-pie-chart" height="220"></canvas>
-          <div id="db-type-legend" style="margin-top:8px;font-size:11px;"></div>
+        <!-- نسبة استغلال القاعات -->
+        <div>
+          <div class="db-section-title">🏫 نسبة استغلال القاعات</div>
+          <div id="db-rooms-table"></div>
         </div>
-      </div>
-
-      <!-- Row 2: Days bar + Heatmap -->
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;">
-        <div class="db-card" id="db-days-card">
-          <div class="db-card-header">
-            <span>📅 توزيع الحصص على الأيام</span>
-            <div style="display:flex;gap:6px;">
-              <button class="db-exp-btn" onclick="exportSectionExcel('days')">📊</button>
-              <button class="db-exp-btn" onclick="exportSectionPDF('db-days-card','توزيع_الأيام')">📄</button>
-            </div>
-          </div>
-          <canvas id="db-days-chart" height="180"></canvas>
-        </div>
-        <div class="db-card" id="db-heat-card">
-          <div class="db-card-header">
-            <span>🌡️ خريطة حرارية — القاعات</span>
-            <div style="display:flex;gap:6px;">
-              <button class="db-exp-btn" onclick="exportSectionExcel('heatmap')">📊</button>
-              <button class="db-exp-btn" onclick="exportSectionPDF('db-heat-card','خريطة_القاعات')">📄</button>
-            </div>
-          </div>
-          <div id="db-heatmap" style="overflow-x:auto;font-size:10px;"></div>
-        </div>
-      </div>
-
-      <!-- Row 3: Specs + Conflicts -->
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;">
-        <div class="db-card" id="db-specs-card">
-          <div class="db-card-header">
-            <span>🎓 تحليل التخصصات</span>
-            <div style="display:flex;gap:6px;">
-              <button class="db-exp-btn" onclick="exportSectionExcel('specs')">📊</button>
-              <button class="db-exp-btn" onclick="exportSectionPDF('db-specs-card','التخصصات')">📄</button>
-            </div>
-          </div>
-          <div id="db-specs-table" style="overflow-x:auto;max-height:280px;overflow-y:auto;"></div>
-        </div>
-        <div class="db-card" id="db-conflicts-card">
-          <div class="db-card-header">
-            <span>⚠️ مؤشر التعارضات</span>
-            <div style="display:flex;gap:6px;">
-              <button class="db-exp-btn" onclick="exportSectionExcel('conflicts')">📊</button>
-              <button class="db-exp-btn" onclick="exportSectionPDF('db-conflicts-card','التعارضات')">📄</button>
-            </div>
-          </div>
-          <div id="db-conflicts-body"></div>
+        <!-- Overload Detection -->
+        <div>
+          <div class="db-section-title">⚠️ Overload Detection</div>
+          <div id="db-overload-table"></div>
         </div>
       </div>
     </div>
@@ -8971,261 +8908,170 @@ function clearAllDismissed(){
 
 // -- DASHBOARD -------------------------------------
 function renderDashboard(){
+  // Sync selects
   const ySel=document.getElementById('db-year');
   if(ySel&&ySel.options.length===0)ySel.innerHTML=S.years.map(y=>`<option value="${y}"${y===S.ay?' selected':''}>${y}</option>`).join('');
   const pSel=document.getElementById('db-period');
   if(pSel&&pSel.options.length<=1)pSel.innerHTML='<option value="">كل الفترات</option>'+S.periods.map((p,i)=>`<option value="${i+1}">${p}</option>`).join('');
   const dSel=document.getElementById('db-tch-dept');
   if(dSel&&dSel.options.length<=1)dSel.innerHTML='<option value="">كل الأقسام</option>'+S.depts.map(d=>`<option value="${d}">${d.replace('قسم ','')}</option>`).join('');
+
   const year=ySel?.value||S.ay;
   const period=document.getElementById('db-period')?.value||'';
   const deptF=document.getElementById('db-tch-dept')?.value||'';
   const overloadOnly=document.getElementById('db-overload-only')?.checked||false;
+
   let sessions=S.sessions.filter(s=>s.y===year);
   if(period)sessions=sessions.filter(s=>s.sem==period);
 
-  // KPI
-  const totalSess=sessions.filter(s=>s.type!=='tot').length;
-  const uniqueTchs=new Set(sessions.map(s=>s.tch).filter(Boolean)).size;
+  // ---- KPI ----
+  const totalSess=sessions.length;
+  const uniqueTeachers=new Set(sessions.map(s=>s.tch).filter(Boolean)).size;
   const uniqueRooms=new Set(sessions.map(s=>s.rm).filter(Boolean)).size;
-  const totalSpecs=new Set(sessions.map(s=>s.spec).filter(Boolean)).size;
-  const overloadTchs=S.teachers.filter(t=>{const o=calcTeacherOvertime(t.name,year,period);return o.overtime>0;}).length;
-  const underloadTchs=S.teachers.filter(t=>{const o=calcTeacherOvertime(t.name,year,period);return o.totalEq>0&&o.totalEq<o.quorum*.7;}).length;
-  const tlcCount=sessions.filter(s=>s.type==='tlc'||s.type==='tlc-remote').length;
-  const tdtpCount=sessions.filter(s=>s.type==='ttd'||s.type==='ttp').length;
-  const kpis=[
-    {icon:'📚',val:totalSess,lbl:'إجمالي الحصص',bg:'#0f1f3d',fg:'#c9a84c'},
-    {icon:'👨‍🏫',val:uniqueTchs,lbl:'أستاذ نشط',bg:'#0d8a7d',fg:'#fff'},
-    {icon:'🎓',val:totalSpecs,lbl:'تخصص',bg:'#7c3aed',fg:'#fff'},
-    {icon:'🏫',val:uniqueRooms,lbl:'قاعة مستخدمة',bg:'#059669',fg:'#fff'},
-    {icon:'📢',val:tlcCount,lbl:'محاضرة',bg:'#1e40af',fg:'#fff'},
-    {icon:'✏️',val:tdtpCount,lbl:'TD / TP',bg:'#b45309',fg:'#fff'},
-    {icon:'⚠️',val:overloadTchs,lbl:'أستاذ مثقّل',bg:'#dc2626',fg:'#fff'},
-    {icon:'📉',val:underloadTchs,lbl:'أقل من النصاب',bg:'#d97706',fg:'#fff'},
-  ];
-  document.getElementById('db-kpi').innerHTML=kpis.map(k=>`<div class="db-kpi-card" style="background:${k.bg};border-color:${k.bg};">
+  const totalSlots=DAYS.length*SLOTS.length;
+  const overloadList=S.teachers.filter(t=>{
+    const ot=calcTeacherOvertime(t.name,year,period||'');
+    return ot.overtime>0;
+  });
+
+  document.getElementById('db-kpi').innerHTML=[
+    {icon:'📚',val:totalSess,lbl:'إجمالي الحصص',color:'#0f1f3d'},
+    {icon:'👨‍🏫',val:uniqueTeachers,lbl:'أستاذ نشط',color:'#0d8a7d'},
+    {icon:'🏫',val:uniqueRooms,lbl:'قاعة مستخدمة',color:'#7c3aed'},
+    {icon:'⚠️',val:overloadList.length,lbl:'أستاذ مثقّل',color:'#ef4444'}
+  ].map(k=>`<div class="db-kpi-card">
     <div class="kpi-icon">${k.icon}</div>
-    <div class="kpi-val" style="color:${k.fg};font-size:28px;">${k.val}</div>
-    <div class="kpi-lbl" style="color:${k.fg};opacity:.85;">${k.lbl}</div>
+    <div class="kpi-val" style="color:${k.color};">${k.val}</div>
+    <div class="kpi-lbl">${k.lbl}</div>
   </div>`).join('');
 
-  // جدول حمل الأساتذة
-  let tchData=S.teachers.filter(t=>!deptF||t.dept===deptF)
-    .map(t=>({t,ot:calcTeacherOvertime(t.name,year,period)}))
+  // ---- جدول الساعات لكل أستاذ ----
+  let tchData=S.teachers
+    .filter(t=>!deptF||t.dept===deptF)
+    .map(t=>({t,ot:calcTeacherOvertime(t.name,year,period||'')}))
     .filter(d=>!overloadOnly||d.ot.overtime>0)
     .sort((a,b)=>b.ot.totalEq-a.ot.totalEq);
-  document.getElementById('db-tch-table').innerHTML=`<table style="width:100%;border-collapse:collapse;font-size:11.5px;">
-    <thead style="background:#0f1f3d;color:#c9a84c;position:sticky;top:0;"><tr>
-      <th style="padding:7px 8px;text-align:right;">#</th>
-      <th style="padding:7px 8px;text-align:right;">الأستاذ</th>
-      <th style="padding:7px 8px;">الرتبة</th>
-      <th style="padding:7px 8px;text-align:center;">محاضرات</th>
-      <th style="padding:7px 8px;text-align:center;">TD/TP</th>
-      <th style="padding:7px 8px;text-align:center;">ساعة معادلة</th>
-      <th style="padding:7px 8px;text-align:center;">النصاب</th>
-      <th style="padding:7px 8px;min-width:100px;">التحميل</th>
-      <th style="padding:7px 8px;text-align:center;">الحالة</th>
-    </tr></thead>
-    <tbody>${tchData.map(({t,ot},i)=>{
-      const pct=Math.min(100,ot.quorum?ot.totalEq/ot.quorum*100:100);
-      const isOver=ot.overtime>0;const isWarn=ot.totalEq<ot.quorum*.7&&ot.totalEq>0;
-      const barColor=isOver?'#dc2626':isWarn?'#f59e0b':'#0d8a7d';
-      const badge=isOver?`<span style="background:#fee2e2;color:#dc2626;border-radius:6px;padding:2px 6px;font-size:10px;font-weight:700;">⚠️ +${ot.overtime.toFixed(2)}h</span>`
-        :isWarn?`<span style="background:#fef3c7;color:#b45309;border-radius:6px;padding:2px 6px;font-size:10px;font-weight:700;">📉 ${ot.totalEq.toFixed(2)}h</span>`
-        :`<span style="background:#dcfce7;color:#166534;border-radius:6px;padding:2px 6px;font-size:10px;font-weight:700;">✅</span>`;
-      return `<tr style="background:${i%2?'#f9fafb':'#fff'};cursor:pointer;" onclick="document.getElementById('tch-tt-sel').value='${t.name.replace(/'/g,"\\'")}';showMgmtPg('tchtimetable')">
-        <td style="padding:6px 8px;color:#999;">${i+1}</td>
-        <td style="padding:6px 8px;font-weight:700;color:#0f1f3d;">${t.name}</td>
-        <td style="padding:6px 8px;font-size:10px;">${RANKS[t.rank]?.short||'—'}</td>
-        <td style="padding:6px 8px;text-align:center;">${ot.uniqueLecs}</td>
-        <td style="padding:6px 8px;text-align:center;">${ot.tdTpCount}</td>
-        <td style="padding:6px 8px;text-align:center;font-weight:700;">${ot.totalEq.toFixed(2)}</td>
-        <td style="padding:6px 8px;text-align:center;">${ot.quorum}</td>
-        <td style="padding:6px 8px;">
-          <div style="background:#e5e7eb;border-radius:99px;height:8px;overflow:hidden;">
-            <div style="width:${pct}%;height:100%;background:${barColor};border-radius:99px;"></div>
-          </div>
-          <div style="font-size:9px;color:#666;margin-top:2px;">${pct.toFixed(0)}%</div>
-        </td>
-        <td style="padding:6px 8px;text-align:center;">${badge}</td>
-      </tr>`;
-    }).join('')}</tbody></table>`;
 
-  // Pie Chart
-  const typeKeys=['tlc','tlc-remote','ttd','ttp','ttd-remote','tot'];
-  const typeNames=['محاضرة','محاضرة عن بعد','أعمال موجهة','أعمال تطبيقية','TD عن بعد','تقييم مستمر'];
-  const pieColors=['#3b82f6','#06b6d4','#10b981','#f59e0b','#8b5cf6','#ef4444'];
-  const typeData={};typeKeys.forEach(k=>{typeData[k]=0;});
-  sessions.forEach(s=>{if(typeData[s.type]!==undefined)typeData[s.type]++;});
-  const pieData=typeKeys.map(k=>typeData[k]);
-  const existingPie=Chart.getChart('db-pie-chart');
-  if(existingPie)existingPie.destroy();
-  const pieCtx=document.getElementById('db-pie-chart')?.getContext('2d');
-  if(pieCtx&&pieData.some(v=>v>0)){
-    new Chart(pieCtx,{type:'doughnut',data:{labels:typeNames,datasets:[{data:pieData,backgroundColor:pieColors,borderWidth:2,borderColor:'#fff'}]},
-      options:{plugins:{legend:{display:false}},cutout:'60%',responsive:true,maintainAspectRatio:false}});
-  }
-  document.getElementById('db-type-legend').innerHTML=typeKeys.map((k,i)=>typeData[k]>0?`<div style="display:flex;align-items:center;gap:5px;margin:3px 0;">
-    <div style="width:10px;height:10px;border-radius:3px;background:${pieColors[i]};flex-shrink:0;"></div>
-    <span style="flex:1;">${typeNames[i]}</span><span style="font-weight:700;">${typeData[k]}</span></div>`:''
-  ).join('');
+  const maxEq=Math.max(...tchData.map(d=>d.ot.totalEq),1);
 
-  // Bar Chart الأيام
-  const dayData=DAYS.map(d=>sessions.filter(s=>s.day===d&&s.type!=='tot').length);
-  const existingBar=Chart.getChart('db-days-chart');
-  if(existingBar)existingBar.destroy();
-  const daysCtx=document.getElementById('db-days-chart')?.getContext('2d');
-  if(daysCtx){
-    const mx=Math.max(...dayData,1);
-    new Chart(daysCtx,{type:'bar',data:{labels:DAYS,datasets:[{label:'عدد الحصص',data:dayData,
-      backgroundColor:dayData.map(v=>`rgba(13,138,125,${(0.4+v/mx*0.6).toFixed(2)})`),
-      borderColor:'#0d8a7d',borderWidth:1,borderRadius:6}]},
-      options:{plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,ticks:{stepSize:1}}},responsive:true,maintainAspectRatio:false}});
-  }
+  document.getElementById('db-tch-table').innerHTML=`
+    <table class="db-table">
+      <thead><tr>
+        <th>الأستاذ</th><th>الرتبة</th><th>القسم</th>
+        <th style="text-align:center;">محاضرات</th>
+        <th style="text-align:center;">TD/TP</th>
+        <th style="text-align:center;">ساعة معادلة</th>
+        <th style="text-align:center;">النصاب</th>
+        <th style="min-width:120px;">التحميل</th>
+        <th style="text-align:center;">الحالة</th>
+      </tr></thead>
+      <tbody>
+        ${tchData.map(({t,ot})=>{
+          const pct=Math.min(100,ot.quorum?ot.totalEq/ot.quorum*100:100);
+          const isOver=ot.overtime>0;
+          const isWarn=ot.totalEq>ot.quorum*0.85&&!isOver;
+          const badge=isOver?`<span class="overload-badge ob-over">⚠️ +${ot.overtime.toFixed(2)}h</span>`
+            :isWarn?`<span class="overload-badge ob-warn">⚡ ${ot.totalEq.toFixed(2)}h</span>`
+            :`<span class="overload-badge ob-ok">✅ ضمن النصاب</span>`;
+          const barCls=isOver||isWarn?'warn':'';
+          return `<tr>
+            <td style="font-weight:700;color:var(--navy);cursor:pointer;"
+              onclick="document.getElementById('tch-tt-sel').value='${t.name.replace(/'/g,"\\'")}';showMgmtPg('tchtimetable')">
+              ${t.name}</td>
+            <td style="font-size:10.5px;">${RANKS[t.rank]?.short||t.rank||'—'}</td>
+            <td style="font-size:10.5px;">${(t.dept||'').replace('قسم ','')}</td>
+            <td style="text-align:center;">${ot.uniqueLecs}</td>
+            <td style="text-align:center;">${ot.tdTpCount}</td>
+            <td style="text-align:center;font-weight:700;">${ot.totalEq.toFixed(2)}</td>
+            <td style="text-align:center;">${ot.quorum}</td>
+            <td>
+              <div class="db-bar">
+                <div class="db-bar-fill ${barCls}" style="width:${Math.min(pct,100)}%;"></div>
+              </div>
+              <div style="font-size:10px;color:var(--gray);margin-top:2px;">${pct.toFixed(0)}%</div>
+            </td>
+            <td>${badge}</td>
+          </tr>`;
+        }).join('')}
+      </tbody>
+    </table>`;
 
-  // Heatmap القاعات
-  const rooms=[...new Set(sessions.map(s=>s.rm).filter(Boolean))].sort();
-  const heatData={};
-  rooms.forEach(r=>{heatData[r]={};SLOTS.forEach(sl=>{heatData[r][sl]=0;});});
-  sessions.forEach(s=>{if(s.rm&&heatData[s.rm])heatData[s.rm][s.slot]=(heatData[s.rm][s.slot]||0)+1;});
-  const maxHeat=Math.max(1,...rooms.flatMap(r=>SLOTS.map(sl=>heatData[r][sl]||0)));
-  document.getElementById('db-heatmap').innerHTML=rooms.length?`<table style="border-collapse:collapse;font-size:10px;width:100%;">
-    <thead><tr><th style="padding:4px 6px;background:#f0f4f8;text-align:right;">القاعة</th>
-      ${SLOTS.map(sl=>`<th style="padding:4px;background:#f0f4f8;text-align:center;font-size:9px;">${(SL[sl]||sl).replace(' - ','<br>')}</th>`).join('')}
-    </tr></thead>
-    <tbody>${rooms.map(r=>`<tr><td style="padding:4px 6px;font-weight:700;white-space:nowrap;">${r}</td>
-      ${SLOTS.map(sl=>{const v=heatData[r][sl]||0;const a=v?0.2+v/maxHeat*0.8:0;const bg=v?`rgba(124,58,237,${a.toFixed(2)})`:'#f9fafb';return `<td class="heat-cell" style="background:${bg};color:${a>0.5?'#fff':'#333'};">${v||'—'}</td>`;}).join('')}
-    </tr>`).join('')}</tbody></table>`
-    :`<div style="text-align:center;color:#999;padding:20px;">لا توجد قاعات</div>`;
-
-  // التخصصات
-  const specMap={};
-  sessions.forEach(s=>{const k=s.spec||'—';if(!specMap[k])specMap[k]={spec:k,lv:s.lv,dp:s.dp,sessions:0,teachers:new Set(),groups:new Set()};specMap[k].sessions++;if(s.tch)specMap[k].teachers.add(s.tch);if(s.group)specMap[k].groups.add(s.group);});
-  const specRows=Object.values(specMap).sort((a,b)=>b.sessions-a.sessions);
-  document.getElementById('db-specs-table').innerHTML=`<table style="width:100%;border-collapse:collapse;font-size:11.5px;">
-    <thead style="background:#0f1f3d;color:#c9a84c;"><tr>
-      <th style="padding:7px 8px;text-align:right;">التخصص</th><th style="padding:7px 8px;text-align:right;">المستوى</th>
-      <th style="padding:7px 8px;text-align:center;">حصص</th><th style="padding:7px 8px;text-align:center;">أساتذة</th><th style="padding:7px 8px;text-align:center;">أفواج</th>
-    </tr></thead>
-    <tbody>${specRows.map((r,i)=>`<tr style="background:${i%2?'#f9fafb':'#fff'};">
-      <td style="padding:6px 8px;font-weight:700;">${r.spec}</td><td style="padding:6px 8px;font-size:10.5px;">${r.lv||'—'}</td>
-      <td style="padding:6px 8px;text-align:center;">${r.sessions}</td><td style="padding:6px 8px;text-align:center;">${r.teachers.size}</td><td style="padding:6px 8px;text-align:center;">${r.groups.size}</td>
-    </tr>`).join('')}</tbody></table>`;
-
-  // التعارضات
-  const conflicts={teacher:[],room:[]};
-  const slotMap={};
-  sessions.forEach(s=>{const key=s.day+'|'+s.slot;if(!slotMap[key])slotMap[key]=[];slotMap[key].push(s);});
-  Object.entries(slotMap).forEach(([k,arr])=>{
-    const tm={};arr.forEach(s=>{if(s.tch){tm[s.tch]=(tm[s.tch]||0)+1;}});
-    Object.entries(tm).forEach(([tch,cnt])=>{if(cnt>1)conflicts.teacher.push({tch,slot:k,cnt});});
-    const rm={};arr.forEach(s=>{if(s.rm){rm[s.rm]=(rm[s.rm]||0)+1;}});
-    Object.entries(rm).forEach(([r,cnt])=>{if(cnt>1)conflicts.room.push({rm:r,slot:k,cnt});});
+  // ---- نسبة استغلال القاعات ----
+  const roomStats={};
+  sessions.forEach(s=>{
+    if(!s.rm)return;
+    if(!roomStats[s.rm])roomStats[s.rm]={count:0,types:{}};
+    roomStats[s.rm].count++;
+    roomStats[s.rm].types[s.type]=(roomStats[s.rm].types[s.type]||0)+1;
   });
-  document.getElementById('db-conflicts-body').innerHTML=`<div style="display:flex;flex-direction:column;gap:12px;">
-    <div style="display:flex;gap:12px;">
-      <div style="flex:1;background:${conflicts.teacher.length?'#fee2e2':'#dcfce7'};border-radius:10px;padding:14px;text-align:center;">
-        <div style="font-size:28px;font-weight:900;color:${conflicts.teacher.length?'#dc2626':'#16a34a'};">${conflicts.teacher.length}</div>
-        <div style="font-size:11px;font-weight:700;margin-top:4px;">تعارض أستاذ</div>
-      </div>
-      <div style="flex:1;background:${conflicts.room.length?'#fee2e2':'#dcfce7'};border-radius:10px;padding:14px;text-align:center;">
-        <div style="font-size:28px;font-weight:900;color:${conflicts.room.length?'#dc2626':'#16a34a'};">${conflicts.room.length}</div>
-        <div style="font-size:11px;font-weight:700;margin-top:4px;">تعارض قاعة</div>
-      </div>
-    </div>
-    ${conflicts.teacher.slice(0,5).map(c=>`<div style="background:#fff5f5;border:1px solid #fecaca;border-radius:6px;padding:6px 8px;font-size:11px;">⚠️ <strong>${c.tch}</strong> — ${c.slot.replace('|',' ')} (${c.cnt} تعارض)</div>`).join('')}
-    ${conflicts.room.slice(0,5).map(c=>`<div style="background:#fff5f5;border:1px solid #fecaca;border-radius:6px;padding:6px 8px;font-size:11px;">🏫 <strong>${c.rm}</strong> — ${c.slot.replace('|',' ')} (${c.cnt} تعارض)</div>`).join('')}
-    ${!conflicts.teacher.length&&!conflicts.room.length?`<div style="text-align:center;color:#16a34a;font-weight:700;padding:10px;">✅ لا توجد تعارضات</div>`:''}
-  </div>`;
+  const maxOcc=Math.max(...Object.values(roomStats).map(r=>r.count),1);
+  const sortedRooms=Object.entries(roomStats).sort((a,b)=>b[1].count-a[1].count);
+  document.getElementById('db-rooms-table').innerHTML=`
+    <table class="db-table">
+      <thead><tr>
+        <th>القاعة</th>
+        <th style="text-align:center;">الحصص</th>
+        <th style="text-align:center;">نسبة الإشغال</th>
+        <th>التوزيع</th>
+      </tr></thead>
+      <tbody>
+        ${sortedRooms.map(([rm,d])=>{
+          const pct=(d.count/totalSlots*100).toFixed(1);
+          const pctBar=Math.min(d.count/maxOcc*100,100);
+          const isAmph=AMPHI.includes(rm);
+          return `<tr>
+            <td style="font-weight:700;">${isAmph?'🎭 ':'🚪 '}${rm}</td>
+            <td style="text-align:center;font-weight:700;">${d.count}</td>
+            <td style="text-align:center;">${pct}%</td>
+            <td>
+              <div class="db-bar">
+                <div class="db-bar-fill${pctBar>80?' warn':''}" style="width:${pctBar}%;"></div>
+              </div>
+            </td>
+          </tr>`;
+        }).join('')}
+        ${!sortedRooms.length?`<tr><td colspan="4" style="text-align:center;color:var(--gray);padding:20px;">لا توجد بيانات</td></tr>`:''}
+      </tbody>
+    </table>`;
 
-  window._dbCache={year,period,sessions,tchData,specRows,conflicts,dayData,typeData,typeKeys,typeNames,pieColors,rooms,heatData};
+  // ---- Overload Detection ----
+  const overData=S.teachers
+    .map(t=>({t,ot:calcTeacherOvertime(t.name,year,period||'')}))
+    .filter(d=>d.ot.overtime>0||d.ot.totalEq>0)
+    .sort((a,b)=>b.ot.overtime-a.ot.overtime)
+    .slice(0,20);
+
+  document.getElementById('db-overload-table').innerHTML=`
+    <table class="db-table">
+      <thead><tr>
+        <th>الأستاذ</th>
+        <th style="text-align:center;">ساعة معادلة</th>
+        <th style="text-align:center;">النصاب</th>
+        <th style="text-align:center;">الزيادة</th>
+        <th>الوضع</th>
+      </tr></thead>
+      <tbody>
+        ${overData.map(({t,ot})=>{
+          const cls=ot.overtime>6?'ob-over':ot.overtime>0?'ob-warn':'ob-ok';
+          const lbl=ot.overtime>6?'عبء ثقيل':ot.overtime>0?'عبء إضافي':'ضمن النصاب';
+          return `<tr>
+            <td style="font-weight:700;cursor:pointer;color:var(--navy);"
+              onclick="document.getElementById('tch-tt-sel').value='${t.name.replace(/'/g,"\\'")}';showMgmtPg('tchtimetable')">
+              ${t.name}</td>
+            <td style="text-align:center;font-weight:700;">${ot.totalEq.toFixed(2)}</td>
+            <td style="text-align:center;">${ot.quorum}</td>
+            <td style="text-align:center;font-weight:800;color:${ot.overtime>0?'#ef4444':'#16a34a'};">
+              ${ot.overtime>0?'+':''}${ot.overtime.toFixed(2)}h
+            </td>
+            <td><span class="overload-badge ${cls}">${lbl}</span></td>
+          </tr>`;
+        }).join('')}
+        ${!overData.length?`<tr><td colspan="5" style="text-align:center;color:var(--gray);padding:20px;">لا توجد بيانات</td></tr>`:''}
+      </tbody>
+    </table>`;
 }
 
-async function exportSectionPDF(cardId,name){
-  const el=document.getElementById(cardId);if(!el){toast('⚠️ لم يُعثر على القسم');return;}
-  toast('⏳ ...');
-  try{
-    const canvas=await html2canvas(el,{scale:2,useCORS:true,backgroundColor:'#ffffff'});
-    const{jsPDF}=window.jspdf;
-    const orient=canvas.width>canvas.height?'landscape':'portrait';
-    const pdf=new jsPDF({orientation:orient,unit:'mm',format:'a4'});
-    const pW=pdf.internal.pageSize.getWidth(),pH=pdf.internal.pageSize.getHeight(),m=8;
-    const imgW=pW-m*2,imgH=canvas.height*(imgW/canvas.width);
-    pdf.addImage(canvas.toDataURL('image/jpeg',0.92),'JPEG',m,m,imgW,Math.min(imgH,pH-m*2));
-    pdf.save(`${name}_${(window._dbCache?.year||S.ay).replace('/','_')}.pdf`);
-    toast('✅ تم التصدير PDF');
-  }catch(e){toast('❌ '+e.message);}
-}
-
-async function exportDashboardPDF(){
-  toast('⏳ جاري تصدير Dashboard...');
-  const el=document.querySelector('#pg-dashboard .mc');if(!el)return;
-  try{
-    const canvas=await html2canvas(el,{scale:1.5,useCORS:true,backgroundColor:'#f8fafc'});
-    const{jsPDF}=window.jspdf;
-    const pdf=new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
-    const pW=pdf.internal.pageSize.getWidth(),pH=pdf.internal.pageSize.getHeight(),m=6;
-    const imgW=pW-m*2,imgH=canvas.height*(imgW/canvas.width);
-    const pages=Math.ceil(imgH/(pH-m*2));
-    for(let p=0;p<pages;p++){if(p>0)pdf.addPage();pdf.addImage(canvas.toDataURL('image/jpeg',0.88),'JPEG',m,m-(p*(pH-m*2)),imgW,imgH);}
-    pdf.save(`Dashboard_${(window._dbCache?.year||S.ay).replace('/','_')}.pdf`);
-    toast('✅ تم تصدير PDF');
-  }catch(e){toast('❌ '+e.message);}
-}
-
-function exportSectionExcel(type){
-  const c=window._dbCache;if(!c){toast('⚠️ حدّث الـ Dashboard أولاً');return;}
-  const wb=XLSX.utils.book_new();
-  if(type==='workload'){
-    const d=[['الأستاذ','الرتبة','القسم','محاضرات','TD/TP','ساعة فعلية','ساعة معادلة','النصاب','إضافية','الحالة']];
-    c.tchData.forEach(({t,ot})=>d.push([t.name,RANKS[t.rank]?.label||'',t.dept||'',ot.uniqueLecs,ot.tdTpCount,ot.totalActual.toFixed(2),ot.totalEq.toFixed(2),ot.quorum,ot.overtime.toFixed(2),ot.overtime>0?'مثقّل':ot.totalEq<ot.quorum*.7&&ot.totalEq>0?'أقل من النصاب':'ضمن النصاب']));
-    XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(d),'حمل الأساتذة');
-  }else if(type==='types'){
-    const d=[['نوع الدرس','عدد الحصص']];c.typeKeys.forEach((k,i)=>d.push([c.typeNames[i],c.typeData[k]||0]));
-    XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(d),'أنواع الدروس');
-  }else if(type==='days'){
-    const d=[['اليوم','عدد الحصص']];DAYS.forEach((dy,i)=>d.push([dy,c.dayData[i]]));
-    XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(d),'توزيع الأيام');
-  }else if(type==='heatmap'){
-    const d=[['القاعة',...SLOTS.map(sl=>SL[sl]||sl)]];c.rooms.forEach(r=>d.push([r,...SLOTS.map(sl=>c.heatData[r]?.[sl]||0)]));
-    XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(d),'خريطة القاعات');
-  }else if(type==='specs'){
-    const d=[['التخصص','المستوى','القسم','الحصص','الأساتذة','الأفواج']];c.specRows.forEach(r=>d.push([r.spec,r.lv||'',r.dp||'',r.sessions,r.teachers.size,r.groups.size]));
-    XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(d),'التخصصات');
-  }else if(type==='conflicts'){
-    const d=[['النوع','الاسم','الوقت','التعارضات']];
-    c.conflicts.teacher.forEach(x=>d.push(['أستاذ',x.tch,x.slot.replace('|',' '),x.cnt]));
-    c.conflicts.room.forEach(x=>d.push(['قاعة',x.rm,x.slot.replace('|',' '),x.cnt]));
-    if(!c.conflicts.teacher.length&&!c.conflicts.room.length)d.push(['—','لا توجد تعارضات','—',0]);
-    XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(d),'التعارضات');
-  }
-  XLSX.writeFile(wb,`${type}_${(c.year||S.ay).replace('/','_')}.xlsx`);
-  toast('📊 تم تصدير Excel');
-}
-
-function exportDashboardExcel(){
-  const c=window._dbCache;if(!c){toast('⚠️ حدّث الـ Dashboard أولاً');return;}
-  const wb=XLSX.utils.book_new();
-  const d1=[['الأستاذ','الرتبة','القسم','محاضرات','TD/TP','ساعة فعلية','ساعة معادلة','النصاب','إضافية','الحالة']];
-  c.tchData.forEach(({t,ot})=>d1.push([t.name,RANKS[t.rank]?.label||'',t.dept||'',ot.uniqueLecs,ot.tdTpCount,ot.totalActual.toFixed(2),ot.totalEq.toFixed(2),ot.quorum,ot.overtime.toFixed(2),ot.overtime>0?'مثقّل':ot.totalEq<ot.quorum*.7&&ot.totalEq>0?'أقل من النصاب':'ضمن النصاب']));
-  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(d1),'حمل الأساتذة');
-  const d2=[['نوع الدرس','عدد الحصص']];c.typeKeys.forEach((k,i)=>d2.push([c.typeNames[i],c.typeData[k]||0]));
-  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(d2),'أنواع الدروس');
-  const d3=[['اليوم','عدد الحصص']];DAYS.forEach((dy,i)=>d3.push([dy,c.dayData[i]]));
-  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(d3),'توزيع الأيام');
-  const d4=[['القاعة',...SLOTS.map(sl=>SL[sl]||sl)]];c.rooms.forEach(r=>d4.push([r,...SLOTS.map(sl=>c.heatData[r]?.[sl]||0)]));
-  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(d4),'خريطة القاعات');
-  const d5=[['التخصص','المستوى','القسم','الحصص','الأساتذة','الأفواج']];c.specRows.forEach(r=>d5.push([r.spec,r.lv||'',r.dp||'',r.sessions,r.teachers.size,r.groups.size]));
-  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(d5),'التخصصات');
-  const d6=[['النوع','الاسم','الوقت','التعارضات']];
-  c.conflicts.teacher.forEach(x=>d6.push(['أستاذ',x.tch,x.slot.replace('|',' '),x.cnt]));
-  c.conflicts.room.forEach(x=>d6.push(['قاعة',x.rm,x.slot.replace('|',' '),x.cnt]));
-  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(d6),'التعارضات');
-  XLSX.writeFile(wb,`Dashboard_${(c.year||S.ay).replace('/','_')}.xlsx`);
-  toast('📊 تم تصدير Dashboard Excel');
-}
-
-
+// -- TEACHER TIMETABLE ---------------------------
 function renderTchTT(){
   // -- Sync selects always --
   const deptSel=document.getElementById('tch-tt-dept');
