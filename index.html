@@ -2803,6 +2803,61 @@ table.occ-matrix td.cell-occ:hover{background:#fee2e2;filter:brightness(.97);}
   </div>
 </div>
 
+<div class="mo" id="mEditTeacher">
+  <div class="mb" style="width:440px;">
+    <div class="mt">✏️ تعديل الأستاذ</div>
+    <input type="hidden" id="et-idx">
+    <div class="fg">
+      <label class="fl">الاسم واللقب</label>
+      <input class="fi" id="et-name" placeholder="اسم الأستاذ...">
+    </div>
+    <div class="frow2">
+      <div class="fg">
+        <label class="fl">الرتبة</label>
+        <select class="fs" id="et-rank">
+          <option value="prof">أستاذ التعليم العالي</option>
+          <option value="mca">أستاذ محاضر أ</option>
+          <option value="mcb">أستاذ محاضر ب</option>
+          <option value="maa">أستاذ مساعد أ</option>
+          <option value="mab">أستاذ مساعد ب</option>
+          <option value="tmp">أستاذ مؤقت</option>
+          <option value="sha">أستاذ مشارك</option>
+        </select>
+      </div>
+      <div class="fg">
+        <label class="fl">الحالة</label>
+        <select class="fs" id="et-kind">
+          <option value="permanent">أستاذ دائم</option>
+          <option value="temporary">أستاذ مؤقت</option>
+          <option value="associate">أستاذ مشارك</option>
+        </select>
+      </div>
+    </div>
+    <div class="fg">
+      <label class="fl">القسم</label>
+      <select class="fs" id="et-dept"></select>
+    </div>
+    <div class="fg">
+      <label class="fl">المنصب</label>
+      <select class="fs" id="et-post">
+        <option value="">— بدون منصب —</option>
+        <option value="dean">عميد</option>
+        <option value="vdean">نائب عميد</option>
+        <option value="hod">رئيس قسم</option>
+        <option value="vhod">نائب رئيس قسم</option>
+        <option value="hspec">مسؤول تخصص</option>
+        <option value="hspec_m">مسؤول تخصص ماستر</option>
+        <option value="hspec_l">مسؤول تخصص ليسانس</option>
+        <option value="hlab">مدير مخبر</option>
+      </select>
+    </div>
+    <div class="ma">
+      <button class="btn bp" onclick="confEditTeacher()">✅ حفظ التعديلات</button>
+      <button class="btn" style="background:var(--gray-light);color:var(--text-mid);" onclick="closeM('mEditTeacher')">إلغاء</button>
+    </div>
+  </div>
+</div>
+
 <div class="mo" id="mOvDetail">
   <div class="mb" style="width:500px;">
     <div class="mt" id="mOvTitle">⏰ تفاصيل الساعات</div>
@@ -4084,7 +4139,7 @@ function renderTchGrid(){
           </div>
         </div>
         <div class="iac">
-          <button class="icb ied" onclick="openEdit('teacher',${realIdx},'${t.name}')">✏️</button>
+          <button class="icb ied" onclick="openEditTeacher(${realIdx})">✏️</button>
           <button class="icb idl" onclick="rmTch(${realIdx})">🗑️</button>
         </div>
       </div>`;
@@ -4236,6 +4291,37 @@ function rmSp(i){
 }
 
 // -- EDIT MODAL ------------------------------------
+function openEditTeacher(idx){
+  const t=S.teachers[idx];if(!t)return;
+  document.getElementById('et-idx').value=idx;
+  document.getElementById('et-name').value=t.name||'';
+  document.getElementById('et-rank').value=t.rank||'mca';
+  document.getElementById('et-kind').value=t.kind||'permanent';
+  document.getElementById('et-post').value=t.post||'';
+  // تعبئة الأقسام
+  const deptSel=document.getElementById('et-dept');
+  deptSel.innerHTML=S.depts.map(d=>`<option value="${d}"${d===t.dept?' selected':''}>${d}</option>`).join('');
+  openM('mEditTeacher');
+}
+function confEditTeacher(){
+  const idx=parseInt(document.getElementById('et-idx').value);
+  const t=S.teachers[idx];if(!t)return;
+  const oldName=t.name;
+  const newName=document.getElementById('et-name').value.trim();
+  if(!newName){toast('⚠️ أدخل الاسم');return;}
+  t.name=newName;
+  t.rank=document.getElementById('et-rank').value;
+  t.kind=document.getElementById('et-kind').value;
+  t.dept=document.getElementById('et-dept').value;
+  t.post=document.getElementById('et-post').value;
+  // تحديث اسم الأستاذ في الحصص والامتحانات
+  if(oldName!==newName){
+    S.sessions.forEach(s=>{if(s.tch===oldName)s.tch=newName;});
+    S.exams.forEach(e=>{if(e.tch===oldName)e.tch=newName;});
+  }
+  save();renderAll();closeM('mEditTeacher');toast('✅ تم تعديل الأستاذ');
+}
+
 function openEdit(type,idx,cur){
   document.getElementById('enType').value=type;
   document.getElementById('enIdx').value=idx;
