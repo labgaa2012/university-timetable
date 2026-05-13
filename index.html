@@ -9228,7 +9228,7 @@ function renderTchTT(){
         html+=`<div class="sc ${s.type}" style="margin-bottom:3px;border-radius:8px;text-align:center;">
           <div class="ss" style="font-weight:800;font-size:11.5px;">${s.subj}</div>
           <div class="si" style="font-size:10px;margin-top:1px;opacity:.85;">${TL[s.type]||''}</div>
-          ${loc?`<div class="si" style="font-size:10px;opacity:.8;">👥 ${loc}</div>`:''}
+          ${loc?`<div class="si" style="font-size:10px;opacity:.8;unicode-bidi:bidi-override;direction:rtl;">👥 ${loc}</div>`:''}
         </div>`;
       });
       html+=`</td>`;
@@ -9317,7 +9317,7 @@ async function exportTchPDF(){
           rows+=`<div class="ci">
             <div class="cs">${s.subj}</div>
             <div class="ci2">${TL[s.type]||''}</div>
-            ${loc2?`<div class="ci2">👥 ${loc2}</div>`:''}
+            ${loc2?`<div class="ci2" style="unicode-bidi:bidi-override;direction:rtl;">👥 ${loc2}</div>`:''}
           </div>`;
         });
         if(!cells.length)rows+=`<div style="text-align:center;color:#ccc;">—</div>`;
