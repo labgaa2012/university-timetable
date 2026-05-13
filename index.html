@@ -5636,6 +5636,7 @@ function addDuyunRow(){
   save();renderDuyunTable();
 }
 function addDuyunCol(){
+  if(!canEditDept(getExamFilters().dp||'')){toast('⚠️ لا تملك صلاحية تعديل هذا الجدول');return;}
   const data=getDuyunData();
   if(!data.extraCols)data.extraCols=[];
   data.extraCols.push('');
@@ -6318,8 +6319,8 @@ function renderExams(){
         });
       }
 
-      h+=`<td><button onclick="delExam('${ex.id}')"
-        style="background:none;border:none;cursor:pointer;color:var(--danger);font-size:16px;">🗑️</button></td>
+      h+=`<td>${canEditExam?`<button onclick="delExam('${ex.id}')"
+        style="background:none;border:none;cursor:pointer;color:var(--danger);font-size:16px;">🗑️</button>`:''}</td>
       </tr>`;
     });
   }
@@ -6663,7 +6664,11 @@ function applyExamChange(applyAll){
   save();renderExams();
 }
 
-function delExam(id){S.exams=S.exams.filter(e=>e.id!==id);save();renderExams();toast('🗑️ تم الحذف');}
+function delExam(id){
+  const ex=S.exams.find(e=>e.id===id);
+  if(!canEditDept(ex?.dp||'')){toast('⚠️ لا تملك صلاحية حذف امتحانات هذا القسم');return;}
+  S.exams=S.exams.filter(e=>e.id!==id);save();renderExams();toast('🗑️ تم الحذف');
+}
 
 async function exportExamPDF(){
   const f=getExamFilters();
