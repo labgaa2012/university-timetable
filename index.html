@@ -1604,10 +1604,10 @@ table.occ-matrix td.cell-occ:hover{background:#fee2e2;filter:brightness(.97);}
         <div class="frow">
           <select class="fs" id="tt-year-sel" onchange="onTTYearChange(this.value)"
             style="font-weight:700;min-width:120px;"></select>
-          <button class="btn" onclick="openRestoreDays()" style="background:#059669;color:#fff;padding:7px 12px;font-size:12px;">🔄 استعادة الأيام</button>
-          <button class="btn" onclick="openInstallTT()" style="background:#7c3aed;color:#fff;">⚡ تنصيب جداول</button>
-          <button class="btn" onclick="openReinstallGroup()" style="background:#059669;color:#fff;">➕ إنشاء جدول فوج</button>
-          <button class="btn" onclick="openCopyGroup()" style="background:#0d8a7d;color:#fff;">📋 نسخ جدول فوج</button>
+          <button class="btn admin-only" onclick="openRestoreDays()" style="background:#059669;color:#fff;padding:7px 12px;font-size:12px;">🔄 استعادة الأيام</button>
+          <button class="btn admin-only" onclick="openInstallTT()" style="background:#7c3aed;color:#fff;">⚡ تنصيب جداول</button>
+          <button class="btn admin-only" onclick="openReinstallGroup()" style="background:#059669;color:#fff;">➕ إنشاء جدول فوج</button>
+          <button class="btn admin-only" onclick="openCopyGroup()" style="background:#0d8a7d;color:#fff;">📋 نسخ جدول فوج</button>
           <button class="btn bn" onclick="expExcel()">📊 تصدير</button>
           <button class="btn bi" onclick="trigImp('imp-sessions')">📥 استيراد</button>
           <button class="btn" onclick="openBulkExportModal()" style="background:#7c3aed;color:#fff;">📄 PDF الكل</button>
@@ -5051,10 +5051,10 @@ function renderTT(){
           <td class="tc" style="position:sticky;right:0;z-index:3;background:var(--gray-light);padding:0;">
             <div style="display:flex;align-items:center;justify-content:space-between;padding:6px 8px;gap:4px;">
               <span>${day}</span>
-              <button title="حذف يوم ${day}" onclick="promptDeleteDay('${dE}','${lvE}','${dpE}','${spE}','${seE}','${gE}')"
+              ${canEditDept(k.dp||'')?`<button title="حذف يوم ${day}" onclick="promptDeleteDay('${dE}','${lvE}','${dpE}','${spE}','${seE}','${gE}')"
                 style="background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.3);
                   border-radius:5px;cursor:pointer;color:#dc2626;font-size:10px;
-                  padding:1px 5px;line-height:1.5;flex-shrink:0;">✕</button>
+                  padding:1px 5px;line-height:1.5;flex-shrink:0;">✕</button>`:''}
             </div>
           </td>`;
         SLOTS.forEach(slot=>{
@@ -5422,6 +5422,7 @@ function delSess(id){
 
 // -- EXAMS -----------------------------------------
 function openReinstallGroup(){
+  if(!canEditDept(S.activeTT?.dp||'')){toast('⚠️ لا تملك صلاحية هذا الإجراء');return;}
   // تعبئة المنسدلات
   const att=S.activeTT||{};
   const lvSel=document.getElementById('rg-lv');
@@ -5813,6 +5814,7 @@ async function exportDuyunPNG(){
 let _pendingDeleteDay={day:'',lv:'',dp:'',spec:'',sec:'',grp:''};
 
 function promptDeleteDay(day,lv,dp,spec,sec,grp){
+  if(!canEditDept(dp)){toast('⚠️ لا تملك صلاحية حذف أيام هذا القسم');return;}
   _pendingDeleteDay={day,lv,dp,spec,sec,grp};
   const lbl=document.getElementById('mdd-day-label');
   if(lbl)lbl.textContent=`📅 يوم ${day} — ${spec} — ${sec}`;
@@ -5849,6 +5851,7 @@ function execDeleteDay(groupOnly){
 }
 
 function openRestoreDays(){
+  if(CURRENT_USER&&CURRENT_USER.role!=='admin'){toast('⚠️ المشرف العام فقط');return;}
   // نأخذ السياق من الفلتر النشط حالياً
   const att=S.activeTT||{};
   const lv=att.lv||'';const dp=att.dp||'';
@@ -5989,6 +5992,7 @@ function deleteGroupTT(lv,dp,spec,sec,grp){
 
 // ══ ⑨ نسخ جدول فوج ══
 function openCopyGroup(){
+  if(!canEditDept(S.activeTT?.dp||'')){toast('⚠️ لا تملك صلاحية هذا الإجراء');return;}
   const att=S.activeTT||{};
   const secSel=document.getElementById('cg-section');
   if(secSel)secSel.innerHTML=S.sections.map(s=>`<option value="${s}">${s}</option>`).join('');
