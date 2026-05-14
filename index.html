@@ -9956,6 +9956,8 @@ function syncAuthToFirestore(){
   _AUTH_DOC.set(auth).then(()=>toast('✅ تم رفع الحسابات لـ Firebase')).catch(e=>toast('❌ '+e.message));
 }
 function getAuthData(){
+  try{return JSON.parse(localStorage.getItem('univ_auth')||'null');}catch{return null;}
+}
 function saveAuthData(data){
   localStorage.setItem('univ_auth',JSON.stringify(data));
   // مزامنة الحسابات مع Firestore
