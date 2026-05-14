@@ -945,8 +945,20 @@ table.occ-matrix td.cell-occ:hover{background:#fee2e2;filter:brightness(.97);}
   :root{--sidebar-w:300px;}
 }
 </style>
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 </head>
 <body>
+<!-- شاشة التحميل -->
+<div id="fs-loading" style="position:fixed;inset:0;background:#0f1f3d;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:99999;">
+  <div style="font-size:48px;margin-bottom:16px;">🎓</div>
+  <div style="color:#c9a84c;font-size:18px;font-weight:800;font-family:'Cairo',sans-serif;">جاري تحميل البيانات...</div>
+  <div style="width:200px;height:4px;background:rgba(255,255,255,.1);border-radius:99px;margin-top:16px;overflow:hidden;">
+    <div id="fs-bar" style="width:0%;height:100%;background:#c9a84c;border-radius:99px;transition:width .4s;"></div>
+  </div>
+  <div id="fs-status" style="color:rgba(255,255,255,.5);font-size:12px;margin-top:10px;font-family:'Cairo',sans-serif;">يتصل بقاعدة البيانات...</div>
+</div>
 
 <header>
   <div class="logo">
@@ -2986,6 +2998,86 @@ const TL={tlc:'محاضرة',ttd:'أعمال موجهة',ttp:'أعمال تطب�
 const TC={tlc:'#dbeafe',ttd:'#dcfce7',ttp:'#fed7aa',tot:'#ede9fe',
   'tlc-remote':'#e0f2fe','ttd-remote':'#fce7f3'};
 const AMPHI=['مدرج أ','مدرج ب','مدرج ج'];
+// ══ FIREBASE CONFIG ══════════════════════════════
+const _fbConfig={
+  apiKey:"AIzaSyAGJyHm30WCsLFuIefctpzF6MtzGIYBmqg",
+  authDomain:"university-timetable-4053b.firebaseapp.com",
+  projectId:"university-timetable-4053b",
+  storageBucket:"university-timetable-4053b.firebasestorage.app",
+  messagingSenderId:"1077936414054",
+  appId:"1:1077936414054:web:b820b1629d3a5defaebca7"
+};
+firebase.initializeApp(_fbConfig);
+const _db=firebase.firestore();
+const _DOC=_db.collection('timetable').doc('main');
+const _AUTH_DOC=_db.collection('auth').doc('data');
+let _saveTimer=null;
+let _remoteUpdate=false;
+
+function save(){
+  // حفظ محلي فوري
+  try{localStorage.setItem(SK,JSON.stringify(S));}catch(e){}
+  // حفظ Firestore مع debounce 800ms
+  if(_saveTimer)clearTimeout(_saveTimer);
+  _saveTimer=setTimeout(async()=>{
+    try{
+      const data={...S};
+      // اللوغو base64 كبير → نحفظه محلياً فقط
+      if(data.settings?.logo&&data.settings.logo.startsWith('data:')){
+        localStorage.setItem('univ_logo_v2',data.settings.logo);
+        data.settings={...data.settings,logo:'__local__'};
+      }
+      await _DOC.set(data);
+    }catch(e){console.warn('Firestore save error:',e);}
+  },800);
+  if(document.getElementById('pg-overtime')?.style.display==='block')renderOvertime();
+}
+
+function _applyData(data){
+  if(!data)return;
+  // استعادة اللوغو المحلي
+  if(data.settings?.logo==='__local__'){
+    data.settings={...data.settings,logo:localStorage.getItem('univ_logo_v2')||''};
+  }
+  S=data;
+}
+
+async function _initFirestore(){
+  const bar=document.getElementById('fs-bar');
+  const status=document.getElementById('fs-status');
+  try{
+    if(bar)bar.style.width='30%';
+    if(status)status.textContent='يقرأ البيانات...';
+    const doc=await _DOC.get();
+    if(bar)bar.style.width='70%';
+    if(doc.exists){
+      _applyData(doc.data());
+      if(status)status.textContent='تم تحميل البيانات ✅';
+    } else {
+      // أول مرة — استخدم localStorage أو defaults
+      if(status)status.textContent='إنشاء قاعدة البيانات...';
+      const local=localStorage.getItem(SK);
+      S=local?JSON.parse(local):defState();
+      await _DOC.set(S);
+    }
+    if(bar)bar.style.width='100%';
+    // مراقبة التغييرات اللحظية
+    _DOC.onSnapshot(snap=>{
+      if(snap.exists&&!_saveTimer){
+        _remoteUpdate=true;
+        _applyData(snap.data());
+        try{renderAll();}catch(e){}
+        _remoteUpdate=false;
+      }
+    });
+  }catch(e){
+    console.warn('Firestore error, using localStorage:',e);
+    if(status)status.textContent='⚠️ تعذّر الاتصال — وضع محلي';
+    const local=localStorage.getItem(SK);
+    S=local?JSON.parse(local):defState();
+  }
+}
+
 const SK='univ_tt_v4';
 
 /* -- DEFAULT SUBJECTS -- */
@@ -3280,7 +3372,11 @@ function defState(){
 
 let S={};
 function load(){
+  // تُستدعى فقط كـ fallback
   try{const d=localStorage.getItem(SK);S=d?JSON.parse(d):defState();}catch(e){S=defState();}
+  _postLoad();
+}
+function _postLoad(){
   if(!S.subjects||!S.subjects.length) S.subjects=DEFAULT_SUBJECTS();
   // دمج الأساتذة الافتراضيين مع الموجودين (إضافة الجدد بدون حذف المدخلين يدوياً)
   DEFAULT_TEACHERS().forEach(def=>{
@@ -3334,8 +3430,19 @@ function load(){
 }
 function save(){
   try{localStorage.setItem(SK,JSON.stringify(S));}catch(e){}
-  // تحديث صفحة الساعات الإضافية تلقائياً عند تغيير البيانات
-  if(document.getElementById('pg-overtime')?.style.display==='block') renderOvertime();
+  if(_saveTimer)clearTimeout(_saveTimer);
+  _saveTimer=setTimeout(async()=>{
+    try{
+      const data={...S};
+      if(data.settings?.logo&&data.settings.logo.startsWith('data:')){
+        localStorage.setItem('univ_logo_v2',data.settings.logo);
+        data.settings={...data.settings,logo:'__local__'};
+      }
+      await _DOC.set(data);
+    }catch(e){console.warn('Firestore save:',e);}
+    _saveTimer=null;
+  },800);
+  if(document.getElementById('pg-overtime')?.style.display==='block')renderOvertime();
 }
 function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,6);}
 
@@ -9804,7 +9911,11 @@ const DEFAULT_PASS='987654321';
 function getAuthData(){
   try{return JSON.parse(localStorage.getItem('univ_auth')||'null');}catch{return null;}
 }
-function saveAuthData(data){localStorage.setItem('univ_auth',JSON.stringify(data));}
+function saveAuthData(data){
+  localStorage.setItem('univ_auth',JSON.stringify(data));
+  // مزامنة الحسابات مع Firestore
+  try{_AUTH_DOC.set(data);}catch(e){}
+}
 
 function initAuth(){
   let auth=getAuthData();
@@ -10223,20 +10334,35 @@ function saveSettings(){
 }
 
 // -- INIT ------------------------------------------
-load();
-rebuildSlots();
-rebuildDays(); // تطبيق الأيام المحفوظة
-renderAll();
-if(S.settings?.university){
-  const h1=document.querySelector('header .logo h1');
-  if(h1)h1.textContent=S.settings.university;
-}
-if(S.settings?.faculty){
-  const h2=document.querySelector('header .logo p');
-  if(h2)h2.textContent=S.settings.faculty;
-}
-// تهيئة نظام المصادقة
-initAuth();
+(async()=>{
+  // تحميل البيانات من Firestore
+  await _initFirestore();
+  _postLoad();
+  rebuildSlots();
+  rebuildDays();
+  renderAll();
+  if(S.settings?.university){
+    const h1=document.querySelector('header .logo h1');
+    if(h1)h1.textContent=S.settings.university;
+  }
+  if(S.settings?.faculty){
+    const h2=document.querySelector('header .logo p');
+    if(h2)h2.textContent=S.settings.faculty;
+  }
+  initAuth();
+  // تحميل بيانات الحسابات من Firestore
+  try{
+    const authDoc=await _AUTH_DOC.get();
+    if(authDoc.exists){
+      localStorage.setItem('univ_auth',JSON.stringify(authDoc.data()));
+    }
+  }catch(e){}
+  // إخفاء شاشة التحميل
+  setTimeout(()=>{
+    const overlay=document.getElementById('fs-loading');
+    if(overlay){overlay.style.opacity='0';overlay.style.transition='opacity .4s';setTimeout(()=>overlay.remove(),400);}
+  },300);
+})();
 </script>
 </body>
 </html>
