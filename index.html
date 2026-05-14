@@ -3064,10 +3064,9 @@ async function _initFirestore(){
     // مراقبة التغييرات اللحظية
     _DOC.onSnapshot(snap=>{
       if(snap.exists&&!_saveTimer){
-        _remoteUpdate=true;
         _applyData(snap.data());
-        try{renderAll();}catch(e){}
-        _remoteUpdate=false;
+        _postLoad();
+        try{renderAll();}catch(e){console.warn('renderAll error:',e);}
       }
     });
   }catch(e){
