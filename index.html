@@ -3030,6 +3030,7 @@ function save(){
       }
       await _DOC.set(data);
       _lastSaveTime=Date.now();
+    }catch(e){console.warn('Firestore save error:',e);}
   },800);
   if(document.getElementById('pg-overtime')?.style.display==='block')renderOvertime();
 }
