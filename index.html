@@ -3012,6 +3012,7 @@ const _db=firebase.firestore();
 const _DOC=_db.collection('timetable').doc('main');
 const _AUTH_DOC=_db.collection('auth').doc('data');
 let _saveTimer=null;
+let _lastSaveTime=0;
 let _remoteUpdate=false;
 
 function save(){
@@ -3028,7 +3029,7 @@ function save(){
         data.settings={...data.settings,logo:'__local__'};
       }
       await _DOC.set(data);
-    }catch(e){console.warn('Firestore save error:',e);}
+      _lastSaveTime=Date.now();
   },800);
   if(document.getElementById('pg-overtime')?.style.display==='block')renderOvertime();
 }
@@ -3061,13 +3062,25 @@ async function _initFirestore(){
       await _DOC.set(S);
     }
     if(bar)bar.style.width='100%';
-    // مراقبة التغييرات اللحظية
+    // مراقبة التغييرات اللحظية من أجهزة أخرى
+    let _lastSnapTime=0;
     _DOC.onSnapshot(snap=>{
-      if(snap.exists&&!_saveTimer){
-        _applyData(snap.data());
-        _postLoad();
-        try{renderAll();}catch(e){console.warn('renderAll error:',e);}
-      }
+      if(!snap.exists)return;
+      const now=Date.now();
+      // تجاهل إذا كنا نحن من أطلق الحفظ (خلال ثانية)
+      if(now-_lastSaveTime<1200)return;
+      _applyData(snap.data());
+      // _postLoad بدون save() لتجنب الحلقة
+      try{
+        if(!S.periods||!S.periods.length)S.periods=['السداسي الأول','السداسي الثاني'];
+        if(!S.groups||!S.groups.length)S.groups=['الفوج1','الفوج2','الفوج3','الفوج4','الفوج5','الفوج6','الفوج7','الفوج8'];
+        if(!S.sections||!S.sections.length)S.sections=['الفصيلة1','الفصيلة2','الفصيلة3'];
+        if(!S.registeredTTs)S.registeredTTs=[];
+        if(!S.examExtraGroups)S.examExtraGroups={};
+        if(!S.settings)S.settings={ministry:'',university:'',faculty:'',logo:''};
+        rebuildSlots();rebuildDays();
+        renderAll();
+      }catch(e){console.warn('sync render error:',e);}
     });
   }catch(e){
     console.warn('Firestore error, using localStorage:',e);
