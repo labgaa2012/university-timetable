@@ -3012,26 +3012,44 @@ const _db=firebase.firestore();
 const _DOC=_db.collection('timetable').doc('main');
 const _AUTH_DOC=_db.collection('auth').doc('data');
 let _saveTimer=null;
-let _lastSaveTime=0;
 let _remoteUpdate=false;
 
+// تقسيم البيانات على وثيقتين لتجنب حد 1MB
+const _MAIN_DOC=_db.collection('timetable').doc('config');   // الإعدادات + قوائم
+const _SESS_DOC=_db.collection('timetable').doc('sessions');  // الحصص + الامتحانات
+
+function _splitData(){
+  const data={...S};
+  if(data.settings?.logo&&data.settings.logo.startsWith('data:')){
+    localStorage.setItem('univ_logo_v2',data.settings.logo);
+    data.settings={...data.settings,logo:'__local__'};
+  }
+  // وثيقة 1: كل شيئ عدا الحصص والامتحانات
+  const main={...data};
+  delete main.sessions;delete main.exams;delete main.duyunExams;
+  // وثيقة 2: الحصص والامتحانات فقط
+  const sess={
+    sessions:S.sessions||[],
+    exams:S.exams||[],
+    duyunExams:S.duyunExams||{},
+    _ay:S.ay
+  };
+  return{main,sess};
+}
+
 function save(){
-  // حفظ محلي فوري
   try{localStorage.setItem(SK,JSON.stringify(S));}catch(e){}
-  // حفظ Firestore مع debounce 800ms
   if(_saveTimer)clearTimeout(_saveTimer);
   _saveTimer=setTimeout(async()=>{
     try{
-      const data={...S};
-      // اللوغو base64 كبير → نحفظه محلياً فقط
-      if(data.settings?.logo&&data.settings.logo.startsWith('data:')){
-        localStorage.setItem('univ_logo_v2',data.settings.logo);
-        data.settings={...data.settings,logo:'__local__'};
-      }
-      await _DOC.set(data);
-      _lastSaveTime=Date.now();
-    }catch(e){console.warn('Firestore save error:',e);}
-  },800);
+      const{main,sess}=_splitData();
+      await Promise.all([_MAIN_DOC.set(main),_SESS_DOC.set(sess)]);
+    }catch(e){
+      console.warn('Firestore save error:',e);
+      toast('⚠️ خطأ في حفظ السحابة');
+    }
+    _saveTimer=null;
+  },600);
   if(document.getElementById('pg-overtime')?.style.display==='block')renderOvertime();
 }
 
@@ -3048,45 +3066,50 @@ async function _initFirestore(){
   const bar=document.getElementById('fs-bar');
   const status=document.getElementById('fs-status');
   try{
-    if(bar)bar.style.width='30%';
+    if(bar)bar.style.width='20%';
     if(status)status.textContent='يقرأ البيانات...';
-    const doc=await _DOC.get();
+    const[mainDoc,sessDoc]=await Promise.all([_MAIN_DOC.get(),_SESS_DOC.get()]);
     if(bar)bar.style.width='70%';
-    if(doc.exists){
-      _applyData(doc.data());
+    if(mainDoc.exists||sessDoc.exists){
+      const main=mainDoc.exists?mainDoc.data():{};
+      const sess=sessDoc.exists?sessDoc.data():{};
+      S={...main,sessions:sess.sessions||[],exams:sess.exams||[],duyunExams:sess.duyunExams||{}};
+      if(S.settings?.logo==='__local__')S.settings.logo=localStorage.getItem('univ_logo_v2')||'';
       if(status)status.textContent='تم تحميل البيانات ✅';
     } else {
-      // أول مرة — استخدم localStorage أو defaults
       if(status)status.textContent='إنشاء قاعدة البيانات...';
       const local=localStorage.getItem(SK);
       S=local?JSON.parse(local):defState();
-      await _DOC.set(S);
+      const{main,sess}=_splitData();
+      await Promise.all([_MAIN_DOC.set(main),_SESS_DOC.set(sess)]);
     }
     if(bar)bar.style.width='100%';
-    // مراقبة التغييرات اللحظية من أجهزة أخرى
-    _DOC.onSnapshot(snap=>{
+    // مراقبة الحصص (الأكثر تغيراً)
+    _SESS_DOC.onSnapshot(snap=>{
       if(!snap.exists)return;
-      _applyData(snap.data());
-      try{
-        if(!S.registeredTTs)S.registeredTTs=[];
-        if(!S.examExtraGroups)S.examExtraGroups={};
-        if(!S.settings)S.settings={ministry:'',university:'',faculty:'',logo:''};
-        if(!S.periods||!S.periods.length)S.periods=['السداسي الأول','السداسي الثاني'];
-        rebuildSlots();rebuildDays();
-        renderAll();
-      }catch(e){console.warn('sync render:',e);}
+      const d=snap.data();
+      S.sessions=d.sessions||[];
+      S.exams=d.exams||[];
+      S.duyunExams=d.duyunExams||{};
+      try{rebuildSlots();rebuildDays();renderTT();renderExams();}catch(e){console.warn('sess sync:',e);}
+    });
+    // مراقبة الإعدادات والقوائم
+    _MAIN_DOC.onSnapshot(snap=>{
+      if(!snap.exists)return;
+      const d=snap.data();
+      if(d.settings?.logo==='__local__')d.settings.logo=localStorage.getItem('univ_logo_v2')||'';
+      const curSess=S.sessions,curExams=S.exams,curDuyun=S.duyunExams;
+      S={...d,sessions:curSess,exams:curExams,duyunExams:curDuyun};
+      try{renderAll();}catch(e){console.warn('main sync:',e);}
     });
   }catch(e){
-    console.warn('Firestore error, using localStorage:',e);
-    if(status)status.textContent='⚠️ تعذّر الاتصال — وضع محلي';
+    console.warn('Firestore error:',e);
+    if(status)status.textContent='⚠️ وضع محلي';
     const local=localStorage.getItem(SK);
     S=local?JSON.parse(local):defState();
   }
 }
 
-const SK='univ_tt_v4';
-
-/* -- DEFAULT SUBJECTS -- */
 function uid2(){return Math.random().toString(36).slice(2,10);}
 
 /* -- DEFAULT SPECS (52 تخصص من ملف الكلية 2024/2025) -- */
