@@ -1207,7 +1207,10 @@ table.occ-matrix td.cell-occ:hover{background:#fee2e2;filter:brightness(.97);}
   <div class="mc">
     <div class="mgmt-header">
       <div class="mct"><div class="mcti">👥</div>إدارة الحسابات</div>
-      <button class="btn bg" onclick="openAddAccount()">➕ حساب جديد</button>
+      <div style="display:flex;gap:8px;">
+        <button class="btn" onclick="syncAuthToFirestore()" style="background:#0d8a7d;color:#fff;">☁️ رفع الحسابات</button>
+        <button class="btn bg" onclick="openAddAccount()">➕ حساب جديد</button>
+      </div>
     </div>
     <div id="acc-list"></div>
   </div>
@@ -9947,7 +9950,11 @@ let CURRENT_USER=null;
 
 const DEFAULT_PASS='987654321';
 
-function getAuthData(){
+function syncAuthToFirestore(){
+  const auth=getAuthData();
+  if(!auth){toast('⚠️ لا توجد بيانات حسابات');return;}
+  _AUTH_DOC.set(auth).then(()=>toast('✅ تم رفع الحسابات لـ Firebase')).catch(e=>toast('❌ '+e.message));
+}
   try{return JSON.parse(localStorage.getItem('univ_auth')||'null');}catch{return null;}
 }
 function saveAuthData(data){
