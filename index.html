@@ -3084,6 +3084,16 @@ async function _initFirestore(){
       await Promise.all([_MAIN_DOC.set(main),_SESS_DOC.set(sess)]);
     }
     if(bar)bar.style.width='100%';
+    // مزامنة الحسابات قبل initAuth() — مهم جداً
+    try{
+      const authDoc=await _AUTH_DOC.get();
+      if(authDoc.exists){
+        localStorage.setItem('univ_auth',JSON.stringify(authDoc.data()));
+      } else {
+        const localAuth=localStorage.getItem('univ_auth');
+        if(localAuth){await _AUTH_DOC.set(JSON.parse(localAuth));}
+      }
+    }catch(e){console.warn('Auth sync:',e);}
     // مراقبة الحصص (الأكثر تغيراً)
     _SESS_DOC.onSnapshot(snap=>{
       if(!snap.exists)return;
@@ -10379,21 +10389,6 @@ function saveSettings(){
     if(h2)h2.textContent=S.settings.faculty;
   }
   initAuth();
-  // مزامنة الحسابات
-  try{
-    const authDoc=await _AUTH_DOC.get();
-    if(authDoc.exists){
-      // Firestore عنده بيانات → استخدمها
-      localStorage.setItem('univ_auth',JSON.stringify(authDoc.data()));
-    } else {
-      // Firestore فارغ → ارفع من localStorage
-      const localAuth=localStorage.getItem('univ_auth');
-      if(localAuth){
-        const parsed=JSON.parse(localAuth);
-        await _AUTH_DOC.set(parsed);
-      }
-    }
-  }catch(e){console.warn('Auth sync:',e);}
   // إخفاء شاشة التحميل
   setTimeout(()=>{
     const overlay=document.getElementById('fs-loading');
