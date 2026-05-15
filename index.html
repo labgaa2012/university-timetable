@@ -3387,7 +3387,8 @@ function save(){
       data.settings.logo='__local__';
     }
     _DB.set(data)
-      .catch(e=>console.warn('Firebase save error:',e))
+      .then(()=>{ S._lastModified=data._lastModified; })
+      .catch(e=>{console.warn('Firebase save error:',e);toast('⚠️ خطأ Firebase: '+e.message);})
       .finally(()=>{_saving=false;_saveTimer=null;});
   },600);
   if(document.getElementById('pg-overtime')?.style.display==='block')renderOvertime();
@@ -3432,19 +3433,24 @@ async function _initDB(){
       if(localAuth) await _AUTH.set(JSON.parse(localAuth));
     }
     setP(100,'جاهز ✅');
-    // مستمع التحديثات اللحظية
+    // مزامنة كل 5 ثوانٍ
     if(!_syncActive){
       _syncActive=true;
-      _DB.on('value',snap=>{
-        if(!snap.exists()||_saving||_saveTimer)return;
-        // تجاهل إذا كتبنا نحن خلال آخر 3 ثوانٍ
-        if(Date.now()-_myLastWrite<3000)return;
-        const data=snap.val();
-        if(!data)return;
-        _applyRemote(data);
-        try{_postLoad();rebuildSlots();rebuildDays();renderAll();}catch(e){}
-        toast('🔄 تم مزامنة البيانات');
-      });
+      setInterval(async()=>{
+        if(_saving||_saveTimer)return;
+        try{
+          const snap=await _DB.once('value');
+          if(!snap.exists())return;
+          const data=snap.val();
+          const remote=data._lastModified||0;
+          const local=S._lastModified||0;
+          if(remote>local+500){
+            _applyRemote(data);
+            try{_postLoad();rebuildSlots();rebuildDays();renderAll();}catch(e){}
+            toast('🔄 تم مزامنة البيانات');
+          }
+        }catch(e){}
+      },5000);
     }
   }catch(e){
     console.warn('Firebase error:',e);
