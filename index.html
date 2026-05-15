@@ -3435,7 +3435,7 @@ async function _initDB(){
     // مستمع التحديثات اللحظية
     if(!_syncActive){
       _syncActive=true;
-      let _myLastWrite=Date.now();
+      let _myLastWrite=0;
       // نُسجّل وقت كل كتابة من هذا الجهاز
       const _origSet=_DB.set.bind(_DB);
       _DB.on('value',snap=>{
