@@ -1620,9 +1620,9 @@ table.occ-matrix td.cell-occ:hover{background:#fee2e2;filter:brightness(.97);}
           <select class="fs" id="tt-year-sel" onchange="onTTYearChange(this.value)"
             style="font-weight:700;min-width:120px;"></select>
           <button class="btn admin-only" onclick="openRestoreDays()" style="background:#059669;color:#fff;padding:7px 12px;font-size:12px;">🔄 استعادة الأيام</button>
-          <button class="btn admin-only" onclick="openInstallTT()" style="background:#7c3aed;color:#fff;">⚡ تنصيب جداول</button>
-          <button class="btn admin-only" onclick="openReinstallGroup()" style="background:#059669;color:#fff;">➕ إنشاء جدول فوج</button>
-          <button class="btn admin-only" onclick="openCopyGroup()" style="background:#0d8a7d;color:#fff;">📋 نسخ جدول فوج</button>
+          <button class="btn" onclick="openInstallTT()" style="background:#7c3aed;color:#fff;">⚡ تنصيب جداول</button>
+          <button class="btn" onclick="openReinstallGroup()" style="background:#059669;color:#fff;">➕ إنشاء جدول فوج</button>
+          <button class="btn" onclick="openCopyGroup()" style="background:#0d8a7d;color:#fff;">📋 نسخ جدول فوج</button>
           <button class="btn bn" onclick="expExcel()">📊 تصدير</button>
           <button class="btn bi" onclick="trigImp('imp-sessions')">📥 استيراد</button>
           <button class="btn" onclick="openBulkExportModal()" style="background:#7c3aed;color:#fff;">📄 PDF الكل</button>
@@ -5568,13 +5568,14 @@ function delSess(id){
 
 // -- EXAMS -----------------------------------------
 function openReinstallGroup(){
-  if(!canEditDept(S.activeTT?.dp||'')){toast('⚠️ لا تملك صلاحية هذا الإجراء');return;}
+  const isAdmin=!CURRENT_USER||CURRENT_USER.role==='admin';
   // تعبئة المنسدلات
   const att=S.activeTT||{};
   const lvSel=document.getElementById('rg-lv');
   const dpSel=document.getElementById('rg-dp');
-  if(lvSel)lvSel.innerHTML=S.levels.map(l=>`<option value="${l}"${l===att.lv?' selected':''}>${l}</option>`).join('');
-  if(dpSel)dpSel.innerHTML=S.depts.map(d=>`<option value="${d}"${d===att.dp?' selected':''}>${d}</option>`).join('');
+  const availDepts=isAdmin?S.depts:[CURRENT_USER.dept].filter(Boolean);
+  if(lvSel)lvSel.innerHTML=getLevelsForDept(isAdmin?'':CURRENT_USER?.dept||'').map(l=>`<option value="${l}"${l===att.lv?' selected':''}>${l}</option>`).join('');
+  if(dpSel)dpSel.innerHTML=availDepts.map(d=>`<option value="${d}"${d===att.dp?' selected':''}>${d}</option>`).join('');
   const secSel=document.getElementById('rg-section');
   if(secSel)secSel.innerHTML=S.sections.map(s=>`<option value="${s}">${s}</option>`).join('');
   const grpSel=document.getElementById('rg-group');
@@ -6138,8 +6139,9 @@ function deleteGroupTT(lv,dp,spec,sec,grp){
 
 // ══ ⑨ نسخ جدول فوج ══
 function openCopyGroup(){
-  if(!canEditDept(S.activeTT?.dp||'')){toast('⚠️ لا تملك صلاحية هذا الإجراء');return;}
   const att=S.activeTT||{};
+  // التحقق: القسم يمكنه نسخ جداول قسمه فقط
+  if(att.dp&&!canEditDept(att.dp)){toast('⚠️ يمكنك نسخ جداول قسمك فقط');return;}
   const secSel=document.getElementById('cg-section');
   if(secSel)secSel.innerHTML=S.sections.map(s=>`<option value="${s}">${s}</option>`).join('');
   const groups=S.groups;
