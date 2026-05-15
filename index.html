@@ -3409,7 +3409,7 @@ function _applyRemote(data){
   // Firebase يحوّل [] إلى null — نُعيد تحويلها لمصفوفات
   const ARR=['exams','sessions','teachers','subjects','specs','levels','depts',
     'years','periods','groups','sections','rooms','registeredTTs','sessionTypes',
-    'examSlots','slots','days'];
+    'examSlots','slots','days','archive'];
   ARR.forEach(f=>{
     if(!Array.isArray(data[f]))
       data[f]=data[f]&&typeof data[f]==='object'?Object.values(data[f]):[];
@@ -7751,6 +7751,7 @@ function renderArchive(){
     </div>`).join('');
 }
 function doArchive(){
+  if(!Array.isArray(S.archive))S.archive=[];
   const ss=S.sessions.filter(s=>s.y===S.ay);
   const ex=S.exams.filter(e=>e.y===S.ay);
   S.archive.unshift({
@@ -8988,6 +8989,7 @@ function renderPeriodGrid(){
   syncPeriodBtns();
 }
 function addPeriod(){
+  if(!Array.isArray(S.periods))S.periods=[];
   const v=document.getElementById('periodIn').value.trim();
   if(!v){toast('⚠️ أدخل اسم الفترة');return;}
   if(S.periods.includes(v)){toast('⚠️ الفترة موجودة بالفعل');return;}
