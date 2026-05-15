@@ -3382,6 +3382,8 @@ function load(){
 function save(){
   // نسخة محلية فورية
   try{localStorage.setItem(SK,JSON.stringify(S));}catch(e){}
+  // تحديث _lastModified فوراً
+  if(!S._lastModified||Date.now()>S._lastModified)S._lastModified=Date.now();
   // رفع Firebase مع debounce
   if(_saveTimer)clearTimeout(_saveTimer);
   _saveTimer=setTimeout(()=>{
@@ -3459,11 +3461,10 @@ async function _initDB(){
           const data=snap.val();
           const remote=data._lastModified||0;
           const local=S._lastModified||0;
-          if(remote>local+500){
+          if(remote>local+100){
             _applyRemote(data);
             try{
               _postLoad();rebuildSlots();rebuildDays();renderAll();
-              // إعادة تطبيق الصلاحيات بعد المزامنة
               if(typeof applyPermissions==='function')applyPermissions();
             }catch(e){}
             toast('🔄 تم مزامنة البيانات');
