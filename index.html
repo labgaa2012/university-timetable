@@ -3313,6 +3313,13 @@ let S={};
 
 // ── _postLoad: تطبيق القيم الافتراضية على S ──────
 function _postLoad(){
+  if(!S.exams)                     S.exams=[];
+  if(!S.sessions)                  S.sessions=[];
+  if(!S.teachers)                  S.teachers=[];
+  if(!S.subjects)                  S.subjects=[];
+  if(!S.specs)                     S.specs=[];
+  if(!S.levels)                    S.levels=[];
+  if(!S.depts)                     S.depts=[];
   if(!S.subjects||!S.subjects.length) S.subjects=DEFAULT_SUBJECTS();
   // دمج الأساتذة الافتراضيين مع الموجودين (إضافة الجدد بدون حذف المدخلين يدوياً)
   DEFAULT_TEACHERS().forEach(def=>{
