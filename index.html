@@ -3446,7 +3446,11 @@ async function _initDB(){
           const local=S._lastModified||0;
           if(remote>local+500){
             _applyRemote(data);
-            try{_postLoad();rebuildSlots();rebuildDays();renderAll();}catch(e){}
+            try{
+              _postLoad();rebuildSlots();rebuildDays();renderAll();
+              // إعادة تطبيق الصلاحيات بعد المزامنة
+              if(typeof applyPermissions==='function')applyPermissions();
+            }catch(e){}
             toast('🔄 تم مزامنة البيانات');
           }
         }catch(e){}
