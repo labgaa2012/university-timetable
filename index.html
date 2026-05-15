@@ -3358,7 +3358,7 @@ function _postLoad(){
   });
   if(S.teachers.length && typeof S.teachers[0]==='string'){
     S.teachers=S.teachers.map(n=>({name:n,kind:'permanent',rank:'mca',dept:''}));
-    save();
+    // لا نستدعي save() هنا لتجنب حلقة المزامنة
   }
   S.teachers=S.teachers.map(t=>({
     name:t.name||'',kind:t.kind||'permanent',rank:t.rank||'mca',dept:t.dept||'',post:t.post||''
@@ -3379,6 +3379,7 @@ function save(){
   if(_saveTimer)clearTimeout(_saveTimer);
   _saveTimer=setTimeout(()=>{
     _saving=true;
+    if(window._trackWrite)_trackWrite();
     const data=JSON.parse(JSON.stringify(S));
     data._lastModified=Date.now();
     if(data.settings?.logo&&data.settings.logo.startsWith('data:')){
@@ -3434,17 +3435,25 @@ async function _initDB(){
     // مستمع التحديثات اللحظية
     if(!_syncActive){
       _syncActive=true;
+      let _myLastWrite=Date.now();
+      // نُسجّل وقت كل كتابة من هذا الجهاز
+      const _origSet=_DB.set.bind(_DB);
       _DB.on('value',snap=>{
         if(!snap.exists()||_saving||_saveTimer)return;
+        // تجاهل إذا كانت كتابتنا نحن خلال آخر 3 ثوانٍ
+        if(Date.now()-_myLastWrite<3000)return;
         const data=snap.val();
         const remote=data._lastModified||0;
         const local=S._lastModified||0;
-        if(remote>local+1500){
+        if(remote>local+1000){
           _applyRemote(data);
           try{_postLoad();rebuildSlots();rebuildDays();renderAll();}catch(e){}
           toast('🔄 تم مزامنة البيانات');
         }
       });
+      // تحديث _myLastWrite عند كل save
+      const _origSave=save;
+      window._trackWrite=function(){_myLastWrite=Date.now();};
     }
   }catch(e){
     console.warn('Firebase error:',e);
@@ -10357,6 +10366,8 @@ function saveSettings(){
     if(S.settings?.university){const h=document.querySelector('header .logo h1');if(h)h.textContent=S.settings.university;}
     if(S.settings?.faculty){const h=document.querySelector('header .logo p');if(h)h.textContent=S.settings.faculty;}
     initAuth();
+    // حفظ الحالة الأولية بعد التهيئة الكاملة
+    save();
   }catch(e){
     console.error('Init error:',e);
     // حاول البدء من localStorage كـ fallback
