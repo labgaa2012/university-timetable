@@ -10348,23 +10348,24 @@ function saveSettings(){
 
 // -- INIT ------------------------------------------
 (async()=>{
-  // 1. تحميل البيانات من Firebase
-  await _initDB();
-  // 2. تطبيق القيم الافتراضية
-  _postLoad();
-  rebuildSlots();
-  rebuildDays();
-  // 3. عرض البرنامج
-  renderAll();
-  if(S.settings?.university){const h=document.querySelector('header .logo h1');if(h)h.textContent=S.settings.university;}
-  if(S.settings?.faculty){const h=document.querySelector('header .logo p');if(h)h.textContent=S.settings.faculty;}
-  // 4. تهيئة نظام الحسابات
-  initAuth();
-  // 5. إخفاء شاشة التحميل
-  setTimeout(()=>{
+  try{
+    await _initDB();
+    _postLoad();
+    rebuildSlots();
+    rebuildDays();
+    renderAll();
+    if(S.settings?.university){const h=document.querySelector('header .logo h1');if(h)h.textContent=S.settings.university;}
+    if(S.settings?.faculty){const h=document.querySelector('header .logo p');if(h)h.textContent=S.settings.faculty;}
+    initAuth();
+  }catch(e){
+    console.error('Init error:',e);
+    // حاول البدء من localStorage كـ fallback
+    try{load();_postLoad();rebuildSlots();rebuildDays();renderAll();initAuth();}catch(e2){console.error('Fallback error:',e2);}
+  }finally{
+    // أخفِ شاشة التحميل دائماً
     const ol=document.getElementById('fs-loading');
-    if(ol){ol.style.opacity='0';setTimeout(()=>ol.remove(),400);}
-  },300);
+    if(ol){ol.style.opacity='0';setTimeout(()=>{if(ol.parentNode)ol.parentNode.removeChild(ol);},400);}
+  }
 })();
 </script>
 </body>
