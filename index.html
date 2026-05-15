@@ -3016,7 +3016,7 @@ firebase.initializeApp({
 const _db=firebase.database();
 const _DB=_db.ref('univ_tt');
 const _AUTH=_db.ref('auth_data');
-let _saving=false,_saveTimer=null,_syncActive=false;
+let _saving=false,_saveTimer=null,_syncActive=false,_myLastWrite=0;
 
 
 /* -- DEFAULT SUBJECTS -- */
@@ -3435,25 +3435,16 @@ async function _initDB(){
     // مستمع التحديثات اللحظية
     if(!_syncActive){
       _syncActive=true;
-      let _myLastWrite=0;
-      // نُسجّل وقت كل كتابة من هذا الجهاز
-      const _origSet=_DB.set.bind(_DB);
       _DB.on('value',snap=>{
         if(!snap.exists()||_saving||_saveTimer)return;
-        // تجاهل إذا كانت كتابتنا نحن خلال آخر 3 ثوانٍ
+        // تجاهل إذا كتبنا نحن خلال آخر 3 ثوانٍ
         if(Date.now()-_myLastWrite<3000)return;
         const data=snap.val();
-        const remote=data._lastModified||0;
-        const local=S._lastModified||0;
-        if(remote>local+1000){
-          _applyRemote(data);
-          try{_postLoad();rebuildSlots();rebuildDays();renderAll();}catch(e){}
-          toast('🔄 تم مزامنة البيانات');
-        }
+        if(!data)return;
+        _applyRemote(data);
+        try{_postLoad();rebuildSlots();rebuildDays();renderAll();}catch(e){}
+        toast('🔄 تم مزامنة البيانات');
       });
-      // تحديث _myLastWrite عند كل save
-      const _origSave=save;
-      window._trackWrite=function(){_myLastWrite=Date.now();};
     }
   }catch(e){
     console.warn('Firebase error:',e);
@@ -10366,8 +10357,7 @@ function saveSettings(){
     if(S.settings?.university){const h=document.querySelector('header .logo h1');if(h)h.textContent=S.settings.university;}
     if(S.settings?.faculty){const h=document.querySelector('header .logo p');if(h)h.textContent=S.settings.faculty;}
     initAuth();
-    // حفظ الحالة الأولية بعد التهيئة الكاملة
-    save();
+    // لا نستدعي save() هنا — نترك بيانات Firebase كما هي
   }catch(e){
     console.error('Init error:',e);
     // حاول البدء من localStorage كـ fallback
