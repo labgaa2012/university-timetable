@@ -4732,7 +4732,7 @@ function confirmInstallTT(){
       const grpName=S.groups[gi]||('الفوج'+(gi+1));
       // تحقق: هل مسجّل بالفعل؟
       const exists=S.registeredTTs.find(t=>
-        t.lv===lv&&t.dp===dp&&t.spec===spec&&
+        (!t.y||t.y===S.ay)&&t.lv===lv&&t.dp===dp&&t.spec===spec&&
         t.section===secName&&t.group===grpName&&
         (per?t.period===per:true)
       );
