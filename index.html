@@ -3401,9 +3401,17 @@ function save(){
   if(document.getElementById('pg-overtime')?.style.display==='block')renderOvertime();
 }
 
-// ── _applyRemote: تطبيق بيانات Firebase ──────────
+// ── _applyRemote: تطبيق بيانات Firebase مع إصلاح null ──
 function _applyRemote(data){
   if(!data)return;
+  // Firebase يحوّل [] إلى null — نُعيد تحويلها لمصفوفات
+  const ARR=['exams','sessions','teachers','subjects','specs','levels','depts',
+    'years','periods','groups','sections','rooms','registeredTTs','sessionTypes',
+    'examSlots','slots','days'];
+  ARR.forEach(f=>{
+    if(!Array.isArray(data[f]))
+      data[f]=data[f]&&typeof data[f]==='object'?Object.values(data[f]):[];
+  });
   if(data.settings?.logo==='__local__')data.settings.logo=localStorage.getItem('_logo_v2')||'';
   S=data;
 }
