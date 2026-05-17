@@ -4721,8 +4721,10 @@ function confirmInstallTT(){
   const ngrp=parseInt(document.getElementById('it-ngrp')?.value||'8');
   const per=period?parseInt(period):'';
 
-  // توليد كل مجموعات (فصيلة × فوج) وتسجيلها
-  // حذف التنصيبات القديمة لنفس المجموعة (السنة+مستوى+قسم+تخصص) قبل إعادة التنصيب
+  // حذف التنصيبات والحصص القديمة لنفس المجموعة قبل إعادة التنصيب
+  S.sessions=S.sessions.filter(s=>
+    !(s.y===S.ay&&s.lv===lv&&s.dp===dp&&s.spec===spec)
+  );
   S.registeredTTs=S.registeredTTs.filter(t=>
     !((!t.y||t.y===S.ay)&&t.lv===lv&&t.dp===dp&&t.spec===spec)
   );
