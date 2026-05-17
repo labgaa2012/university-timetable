@@ -5515,29 +5515,30 @@ function saveSess(){
     S.sessions.push(data);
     // النسخ التلقائي للمحاضرات
     if(type==='tlc'||type==='tlc-remote'){
-      // الأفواج المنصَّبة في نفس الفصيلة والتخصص فقط (لا كل S.groups)
+      // كل الأفواج المنصَّبة في نفس التخصص (بغض النظر عن الفصيلة)
       const regGroups=S.registeredTTs
-        .filter(t=>t.lv===lv&&t.dp===dp&&t.spec===spec&&t.section===section&&t.group&&t.group!==grp)
+        .filter(t=>t.lv===lv&&t.dp===dp&&t.spec===spec&&t.group&&t.group!==grp)
         .map(t=>t.group);
-      // إذا لم توجد registeredTTs → أفواج من الحصص الموجودة في نفس الفصيلة
+      // fallback: من الحصص الموجودة
       const targetGroups=regGroups.length>0
         ? [...new Set(regGroups)]
-        : [...new Set(S.sessions.filter(s=>s.y===S.ay&&s.lv===lv&&s.dp===dp&&s.spec===spec&&s.section===section&&s.group&&s.group!==grp).map(s=>s.group))];
+        : [...new Set(S.sessions.filter(s=>
+            s.y===S.ay&&s.lv===lv&&s.dp===dp&&s.spec===spec&&s.group&&s.group!==grp
+          ).map(s=>s.group))];
 
-      // حالة group='' (حصة لكل الأفواج) → لا نسخ مطلوب
       let copied=0;
       if(grp!==''){
         targetGroups.forEach(g=>{
           const exists=S.sessions.find(s=>
             s.y===S.ay&&s.lv===lv&&s.dp===dp&&s.spec===spec&&
-            s.section===section&&s.group===g&&s.day===day&&s.slot===slot
+            s.group===g&&s.day===day&&s.slot===slot
           );
           if(!exists){S.sessions.push({...data,id:uid(),group:g,firstLec:0});copied++;}
         });
       }
       if(copied>0){
         save();renderTT();closeM('mSess');
-        toast(`✅ أُضيفت + نُسخت لـ ${copied} فوج (نفس الفصيلة)`);
+        toast(`✅ أُضيفت + نُسخت لـ ${copied} فوج`);
         return;
       }
     }
